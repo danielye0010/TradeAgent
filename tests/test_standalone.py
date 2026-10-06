@@ -8,17 +8,17 @@ from pathlib import Path
 import pytest
 from test_release_policy import artifact, facts, histories, tiny_snapshot
 
-from robinhood_agent.canary import CanarySelector
-from robinhood_agent.cli import main
-from robinhood_agent.model import Config, Halt, Risk, digest
-from robinhood_agent.policy import GrantContext, PolicyGuard, PolicyLimits, PolicySignature
-from robinhood_agent.release import require_real_release
-from robinhood_agent.simulator import SimClock, SimulatedMCP
-from robinhood_agent.standalone import run_policy_once
-from robinhood_agent.standalone_mcp import ExternalOAuthToken, StandaloneMCP
-from robinhood_agent.standalone_reference import STATUS_URL, action_rows
-from robinhood_agent.state import State
-from robinhood_agent.supervised import OfficialExecutionAdapter
+from tradebot.canary import CanarySelector
+from tradebot.cli import main
+from tradebot.model import Config, Halt, Risk, digest
+from tradebot.policy import GrantContext, PolicyGuard, PolicyLimits, PolicySignature
+from tradebot.release import require_real_release
+from tradebot.simulator import SimClock, SimulatedMCP
+from tradebot.standalone import run_policy_once
+from tradebot.standalone_mcp import ExternalOAuthToken, StandaloneMCP
+from tradebot.standalone_reference import STATUS_URL, action_rows
+from tradebot.state import State
+from tradebot.supervised import OfficialExecutionAdapter
 
 
 @contextmanager
@@ -213,7 +213,7 @@ def test_limited_run_once_does_not_force_positive_signal(tmp_path, monkeypatch):
 
 
 def test_direct_transport_never_redirects_retries_or_calls_codex(monkeypatch):
-    import robinhood_agent.standalone_mcp as module
+    import tradebot.standalone_mcp as module
 
     sends = []
 
@@ -245,7 +245,7 @@ def test_direct_transport_never_redirects_retries_or_calls_codex(monkeypatch):
 
 
 def test_before_send_runs_after_token_and_can_stop_network(monkeypatch):
-    import robinhood_agent.standalone_mcp as module
+    import tradebot.standalone_mcp as module
 
     order = []
 
@@ -265,7 +265,7 @@ def test_before_send_runs_after_token_and_can_stop_network(monkeypatch):
         order.append("token")
         return "SYNTHETIC_TOKEN"
 
-    from robinhood_agent.standalone_mcp import WireAuthorization
+    from tradebot.standalone_mcp import WireAuthorization
 
     permit = WireAuthorization(
         None, None, "synthetic", "place_equity_order", digest({}), None, None, None
@@ -331,9 +331,9 @@ def test_real_signed_boundary_fails_closed_with_synthetic_key(tmp_path, monkeypa
     import hashlib
     import subprocess
 
-    import robinhood_agent.policy as module
-    from robinhood_agent.model import Intent, dec
-    from robinhood_agent.state import dumps
+    import tradebot.policy as module
+    from tradebot.model import Intent, dec
+    from tradebot.state import dumps
 
     with runtime(tmp_path, monkeypatch) as (_run, sim, state, clock, simulated):
         private, public, msg, sig = (
@@ -412,8 +412,8 @@ def test_real_signed_boundary_fails_closed_with_synthetic_key(tmp_path, monkeypa
 def test_direct_json_and_sse_catalog_initialization_without_codex(monkeypatch):
     import io
 
-    import robinhood_agent.standalone_mcp as module
-    from robinhood_agent.schema import Contracts
+    import tradebot.standalone_mcp as module
+    from tradebot.schema import Contracts
 
     calls = []
     pins = Contracts()
@@ -483,9 +483,9 @@ def test_new_execution_boundary_with_actual_synthetic_signature_no_network(
     import hashlib
     import subprocess
 
-    import robinhood_agent.policy as module
-    from robinhood_agent.standalone_mcp import StandaloneExecutionTransport
-    from robinhood_agent.state import dumps
+    import tradebot.policy as module
+    from tradebot.standalone_mcp import StandaloneExecutionTransport
+    from tradebot.state import dumps
 
     with runtime(tmp_path, monkeypatch) as (_run, sim, state, clock, simulated):
         private, public, msg, sig = (
@@ -584,7 +584,7 @@ def test_new_execution_boundary_with_actual_synthetic_signature_no_network(
 
 
 def test_raw_transport_callback_is_not_a_release_bypass(monkeypatch):
-    import robinhood_agent.standalone_mcp as module
+    import tradebot.standalone_mcp as module
 
     def prohibited(*args, **kwargs):
         raise AssertionError("network touched")

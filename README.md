@@ -1,81 +1,89 @@
-# Robinhood Agent
+# TradeBot
 
-Robinhood Agent is a Python trading bot built on Robinhood's official Trading MCP. It supports local simulation, real-data shadow runs, account and order risk checks, and controlled equity execution.
+A Python trading system for simulation, shadow trading, and controlled live execution.
 
-Try a trading cycle without a brokerage account:
+[Getting Started](docs/getting-started.md) ·
+[Architecture](docs/architecture.md) ·
+[Deployment](docs/deployment.md)
+
+TradeBot separates strategy, risk management, execution, and broker reconciliation.
+It includes a local simulator, live-data shadow mode, persistent execution state,
+and controlled live equity trading.
+
+## Quick Start
 
 ```bash
-git clone https://github.com/danielye0010/robinhood-agent-public.git
-cd robinhood-agent-public
+git clone https://github.com/danielye0010/tradebot.git
+cd tradebot
+
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e ".[dev]"
 
-robinhood-agent simulate --demo-dir data/demo
-robinhood-agent inspect --config data/demo/inspect.example.json
+tradebot simulate --demo-dir data/demo
+tradebot inspect --config data/demo/inspect.example.json
 ```
 
-The demo fills synthetic equity and option orders, suppresses a duplicate decision, and records the results locally. No brokerage account is required.
+This runs a complete synthetic trading cycle locally. No brokerage account is required.
 
-## Installation
-
-Use Python 3.12–3.14 on Linux or Ubuntu on WSL2. Keep the checkout and runtime state on a local Linux filesystem.
-
-Install from a source checkout with the commands above, then check your configuration:
-
-```bash
-robinhood-agent validate
-```
-
-See [Getting Started](docs/getting-started.md) for requirements and setup help.
+Use Python 3.12–3.14 on Linux or Ubuntu on WSL2. Keep the checkout and runtime
+state on a local Linux filesystem. See [Getting Started](docs/getting-started.md)
+for installation and configuration.
 
 ## Features
 
-- Official Robinhood Trading MCP integration
-- Synthetic local trading demo
-- Real-data shadow mode
-- Deterministic account and order risk checks
-- SQLite execution journal and recovery
-- Duplicate submission protection
-- Signed controls for real equity execution
+- Local equity and options simulation
+- Live-data shadow trading
+- Deterministic portfolio and order risk controls
+- Persistent SQLite execution state
+- Duplicate-order protection and recovery
+- Broker reconciliation after interrupted submissions
+- Signed controls for live equity execution
 
-The included EMA strategy is a configurable example. Trading results depend on your strategy, market conditions, and costs.
+## Architecture
 
-## Using Robinhood
-
-Connect Robinhood through Codex CLI's browser login, then run a shadow cycle:
-
-```bash
-robinhood-agent tools
-robinhood-agent shadow
-robinhood-agent inspect
+```mermaid
+flowchart LR
+    Data[Market + Account] --> Strategy
+    Strategy --> Risk
+    Risk --> Execution
+    Execution --> Broker
+    Broker --> State
+    State --> Risk
 ```
 
-Follow [Connect Robinhood](docs/getting-started.md#connect-robinhood) to set up the official MCP connection first. Shadow mode reads account and market data but never sends orders.
+Strategies generate trade proposals. Risk checks validate account, market, and
+portfolio limits before execution. Orders and broker state are persisted for
+reconciliation and recovery. See [Architecture](docs/architecture.md) for the modules.
 
-## Operating modes
+## Broker Integration
 
-| Mode | Use |
-| --- | --- |
-| Simulation | Run synthetic orders and inspect local results. |
-| Shadow | Evaluate trades using real account and market data without submitting orders. |
-| Supervised / canary | Execute equities with signed approval or a bounded signed policy. |
-| Limited autonomous equity | Run within a signed policy's account, instrument, and trading limits. |
+The current broker adapter uses Robinhood's official Trading MCP.
 
-Real execution requires a signed policy or approval and an enrolled public verification key. The default configuration uses shadow mode; production keys are not enrolled. Live options are not supported.
+See [Getting Started](docs/getting-started.md#connect-robinhood) for connection
+and shadow-mode setup.
 
-See [Deployment](docs/deployment.md) for setup and recovery.
+## Operating Modes
+
+Simulation runs locally with synthetic brokers. Shadow mode reads live data and
+records decisions without sending orders. Real equity execution requires a signed
+approval or policy and an enrolled public verification key. The default is shadow
+mode; production keys are not enrolled. Live options are not supported.
+
+See [Deployment](docs/deployment.md) for supervised, canary, and limited autonomous
+equity operation. The included EMA strategy is an example with no established live
+performance record.
 
 ## Documentation
 
-- [Getting Started](docs/getting-started.md) — install, run the demo, and connect Robinhood
-- [Architecture](docs/architecture.md) — clients, strategy, risk, execution, and state
-- [Safety](docs/safety.md) — risk checks and order recovery
-- [Deployment](docs/deployment.md) — modes, real execution requirements, and operations
+- [Getting Started](docs/getting-started.md) — installation, demo, and broker setup
+- [Architecture](docs/architecture.md) — strategy, risk, execution, and integrations
+- [Safety](docs/safety.md) — risk controls and order recovery
+- [Deployment](docs/deployment.md) — operating modes, state, and recovery
 
 ## Development
 
-Install the development dependencies with `python -m pip install -e ".[dev]"`, then run:
+Install with `python -m pip install -e ".[dev]"`, then run:
 
 ```bash
 python -m pytest -q
@@ -84,10 +92,12 @@ ruff format --check src tests scripts
 python -m build
 ```
 
-Tests and CI use synthetic brokers. See [Contributing](CONTRIBUTING.md) for the full checks and [Security](SECURITY.md) for sensitive reports.
+Tests and CI use synthetic brokers. See [Contributing](CONTRIBUTING.md) for the
+full checks and [Security](SECURITY.md) for sensitive reports.
 
 ## License
 
-Original code is licensed under [Apache-2.0](LICENSE). Reused components retain their [MIT licenses](THIRD_PARTY.md).
+Original code is licensed under [Apache-2.0](LICENSE). Reused components retain
+their [MIT licenses](THIRD_PARTY.md). Trading involves risk and can lose money.
 
-Trading involves risk and can lose money. Robinhood Agent is an independent project and is not affiliated with or endorsed by Robinhood Markets, Inc.
+TradeBot is an independent project and is not affiliated with or endorsed by Robinhood Markets, Inc.

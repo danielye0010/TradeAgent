@@ -2,14 +2,14 @@
 
 import json
 
-from robinhood_agent.cli import main
+from tradebot.cli import main
 
 
 def test_demo_inspection_uses_synthetic_equity_journal(tmp_path, monkeypatch, capsys):
     def no_native_connection(*args, **kwargs):
         raise AssertionError("offline onboarding must not connect to a broker")
 
-    monkeypatch.setattr("robinhood_agent.cli.CodexBridge", no_native_connection)
+    monkeypatch.setattr("tradebot.cli.CodexBridge", no_native_connection)
     directory = tmp_path / "demo"
     assert main(["validate"]) == 0
     capsys.readouterr()

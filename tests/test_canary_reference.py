@@ -4,9 +4,9 @@ from zoneinfo import ZoneInfo
 import pytest
 from test_release_policy import histories, tiny_snapshot
 
-from robinhood_agent.canary import CanarySelector, nasdaq_common_reference
-from robinhood_agent.model import Config, Halt, Risk, dec
-from robinhood_agent.simulator import SimClock
+from tradebot.canary import CanarySelector, nasdaq_common_reference
+from tradebot.model import Config, Halt, Risk, dec
+from tradebot.simulator import SimClock
 
 NOW = datetime(2026, 10, 6, 12, 30, tzinfo=ZoneInfo("America/New_York")).timestamp()
 HEADER = (

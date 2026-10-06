@@ -5,13 +5,13 @@ from pathlib import Path
 import pytest
 from test_broker_contract import NOW, RawReadFake
 
-from robinhood_agent.account_policy import POLICY, capital, eligible
-from robinhood_agent.broker import Broker
-from robinhood_agent.model import Config, Halt, Risk, dec, load_config
-from robinhood_agent.risk import check_order
-from robinhood_agent.simulator import SimClock, funded_snapshot
-from robinhood_agent.strategy import STATUS, StrategySignal
-from robinhood_agent.strategy import TestTrendStrategy as TrendStrategy
+from tradebot.account_policy import POLICY, capital, eligible
+from tradebot.broker import Broker
+from tradebot.model import Config, Halt, Risk, dec, load_config
+from tradebot.risk import check_order
+from tradebot.simulator import SimClock, funded_snapshot
+from tradebot.strategy import STATUS, StrategySignal
+from tradebot.strategy import TestTrendStrategy as TrendStrategy
 
 
 @pytest.mark.parametrize(
@@ -33,8 +33,8 @@ def test_midnight_utc_daily_candle_is_incomplete_until_exchange_close(hour, expe
 def test_small_funded_shadow_records_no_broker_writes_and_suppresses_repeat(tmp_path, monkeypatch):
     import time
 
-    from robinhood_agent.runner import cycle
-    from robinhood_agent.state import State
+    from tradebot.runner import cycle
+    from tradebot.state import State
 
     monkeypatch.setattr(time, "time", lambda: NOW.timestamp())
     bridge = RawReadFake()

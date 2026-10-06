@@ -1,5 +1,7 @@
 # Deployment
 
+TradeBot runs once per invocation. Its current broker integration uses Robinhood's official Trading MCP.
+
 ## Modes
 
 | Mode | Operation |
@@ -17,8 +19,8 @@ The default configuration is SHADOW. Production verification keys are not enroll
 Set up the [official MCP connection](getting-started.md#connect-robinhood), then run:
 
 ```bash
-robinhood-agent shadow
-robinhood-agent inspect
+tradebot shadow
+tradebot inspect
 ```
 
 Each invocation runs once and records its decisions in the configured state directory.

@@ -3,9 +3,9 @@ requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "robinhood-agent"
+name = "tradebot"
 version = "0.1.0"
-description = "Python trading bot for Robinhood's official Trading MCP"
+description = "A Python trading system for simulation, shadow trading, and controlled live execution."
 readme = "README.md"
 license = "Apache-2.0 AND MIT"
 classifiers = [
@@ -24,18 +24,18 @@ license-files = ["LICENSE", "licenses/*.txt"]
 dev = ["pytest==9.1.1", "ruff==0.16.10", "build==1.3.0", "twine==6.2.0"]
 
 [project.urls]
-Source = "https://github.com/danielye0010/robinhood-agent-public"
-Issues = "https://github.com/danielye0010/robinhood-agent-public/issues"
-Documentation = "https://github.com/danielye0010/robinhood-agent-public/tree/main/docs"
+Source = "https://github.com/danielye0010/tradebot"
+Issues = "https://github.com/danielye0010/tradebot/issues"
+Documentation = "https://github.com/danielye0010/tradebot/tree/main/docs"
 
 [project.scripts]
-robinhood-agent = "robinhood_agent.cli:main"
+tradebot = "tradebot.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-robinhood_agent = ["contracts/*.json"]
+tradebot = ["contracts/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -44,7 +44,7 @@ addopts = "--basetemp=work/test-runtime"
 
 [tool.ruff]
 line-length = 100
-exclude = ["src/robinhood_agent/vendor"]
+exclude = ["src/tradebot/vendor"]
 
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F", "I", "B"]

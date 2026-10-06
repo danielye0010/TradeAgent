@@ -1,5 +1,7 @@
 # Getting Started
 
+Install TradeBot and run a local simulation before connecting a broker.
+
 ## Requirements
 
 - Python 3.12–3.14
@@ -13,12 +15,12 @@ Codex CLI and a Robinhood account are needed only for real-data runs. Installati
 ## Install
 
 ```bash
-git clone https://github.com/danielye0010/robinhood-agent-public.git
-cd robinhood-agent-public
+git clone https://github.com/danielye0010/tradebot.git
+cd tradebot
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e ".[dev]"
-robinhood-agent validate
+tradebot validate
 ```
 
 The validation output includes `"valid": true` and `"mode": "SHADOW"`. Run commands from the repository root so the example configs are available.
@@ -26,8 +28,8 @@ The validation output includes `"valid": true` and `"mode": "SHADOW"`. Run comma
 ## Run the demo
 
 ```bash
-robinhood-agent simulate --demo-dir data/demo
-robinhood-agent inspect --config data/demo/inspect.example.json
+tradebot simulate --demo-dir data/demo
+tradebot inspect --config data/demo/inspect.example.json
 ```
 
 The demo creates one synthetic equity order and one synthetic option order. Repeating the same decision is suppressed. The result includes `"account_and_orders": "SYNTHETIC"` and SQLite integrity `"ok"`.
@@ -43,7 +45,7 @@ Copy the examples to local files:
 ```bash
 cp config/config.example.json config/config.local.json
 cp config/risk.example.json config/risk.local.json
-robinhood-agent validate --config config/config.local.json --risk config/risk.local.json
+tradebot validate --config config/config.local.json --risk config/risk.local.json
 ```
 
 The config sets mode, symbols, strategy version, target fraction, timeout, lease duration, and state directory. The risk config sets cash, exposure, turnover, loss, spread, and data-age limits. Pass both paths on subsequent commands. Local files are ignored by Git.
@@ -60,7 +62,7 @@ codex login status
 codex mcp add robinhood-trading --url https://agent.robinhood.com/mcp/trading
 codex mcp login robinhood-trading
 codex mcp get robinhood-trading
-robinhood-agent tools
+tradebot tools
 ```
 
 Complete authentication in the provider's browser flow. If `robinhood-trading` is already configured, use `codex mcp get` rather than adding it again. Credentials stay outside the project. See the [Codex MCP guide](https://developers.openai.com/codex/extend/mcp) for connection settings.
@@ -70,8 +72,8 @@ The native client uses Codex app-server and pinned Robinhood MCP 1.6.2 contracts
 ## Shadow mode
 
 ```bash
-robinhood-agent shadow
-robinhood-agent inspect
+tradebot shadow
+tradebot inspect
 ```
 
 Shadow mode reads real account and market data, evaluates the strategy and risk checks, and records hypothetical decisions. It never reviews, places, or cancels orders. No trade or a risk rejection is a normal result.

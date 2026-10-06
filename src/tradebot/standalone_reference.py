@@ -100,7 +100,7 @@ def fetch_public(url, timeout=15):
         conn.request(
             "GET",
             parsed.path + ("?" + parsed.query if parsed.query else ""),
-            headers={"User-Agent": "robinhood-agent-reference/0.1"},
+            headers={"User-Agent": "tradebot-reference/0.1"},
         )
         response = conn.getresponse()
         raw = response.read(4 * 1024 * 1024 + 1)

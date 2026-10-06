@@ -4,10 +4,10 @@ from decimal import Decimal as D
 
 import pytest
 
-from robinhood_agent import state as state_module
-from robinhood_agent.execution import Execution
-from robinhood_agent.model import Config, Halt, Intent, Risk, Snapshot, digest
-from robinhood_agent.state import State
+from tradebot import state as state_module
+from tradebot.execution import Execution
+from tradebot.model import Config, Halt, Intent, Risk, Snapshot, digest
+from tradebot.state import State
 
 
 @pytest.mark.parametrize("receipt", ["timeout", "ack_only", "filled"])

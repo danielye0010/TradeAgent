@@ -14,12 +14,12 @@ from pathlib import Path
 import pytest
 from test_broker_contract import NOW, RawReadFake
 
-from robinhood_agent.autonomous import AutonomousCanaryLifecycle, AutonomousPolicyLifecycle
-from robinhood_agent.broker import Broker
-from robinhood_agent.canary import CanarySelector, InstrumentFacts
-from robinhood_agent.health import health_report
-from robinhood_agent.model import Config, Halt, Intent, Risk, dec, digest
-from robinhood_agent.policy import (
+from tradebot.autonomous import AutonomousCanaryLifecycle, AutonomousPolicyLifecycle
+from tradebot.broker import Broker
+from tradebot.canary import CanarySelector, InstrumentFacts
+from tradebot.health import health_report
+from tradebot.model import Config, Halt, Intent, Risk, dec, digest
+from tradebot.policy import (
     GRANT_VERSION,
     GrantContext,
     PolicyGuard,
@@ -28,9 +28,9 @@ from robinhood_agent.policy import (
     deployment_hash,
     require_autonomous_release,
 )
-from robinhood_agent.simulator import SimClock, SimulatedMCP, funded_snapshot
-from robinhood_agent.state import State, dumps
-from robinhood_agent.supervised import OfficialExecutionAdapter
+from tradebot.simulator import SimClock, SimulatedMCP, funded_snapshot
+from tradebot.state import State, dumps
+from tradebot.supervised import OfficialExecutionAdapter
 
 
 def tiny_snapshot(clock, symbols=("TINY",)):
@@ -470,7 +470,7 @@ def test_sqlite_interrupted_transaction_rolls_back(tmp_path):
 
 def test_second_process_and_killed_process_preserve_lease(tmp_path):
     directory = tmp_path / "locked"
-    program = "from pathlib import Path; from robinhood_agent.state import State; import sys,time; s=State(Path(sys.argv[1]));\nwith s.lock(60):\n print('LOCKED',flush=True); time.sleep(30)"
+    program = "from pathlib import Path; from tradebot.state import State; import sys,time; s=State(Path(sys.argv[1]));\nwith s.lock(60):\n print('LOCKED',flush=True); time.sleep(30)"
     process = subprocess.Popen(
         [sys.executable, "-c", program, str(directory)],
         stdout=subprocess.PIPE,
@@ -497,7 +497,7 @@ def test_second_process_and_killed_process_preserve_lease(tmp_path):
 
 
 def test_policy_signature_valid_tamper_and_wrong_key(tmp_path, monkeypatch):
-    import robinhood_agent.policy as module
+    import tradebot.policy as module
 
     private, public, message, sig = (
         tmp_path / x for x in ("private.pem", "public.pem", "message", "signature")
@@ -586,7 +586,7 @@ def test_canary_history_does_not_accept_unvalidated_bars(fault):
 
 
 def test_local_health_cli_readonly_and_persistent_halt(tmp_path, monkeypatch):
-    from robinhood_agent.health import halt_entries
+    from tradebot.health import halt_entries
 
     with harness(tmp_path, monkeypatch) as (e, sim, s, _c):
         before = s.path.read_bytes()
@@ -604,7 +604,7 @@ def test_local_health_cli_readonly_and_persistent_halt(tmp_path, monkeypatch):
 
 def test_raw_official_fill_fee_reconciles_through_production_lifecycle(tmp_path, monkeypatch):
     # Real wire normalizer, synthetic raw official data, no execution transport.
-    from robinhood_agent.supervised import SupervisedLifecycle
+    from tradebot.supervised import SupervisedLifecycle
 
     raw = RawReadFake()
 

@@ -11,19 +11,19 @@ from pathlib import Path
 
 import pytest
 
-from robinhood_agent.account_policy import POLICY, capital, eligible
-from robinhood_agent.accounting import Accounting
-from robinhood_agent.calendar import regular_session
-from robinhood_agent.codex_bridge import CodexBridge
-from robinhood_agent.model import Config, Halt, Intent, Risk, dec
-from robinhood_agent.options import OptionIntent, OptionsReader, check_option_order, normalize_order
-from robinhood_agent.risk import check_order, check_state
-from robinhood_agent.schema import Contracts
-from robinhood_agent.simulator import SimClock, SimulatedMCP, funded_snapshot
-from robinhood_agent.state import State
-from robinhood_agent.strategy import STATUS
-from robinhood_agent.strategy import TestTrendStrategy as TrendStrategy
-from robinhood_agent.supervised import (
+from tradebot.account_policy import POLICY, capital, eligible
+from tradebot.accounting import Accounting
+from tradebot.calendar import regular_session
+from tradebot.codex_bridge import CodexBridge
+from tradebot.model import Config, Halt, Intent, Risk, dec
+from tradebot.options import OptionIntent, OptionsReader, check_option_order, normalize_order
+from tradebot.risk import check_order, check_state
+from tradebot.schema import Contracts
+from tradebot.simulator import SimClock, SimulatedMCP, funded_snapshot
+from tradebot.state import State
+from tradebot.strategy import STATUS
+from tradebot.strategy import TestTrendStrategy as TrendStrategy
+from tradebot.supervised import (
     HumanApproval,
     NativeExecutionTransport,
     OfficialExecutionAdapter,
@@ -34,8 +34,8 @@ from robinhood_agent.supervised import (
 def test_human_external_signature_verification_and_tamper(monkeypatch):
     # Ephemeral TEST key only, outside the repository and erased on exit.
     # Production has no signing method/key and remains independently locked.
-    import robinhood_agent.supervised as module
-    from robinhood_agent.state import dumps
+    import tradebot.supervised as module
+    from tradebot.state import dumps
 
     binding = {"key": "synthetic-signature-test", "simulation": False, "expires": 1791208830}
     with tempfile.TemporaryDirectory() as directory:
@@ -86,7 +86,7 @@ def test_human_external_signature_verification_and_tamper(monkeypatch):
 def test_shadow_uses_same_risk_and_adapter_but_never_reviews_or_writes(tmp_path, monkeypatch):
     import time
 
-    from robinhood_agent.runner import cycle
+    from tradebot.runner import cycle
 
     clock = SimClock()
     monkeypatch.setattr(time, "time", clock)
@@ -552,7 +552,7 @@ def test_both_real_capability_gates_independent():
         with pytest.raises(Halt, match="disabled"):
             bridge.execution_call(name, {})
     assert bridge.serial == 0 and not bridge.calls
-    from robinhood_agent.supervised_cli import main as supervised_main
+    from tradebot.supervised_cli import main as supervised_main
 
     with pytest.raises(Halt, match="real SUPERVISED execution is disabled"):
         supervised_main(["submit", "--config", "does-not-exist"])

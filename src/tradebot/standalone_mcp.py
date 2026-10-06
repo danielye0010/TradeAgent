@@ -106,7 +106,7 @@ class StandaloneMCP:
             {
                 "protocolVersion": "2025-11-25",
                 "capabilities": {},
-                "clientInfo": {"name": "robinhood-agent", "version": "0.1.0"},
+                "clientInfo": {"name": "tradebot", "version": "0.1.0"},
             },
         )
         self.protocol = result.get("protocolVersion")

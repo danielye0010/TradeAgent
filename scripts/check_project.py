@@ -1,5 +1,6 @@
 """Check documentation links, deployment hashes, and upstream files."""
 
+import argparse
 import hashlib
 import json
 import re
@@ -13,6 +14,26 @@ def fingerprint(files):
     return hashlib.sha256(
         json.dumps(files, sort_keys=True, separators=(",", ":")).encode()
     ).hexdigest()
+
+
+def update_manifest():
+    """Hash source artifacts without reading operator config or runtime state."""
+    paths = [ROOT / name for name in (".gitignore", "LICENSE", "pyproject.toml")]
+    paths.extend((ROOT / "src").rglob("*.py"))
+    paths.extend((ROOT / "src").glob("*/contracts/*.json"))
+    paths.extend((ROOT / "tests").rglob("*.py"))
+    paths.extend((ROOT / "config").glob("*.example.json"))
+    paths.extend((ROOT / "config").glob("*.template.json"))
+    paths.extend((ROOT / "licenses").glob("*.txt"))
+    files = {
+        path.relative_to(ROOT).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in sorted(paths)
+        if "__pycache__" not in path.parts
+    }
+    manifest_path = ROOT / "docs/deployment_manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest.update(files=files, framework_sha256=fingerprint(files))
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
 
 
 def check():
@@ -89,4 +110,10 @@ def check():
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--update-manifest", action="store_true", help="regenerate deployment file hashes"
+    )
+    if parser.parse_args().update_manifest:
+        update_manifest()
     check()

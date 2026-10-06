@@ -1,46 +1,40 @@
 # Architecture
 
-The agent reads broker data, produces trade proposals, checks risk, executes approved orders, and reconciles the results.
-
-```mermaid
-flowchart TD
-    Data[Market / Account Data] --> Strategy
-    Strategy --> Risk
-    Risk --> Execution
-    Execution --> Broker
-    Broker --> State
-    State --> Data
-```
+TradeBot reads broker data, produces trade proposals, checks risk, executes approved orders, and reconciles the results.
 
 Strategies produce trade proposals. Risk checks account state, market conditions, and portfolio limits before execution can submit an order. Orders and reconciliation results are stored in SQLite.
 
-## MCP client
+## Broker clients
 
-[codex_bridge.py](../src/robinhood_agent/codex_bridge.py) connects through Codex app-server and its native OAuth session. It checks the official endpoint, tool annotations, and [pinned contracts](../src/robinhood_agent/contracts/official-1.6.2.json).
+The current integration uses Robinhood's official Trading MCP.
 
-[standalone_mcp.py](../src/robinhood_agent/standalone_mcp.py) implements Streamable HTTP using an external OAuth helper. It handles protocol/session negotiation and validates tool inputs and outputs. Both clients feed the broker adapter.
+[codex_bridge.py](../src/tradebot/codex_bridge.py) connects through Codex app-server and its native OAuth session. It checks the official endpoint, tool annotations, and [pinned contracts](../src/tradebot/contracts/official-1.6.2.json).
 
-## Broker normalization
+[standalone_mcp.py](../src/tradebot/standalone_mcp.py) implements Streamable HTTP using an external OAuth helper. It handles protocol/session negotiation and validates tool inputs and outputs. Both clients feed the broker adapter.
 
-[broker.py](../src/robinhood_agent/broker.py) collects paginated responses and converts accounts, cash, positions, orders, quotes, fills, and fees into shared types. Strategy, risk, and reconciliation use these normalized objects. Unknown schemas or inconsistent data stop the run.
+## Broker adapter
+
+[broker.py](../src/tradebot/broker.py) normalizes Robinhood data: it collects paginated responses and converts accounts, cash, positions, orders, quotes, fills, and fees into shared types. Strategy, risk, and reconciliation use these normalized objects. Unknown schemas or inconsistent data stop the run.
+
+Adding another broker would require its own client, contracts, normalization, and execution adapter. Strategies use normalized market and portfolio types.
 
 ## Strategy
 
-[strategy.py](../src/robinhood_agent/strategy.py) defines the strategy interface and the included EMA trend example. Strategies receive completed market bars and propose an instrument, side, quantity, and price. The proposal goes to risk checks before execution.
+[strategy.py](../src/tradebot/strategy.py) defines the strategy interface and the included EMA trend example. Strategies receive completed market bars and propose an instrument, side, quantity, and price. The proposal goes to risk checks before execution.
 
 ## Risk
 
-[risk.py](../src/robinhood_agent/risk.py) checks account eligibility, unleveraged cash, reserves, exposure, concentration, turnover, losses, exchange session, tradability, spread, and data freshness. [accounting.py](../src/robinhood_agent/accounting.py) tracks portfolio baselines and cash movements.
+[risk.py](../src/tradebot/risk.py) checks account eligibility, unleveraged cash, reserves, exposure, concentration, turnover, losses, exchange session, tradability, spread, and data freshness. [accounting.py](../src/tradebot/accounting.py) tracks portfolio baselines and cash movements.
 
 ## Execution
 
-[supervised.py](../src/robinhood_agent/supervised.py) implements review, exact approval binding, submission, and reconciliation. [policy.py](../src/robinhood_agent/policy.py) verifies signed account, deployment, config, strategy, risk, schema, and universe limits. [autonomous.py](../src/robinhood_agent/autonomous.py) reuses the lifecycle for policy-controlled execution; [standalone.py](../src/robinhood_agent/standalone.py) runs it through the direct client.
+[supervised.py](../src/tradebot/supervised.py) implements review, exact approval binding, submission, and reconciliation. [policy.py](../src/tradebot/policy.py) verifies signed account, deployment, config, strategy, risk, schema, and universe limits. [autonomous.py](../src/tradebot/autonomous.py) reuses the lifecycle for policy-controlled execution; [standalone.py](../src/tradebot/standalone.py) runs it through the direct client.
 
 Submission identity and authorization consumption are persisted before the broker request. A canary tracks separate opening and exit allowances.
 
 ## Persistence
 
-[state.py](../src/robinhood_agent/state.py) stores runs, intents, approvals, and events in SQLite. An OS process lock and a fenced database lease coordinate workers. JSONL is an export of the SQLite journal.
+[state.py](../src/tradebot/state.py) stores runs, intents, approvals, and events in SQLite. An OS process lock and a fenced database lease coordinate workers. JSONL is an export of the SQLite journal.
 
 `docs/deployment_manifest.json` records the deployed file hashes. Policy checks the manifest and signed deployment hash before real execution. Changing deployed files requires a new manifest and matching signed policy.
 

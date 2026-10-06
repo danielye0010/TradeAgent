@@ -4,8 +4,8 @@ from decimal import Decimal as D
 
 import pytest
 
-from robinhood_agent.broker import Broker
-from robinhood_agent.model import Config, Halt, Risk
+from tradebot.broker import Broker
+from tradebot.model import Config, Halt, Risk
 
 NOW = datetime(2026, 10, 5, 18, tzinfo=timezone.utc)
 

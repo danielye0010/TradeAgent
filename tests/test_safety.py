@@ -7,17 +7,17 @@ from types import SimpleNamespace
 
 import pytest
 
-from robinhood_agent.account_policy import POLICY
-from robinhood_agent.broker import Broker, utc_time
-from robinhood_agent.codex_bridge import READ_TOOLS, CodexBridge
-from robinhood_agent.execution import Execution
-from robinhood_agent.model import Config, Halt, Intent, Risk, Snapshot, dec
-from robinhood_agent.risk import check_order, check_state
-from robinhood_agent.runner import cycle
-from robinhood_agent.state import State
-from robinhood_agent.strategy import signal
-from robinhood_agent.vendor import run_lock
-from robinhood_agent.vendor.client import _parse_result
+from tradebot.account_policy import POLICY
+from tradebot.broker import Broker, utc_time
+from tradebot.codex_bridge import READ_TOOLS, CodexBridge
+from tradebot.execution import Execution
+from tradebot.model import Config, Halt, Intent, Risk, Snapshot, dec
+from tradebot.risk import check_order, check_state
+from tradebot.runner import cycle
+from tradebot.state import State
+from tradebot.strategy import signal
+from tradebot.vendor import run_lock
+from tradebot.vendor.client import _parse_result
 
 
 @pytest.fixture
