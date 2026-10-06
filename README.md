@@ -38,7 +38,7 @@ Use Linux or Ubuntu on WSL2, with the checkout on a local Linux filesystem. Pyth
 
 ```bash
 git clone https://github.com/danielye0010/robinhood-agent-public.git
-cd robinhood-agent
+cd robinhood-agent-public
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e ".[dev]"
