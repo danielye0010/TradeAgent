@@ -11,7 +11,7 @@
     "licenses/Oft3r-MIT.txt": "380775b4c1b3ec8ea691f8380e33c4f76be1c412c1444674a1b7c75af0a26797",
     "licenses/abiemann-MIT.txt": "43b87f35ac1a7d87c2a87caa4ffe37019927a1c2c2f9075bd35cf0176de7bdca",
     "licenses/cbangera2-MIT.txt": "82c7d6213c64ee4d1a906a7b5049f8d3959c481f42a63f0174534991136f2a0e",
-    "pyproject.toml": "7bad3468f88c52df78f7b8cafd6fc6c70c9a653ea1ee40bb449a4ad30c1a7184",
+    "pyproject.toml": "0ba6da4e1d23ec5591a6de827cfa7f8b841d69726428f7eb323e520f1b042aeb",
     "src/robinhood_agent/__init__.py": "f36f2104ca7039447a289bd91cc381deec3b31baa9f491528bad0e1589c7200d",
     "src/robinhood_agent/account_policy.py": "ac872bb24842f0defcb09960bfbd78d0dd94c52725835caa8df0a7e860114020",
     "src/robinhood_agent/accounting.py": "901e8f4d4682817402b54f5c2cc3d8c8fbf7ca514d3c207737a269b723450615",
@@ -60,5 +60,5 @@
     "tests/test_standalone.py": "6e5cbec8a6fdf61f780326c411f8d142f4adf187a0b36733cb1ed97e6299f570",
     "tests/test_supervised_contract.py": "ea9132b345522abe9f7a94a51ecea7c9351bdce8b4d83676debf9e1767733d51"
   },
-  "framework_sha256": "cc22beba94cad6746519794a431350947fbac0948b4098c522a78aadee0f4a70"
+  "framework_sha256": "fa8d2e8a554cabc2b0e1d32d66b32d2bdf9467dc9e5b47fca1992e6c84d197c3"
 }
