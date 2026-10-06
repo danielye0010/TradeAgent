@@ -1,18 +1,16 @@
-# Getting started
+# Getting Started
 
-Start with the synthetic demo. It exercises the same local journal and execution lifecycle without Codex, a Robinhood account, credentials, or real money.
+## Requirements
 
-## Environment
+- Python 3.11–3.14
+- Linux or Ubuntu on WSL2
+- Git, Python venv support, and `findmnt` from util-linux
 
-Use Linux or Ubuntu on WSL2. State uses POSIX process locks and `findmnt` from util-linux. The runtime supports local ext2/ext3/ext4, btrfs, or xfs filesystems. On WSL, clone under your Linux home directory, not a Windows-mounted or network drive. `/tmp` may be tmpfs and is unsuitable for execution state.
+Runtime state must live on a local Linux filesystem because the locking layer uses POSIX file locks. Supported filesystems are ext2/ext3/ext4, btrfs, and xfs. On WSL, use your Linux home directory. Windows mounts, network shares, and tmpfs are not supported for state.
 
-Package metadata requires Python 3.11 or newer. Local validation uses Python 3.14; the CI workflow tests that version on Linux. Older eligible interpreters are not claimed as tested. Native Windows and macOS execution are not supported by the state layer.
-
-Install Python's venv support if your distribution packages it separately. Git and internet access are needed for installation; runtime simulation itself is offline.
+Codex CLI and a Robinhood account are needed only for real-data runs. Installation downloads Python dependencies; the demo runs offline.
 
 ## Install
-
-From a new checkout:
 
 ```bash
 git clone https://github.com/danielye0010/robinhood-agent-public.git
@@ -23,33 +21,24 @@ python -m pip install -e ".[dev]"
 robinhood-agent validate
 ```
 
-The repository is private until separately released; cloning requires permission. `validate` checks local config structure, not account access or permission to trade. The JSON response includes `"valid": true` and `"mode": "SHADOW"`.
+The validation output includes `"valid": true` and `"mode": "SHADOW"`. Run commands from the repository root so the example configs are available.
 
-There is no PyPI release. Use the source checkout so public configs and deployment metadata remain available. The import package is `robinhood_agent`; the command is `robinhood-agent`.
-
-## Run and inspect the synthetic demo
+## Run the demo
 
 ```bash
 robinhood-agent simulate --demo-dir data/demo
 robinhood-agent inspect --config data/demo/inspect.example.json
 ```
 
-Expected results:
+The demo creates one synthetic equity order and one synthetic option order. Repeating the same decision is suppressed. The result includes `"account_and_orders": "SYNTHETIC"` and SQLite integrity `"ok"`.
 
-- `account_and_orders` is `SYNTHETIC` and `real_review_place_cancel_calls` is zero.
-- Both equity and option fixtures report one synthetic broker order and SQLite integrity `ok`.
-- A repeated decision is suppressed rather than submitted twice.
-- The inspection shows the equity demo runs and intent, rather than opening the default real-data journal.
+`data/demo/demonstration.json` contains the summary. The `equity/` and `option/` directories contain separate broker and agent journals. Inspection uses the generated config to show the equity demo's runs and intent.
 
-Artifacts live under `data/demo`: `demonstration.json`, an inspection config, and separate `equity` and `option` broker/agent journals. They are private local runtime files and ignored by Git. The option fixture proves only simulated infrastructure; it does not enable live options.
-
-If `data/demo` exists, choose a new name, such as `data/demo-2`, and use that name for both commands. Do not delete existing state just to repeat a demonstration.
+Use a new directory for each demo, such as `data/demo-2`, and use the same directory in the inspection command. Generated data is ignored by Git.
 
 ## Configuration
 
-`config/config.example.json` sets SHADOW mode, symbols, strategy version, target fraction, timeout, lease duration, and state directory. `config/risk.example.json` defines deterministic exposure, cash, turnover, loss, spread, and freshness limits. Examples contain no credentials or account IDs.
-
-For local settings, copy the examples to ignored paths:
+Copy the examples to local files:
 
 ```bash
 cp config/config.example.json config/config.local.json
@@ -57,13 +46,13 @@ cp config/risk.example.json config/risk.local.json
 robinhood-agent validate --config config/config.local.json --risk config/risk.local.json
 ```
 
-Use these paths explicitly on later commands. Changing `mode` or a strategy does not enroll a key or grant real execution. Keep SHADOW for onboarding. `small-balance-shadow.example.json` is a read-only single-symbol sizing fixture; `canary.example.json` and `canary-policy.template.json` serve deployment tests and review, not the no-account quickstart. The policy template is unsigned and expired by construction.
+The config sets mode, symbols, strategy version, target fraction, timeout, lease duration, and state directory. The risk config sets cash, exposure, turnover, loss, spread, and data-age limits. Pass both paths on subsequent commands. Local files are ignored by Git.
 
-## Connect the official MCP
+The other examples cover specific uses: `small-balance-shadow.example.json` selects a single symbol for whole-share sizing; `canary.example.json` configures a canary run; `canary-policy.template.json` shows the signed-policy fields. See [Deployment](deployment.md) for real execution requirements.
 
-This separate path accesses real account and market data. It requires an eligible Robinhood Agentic Trading account and a working Codex CLI in the same Linux environment. The native bridge was developed against Codex CLI 0.160.1 and pins official MCP server 1.6.2 contracts; compatibility with newer versions must be checked, not assumed.
+## Connect Robinhood
 
-Install Codex using its [official instructions](https://developers.openai.com/codex/cli). Then use the native browser authentication flow:
+Install [Codex CLI](https://developers.openai.com/codex/cli) in the same Linux environment. You need an eligible Robinhood Agentic Trading account.
 
 ```bash
 codex login
@@ -74,29 +63,30 @@ codex mcp get robinhood-trading
 robinhood-agent tools
 ```
 
-If the named server is already configured, inspect it with `codex mcp get` instead of adding it again. Complete sign-in directly in the provider's browser flow. Do not paste tokens into project files, terminal commands, or issue reports. See [official MCP configuration guidance](https://developers.openai.com/codex/extend/mcp).
+Complete authentication in the provider's browser flow. If `robinhood-trading` is already configured, use `codex mcp get` rather than adding it again. Credentials stay outside the project. See the [Codex MCP guide](https://developers.openai.com/codex/extend/mcp) for connection settings.
 
-`tools` checks authentication, official endpoint, tool annotations and pinned contracts. It can initialize local state at the configured state directory. Run it only against the state location intended for your own checkout. A failed contract or account check is a safety halt, not a reason to bypass validation.
+The native client uses Codex app-server and pinned Robinhood MCP 1.6.2 contracts. Check compatibility when upgrading Codex or the server. `tools` checks the connection and tool schemas; it also initializes the configured local state directory.
 
-When you deliberately want one real-data SHADOW evaluation:
+## Shadow mode
 
 ```bash
 robinhood-agent shadow
 robinhood-agent inspect
 ```
 
-SHADOW makes broker reads and records hypothetical decisions; it never reviews, places, or cancels orders. A rejected or absent proposal is a valid result. These two commands refer to the configured SHADOW journal, whereas demo inspection uses its generated config.
+Shadow mode reads real account and market data, evaluates the strategy and risk checks, and records hypothetical decisions. It never reviews, places, or cancels orders. No trade or a risk rejection is a normal result.
 
-## Common setup problems
+These commands use the configured state directory, which defaults to `data/`. Demo inspection uses its own generated config.
 
-| Symptom | Action |
+## Troubleshooting
+
+| Problem | What to check |
 | --- | --- |
-| Missing `venv` or `ensurepip` | Install the distribution's Python venv package, then create the environment again. |
+| Missing `venv` or `ensurepip` | Install your distribution's Python venv package. |
 | Missing `findmnt` | Install util-linux. |
-| Unsupported filesystem | Move a new checkout and its new demo to a supported Linux filesystem; preserve existing runtime data. |
-| Demo directory already exists | Choose a new demo directory and inspect that directory's generated config. |
-| Config missing | Run from the repository root or pass explicit `--config` and `--risk` paths. |
-| Authentication/contract halt | Verify native sign-in and official server compatibility; never copy another application's tokens. |
-| CLI exits with code 2 | Read the JSON halt reason and correct the cause without weakening risk or release controls. |
+| Unsupported filesystem | Use a local Linux checkout and a new demo directory. |
+| Demo directory already exists | Choose another directory and update the inspection path. |
+| Config file not found | Run from the repository root or pass `--config` and `--risk`. |
+| Authentication or schema error | Check Codex sign-in, the official endpoint, and server compatibility. |
 
-The SHADOW command returns 0 for a completed cycle, 2 for a safety halt, and 1 for an unexpected cycle failure. Do not automate retries on unknown submission state. Continue with [deployment and recovery](deployment.md).
+A completed shadow cycle exits with 0, a safety halt with 2, and an unexpected cycle failure with 1. Read the JSON error before rerunning. See [State and recovery](deployment.md#state-and-recovery) for interrupted orders.

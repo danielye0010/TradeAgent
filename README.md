@@ -1,40 +1,8 @@
 # Robinhood Agent
 
-A safety-oriented trading agent for Robinhood's official Trading MCP, with deterministic risk controls, durable execution state, and staged deployment.
+Robinhood Agent is a Python trading bot built on Robinhood's official Trading MCP. It supports local simulation, real-data shadow runs, account and order risk checks, and controlled equity execution.
 
-[![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-
-## Why this project
-
-Broker access alone does not make an agent reliable. A strategy proposes a trade; deterministic risk checks, signed execution policy, durable submission identity, and reconciliation decide whether it can proceed. This project provides that infrastructure. The bundled EMA strategy is an engineering example, not a proven investment strategy.
-
-## Features
-
-- A synthetic demo that needs no account, credentials, or money.
-- Official MCP integration and one-shot real-data SHADOW evaluation.
-- Separate strategy, risk, execution policy, and broker adapters.
-- Durable journals, fenced leases, and duplicate submission protection.
-- Recovery paths for interrupted execution and uncertain broker responses.
-- Signed, bounded deployment controls for deliberate equity releases.
-
-## How it works
-
-```mermaid
-flowchart TD
-    MCP[Official MCP / normalized market and account data] --> Strategy
-    Strategy --> Proposal[Advisory proposal]
-    Proposal --> Risk[Deterministic risk authority]
-    Risk --> Policy[Execution policy and release gates]
-    Policy --> Adapter[Broker adapter]
-    Adapter --> Reconcile[Reconciliation and durable state]
-    Reconcile --> Risk
-```
-
-Strategy output has no direct route to broker execution.
-
-## Quick start: no account required
-
-Use Linux or Ubuntu on WSL2, with the checkout on a local Linux filesystem. Python 3.11 or newer is required; see [environment support](docs/getting-started.md#environment).
+Try a trading cycle without a brokerage account:
 
 ```bash
 git clone https://github.com/danielye0010/robinhood-agent-public.git
@@ -43,43 +11,83 @@ python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e ".[dev]"
 
-robinhood-agent validate
 robinhood-agent simulate --demo-dir data/demo
 robinhood-agent inspect --config data/demo/inspect.example.json
 ```
 
-The demo creates synthetic equity and option fills, suppresses a duplicate decision, and writes a summary to `data/demo/demonstration.json`. No broker connection is made. Use a **new** demo directory on each run; prior evidence is never overwritten. [Getting started](docs/getting-started.md) explains the output and customization.
+The demo fills synthetic equity and option orders, suppresses a duplicate decision, and records the results locally. No brokerage account is required.
 
-The repository is currently private; cloning requires access. There is no published PyPI package.
+## Installation
 
-## Connect Robinhood
+Use Python 3.11–3.14 on Linux or Ubuntu on WSL2. Keep the checkout and runtime state on a local Linux filesystem.
 
-The optional real-data path uses Codex CLI and its native Robinhood OAuth connection. Credentials stay with the authentication provider, outside this repository. Connect and authenticate personally, then check the guarded connection and run a one-shot SHADOW cycle. Follow [Connect the official MCP](docs/getting-started.md#connect-the-official-mcp) before doing so.
+Install from a source checkout with the commands above, then check your configuration:
+
+```bash
+robinhood-agent validate
+```
+
+See [Getting Started](docs/getting-started.md) for requirements and setup help.
+
+## Features
+
+- Official Robinhood Trading MCP integration
+- Synthetic local trading demo
+- Real-data shadow mode
+- Deterministic account and order risk checks
+- SQLite execution journal and recovery
+- Duplicate submission protection
+- Signed controls for real equity execution
+
+The included EMA strategy is a configurable example. Trading results depend on your strategy, market conditions, and costs.
+
+## Using Robinhood
+
+Connect Robinhood through Codex CLI's browser login, then run a shadow cycle:
+
+```bash
+robinhood-agent tools
+robinhood-agent shadow
+robinhood-agent inspect
+```
+
+Follow [Connect Robinhood](docs/getting-started.md#connect-robinhood) to set up the official MCP connection first. Shadow mode reads account and market data but never sends orders.
 
 ## Operating modes
 
-| Stage | What it does | Real broker writes |
-| --- | --- | --- |
-| Simulation | Synthetic fills, journals, and duplicate suppression | None |
-| SHADOW | Real account/market reads and hypothetical decisions | None |
-| Supervised / canary | Equity lifecycle with exact approval or bounded signed policy | Requires a deliberate release and enrolled verification key |
-| Limited autonomous equity | Reusable signed limits and strict classification/reconciliation | Gated; no default live release |
+| Mode | Use |
+| --- | --- |
+| Simulation | Run synthetic orders and inspect local results. |
+| Shadow | Evaluate trades using real account and market data without submitting orders. |
+| Supervised / canary | Execute equities with signed approval or a bounded signed policy. |
+| Limited autonomous equity | Run within a signed policy's account, instrument, and trading limits. |
 
-## Current status
+Real execution requires a signed policy or approval and an enrolled public verification key. The default configuration uses shadow mode; production keys are not enrolled. Live options are not supported.
 
-Simulation and real-data SHADOW are supported. Real equity execution infrastructure is implemented but fails closed without an enrolled key and valid deployment policy. Live options and unattended production are not supported by default. [Deployment](docs/deployment.md#current-state) is the authoritative status and release guide.
+See [Deployment](docs/deployment.md) for setup and recovery.
 
 ## Documentation
 
-- [Getting started](docs/getting-started.md): installation, demo, configuration, and connection.
-- [Architecture](docs/architecture.md): transport, risk, state, and execution boundaries.
-- [Safety](docs/safety.md): invariants and failure handling.
-- [Deployment](docs/deployment.md): stages, release requirements, and recovery.
+- [Getting Started](docs/getting-started.md) — install, run the demo, and connect Robinhood
+- [Architecture](docs/architecture.md) — clients, strategy, risk, execution, and state
+- [Safety](docs/safety.md) — risk checks and order recovery
+- [Deployment](docs/deployment.md) — modes, real execution requirements, and operations
 
-## Contributing
+## Development
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for local checks and change expectations, and [SECURITY.md](SECURITY.md) for sensitive reports. Original project code is licensed under [Apache-2.0](LICENSE); vendored components retain their [MIT notices](THIRD_PARTY.md).
+Install the development dependencies with `python -m pip install -e ".[dev]"`, then run:
 
-## Trading risk
+```bash
+python -m pytest -q
+ruff check src tests scripts
+ruff format --check src tests scripts
+python -m build
+```
 
-Trading can lose money. Simulation demonstrates infrastructure behavior, not profitability or live readiness. Review the code, limits, and operational requirements before connecting an account. This independent project is not affiliated with or endorsed by Robinhood Markets, Inc.
+Tests and CI use synthetic brokers. See [Contributing](CONTRIBUTING.md) for the full checks and [Security](SECURITY.md) for sensitive reports.
+
+## License
+
+Original code is licensed under [Apache-2.0](LICENSE). Reused components retain their [MIT licenses](THIRD_PARTY.md).
+
+Trading involves risk and can lose money. Robinhood Agent is an independent project and is not affiliated with or endorsed by Robinhood Markets, Inc.

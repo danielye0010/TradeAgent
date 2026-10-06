@@ -1,4 +1,4 @@
-"""Schema-verified two-phase supervision. Production transport is milestone-locked."""
+"""Two-phase order review, submission, and reconciliation."""
 
 import base64
 import json

@@ -6,7 +6,7 @@ from dataclasses import asdict, replace
 from pathlib import Path
 
 import pytest
-from test_predeployment import artifact, facts, histories, tiny_snapshot
+from test_release_policy import artifact, facts, histories, tiny_snapshot
 
 from robinhood_agent.canary import CanarySelector
 from robinhood_agent.cli import main

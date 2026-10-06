@@ -46,7 +46,7 @@ def main(argv=None):
         if args.command == "simulate":
             from .demo import run_demo
 
-            directory = args.demo_dir or Path(config.state_dir) / "pre-funding" / (
+            directory = args.demo_dir or Path(config.state_dir) / "simulations" / (
                 "simulation-" + datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
             )
             result = run_demo(directory, args.read_evidence)

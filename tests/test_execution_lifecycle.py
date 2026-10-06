@@ -554,7 +554,7 @@ def test_both_real_capability_gates_independent():
     assert bridge.serial == 0 and not bridge.calls
     from robinhood_agent.supervised_cli import main as supervised_main
 
-    with pytest.raises(Halt, match="CLI milestone gate"):
+    with pytest.raises(Halt, match="real SUPERVISED execution is disabled"):
         supervised_main(["submit", "--config", "does-not-exist"])
 
 

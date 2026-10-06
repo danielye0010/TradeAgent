@@ -1,4 +1,4 @@
-"""Check reusable project links, deployment integrity, and source-artifact privacy."""
+"""Check documentation links, deployment hashes, and upstream files."""
 
 import hashlib
 import json
@@ -17,7 +17,7 @@ def fingerprint(files):
 
 def check():
     errors = []
-    manifest = json.loads((ROOT / "docs/FRAMEWORK_FREEZE.json").read_text())
+    manifest = json.loads((ROOT / "docs/deployment_manifest.json").read_text())
     for name, expected in manifest["files"].items():
         path = ROOT / name
         if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != expected:
@@ -85,7 +85,7 @@ def check():
                     errors.append(f"broken anchor: {path.relative_to(ROOT)} -> {target}")
     if errors:
         raise SystemExit("\n".join(errors))
-    print("Project links, deployment manifest, provenance and source-artifact scan passed.")
+    print("Project checks passed.")
 
 
 if __name__ == "__main__":

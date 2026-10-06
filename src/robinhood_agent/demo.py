@@ -1,4 +1,4 @@
-"""One-shot pre-funding demonstration. Every write uses a synthetic local MCP broker."""
+"""Run a local trading demonstration with a synthetic MCP broker."""
 
 import copy
 import json
@@ -31,7 +31,7 @@ def run_demo(directory: Path, read_evidence: Path | None = None):
     c = Config(mode="SUPERVISED", supervised_enabled=True)
     r = Risk()
     result = {
-        "milestone": "PRE_FUNDING_ONLY",
+        "mode": "SIMULATION",
         "real_review_place_cancel_calls": 0,
         "account_and_orders": "SYNTHETIC",
         "strategy_validation": "TEST_STRATEGY_NOT_VALIDATED_FOR_LIVE_TRADING",
@@ -39,7 +39,7 @@ def run_demo(directory: Path, read_evidence: Path | None = None):
     if read_evidence:
         evidence = json.loads(read_evidence.read_text())
         if evidence["real_review_place_cancel_calls"] != 0:
-            raise Halt("read-only evidence violated the milestone")
+            raise Halt("read-only input contains broker write calls")
         result["real_read_connectivity"] = {
             k: evidence[k]
             for k in (

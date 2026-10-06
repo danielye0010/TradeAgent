@@ -2,7 +2,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import pytest
-from test_predeployment import histories, tiny_snapshot
+from test_release_policy import histories, tiny_snapshot
 
 from robinhood_agent.canary import CanarySelector, nasdaq_common_reference
 from robinhood_agent.model import Config, Halt, Risk, dec

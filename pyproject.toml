@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "robinhood-agent"
 version = "0.1.0"
-description = "Safety-oriented trading infrastructure for the official Robinhood Trading MCP"
+description = "Python trading bot for Robinhood's official Trading MCP"
 readme = "README.md"
 license = "Apache-2.0 AND MIT"
 classifiers = [

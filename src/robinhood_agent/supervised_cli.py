@@ -21,7 +21,7 @@ from .supervised import (
 def require_cli_release():
     # Independent from release.require_real_release and native transport. Future
     # authorization must explicitly release BOTH barriers; there is no config flag.
-    raise Halt("CLI milestone gate: real SUPERVISED execution has not been released")
+    raise Halt("real SUPERVISED execution is disabled")
 
 
 def read_intent(path, broker):

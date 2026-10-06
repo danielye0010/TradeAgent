@@ -35,7 +35,7 @@ def require_autonomous_release(phase=None):
 
 def deployment_hash(root):
     root = Path(root)
-    manifest = json.loads((root / "docs/FRAMEWORK_FREEZE.json").read_text())
+    manifest = json.loads((root / "docs/deployment_manifest.json").read_text())
     expected = manifest["files"]
     for name, sha in expected.items():
         if hashlib.sha256((root / name).read_bytes()).hexdigest() != sha:

@@ -444,7 +444,7 @@ def test_deployment_freeze_tamper_and_untracked_source(tmp_path):
     sha = hashlib.sha256(
         json.dumps(files, sort_keys=True, separators=(",", ":")).encode()
     ).hexdigest()
-    (tmp_path / "docs/FRAMEWORK_FREEZE.json").write_text(
+    (tmp_path / "docs/deployment_manifest.json").write_text(
         json.dumps({"files": files, "framework_sha256": sha})
     )
     assert deployment_hash(tmp_path) == sha
