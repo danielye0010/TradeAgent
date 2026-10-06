@@ -1,0 +1,6 @@
+include .gitignore README.md LICENSE THIRD_PARTY.md CONTRIBUTING.md SECURITY.md AGENTS.md
+recursive-include config *.example.json *.template.json
+recursive-include docs *.md *.json
+recursive-include scripts *.py
+recursive-include tests *.py
+recursive-include licenses *.txt

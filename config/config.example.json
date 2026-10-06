@@ -1,0 +1,12 @@
+{
+  "version": "1",
+  "mode": "SHADOW",
+  "supervised_enabled": false,
+  "live_enabled": false,
+  "strategy_version": "oft3r-trend-test-v1",
+  "target_fraction": "0.05",
+  "lease_seconds": 1200,
+  "request_timeout_seconds": 60,
+  "state_dir": "data",
+  "allowed_symbols": ["SPY", "QQQ", "IWM"]
+}

@@ -1,0 +1,14 @@
+{
+  "version": "small-balance-shadow-2026-10-06-v1",
+  "mode": "SUPERVISED",
+  "supervised_enabled": true,
+  "live_enabled": false,
+  "strategy_version": "infrastructure-canary-v1",
+  "target_fraction": "0.05",
+  "lease_seconds": 1200,
+  "request_timeout_seconds": 60,
+  "state_dir": "data",
+  "allowed_symbols": [
+    "OPEN"
+  ]
+}

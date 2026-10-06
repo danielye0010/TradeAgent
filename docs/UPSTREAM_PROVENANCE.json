@@ -1,0 +1,21 @@
+{
+  "verification": {
+    "run_lock_exact_bytes": true,
+    "exceptions_exact_bytes": true,
+    "ema_exact_function_ast": true,
+    "trend_exact_function_ast": true
+  },
+  "files": {
+    "src/robinhood_agent/vendor/__init__.py": "412865018dd7461a5546ed0ae9eee25a4cf422d8c4e89f9e0f12826a73ff63f7",
+    "src/robinhood_agent/vendor/client.py": "6ad9fea81058edbb090af744bca6b1e86e3aa43fef2cb892498e8aa1e955038d",
+    "src/robinhood_agent/vendor/exceptions.py": "cf5e04b286b970765228287940b62d72b1fd5d4f163f95377c2bf6ca363d998c",
+    "src/robinhood_agent/vendor/indicators.py": "0d161f00c57f72f6ec99de99bd49ce2d074ef85c854a1fadac72892e2eefe181",
+    "src/robinhood_agent/vendor/run_lock.py": "3c606fc3280196c182b20d9fb2e63a29aab5fa3eccd002c8c0e4a6decec6f3a0",
+    "src/robinhood_agent/vendor/trend.py": "04eac1dad150cfaccaad3c095da02e7ccfc96de4c6b8fcc0e33d7ab6e34f3355"
+  },
+  "licenses": {
+    "licenses/Oft3r-MIT.txt": "380775b4c1b3ec8ea691f8380e33c4f76be1c412c1444674a1b7c75af0a26797",
+    "licenses/abiemann-MIT.txt": "43b87f35ac1a7d87c2a87caa4ffe37019927a1c2c2f9075bd35cf0176de7bdca",
+    "licenses/cbangera2-MIT.txt": "82c7d6213c64ee4d1a906a7b5049f8d3959c481f42a63f0174534991136f2a0e"
+  }
+}

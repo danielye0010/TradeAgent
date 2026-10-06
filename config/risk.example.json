@@ -1,0 +1,13 @@
+{
+  "version": "1",
+  "max_positions": 5,
+  "max_position_fraction": "0.20",
+  "max_new_exposure_fraction": "0.10",
+  "min_cash_fraction": "0.20",
+  "daily_loss_halt_fraction": "0.02",
+  "max_daily_turnover_fraction": "0.20",
+  "max_data_age_seconds": 120,
+  "max_history_age_seconds": 604800,
+  "max_spread_fraction": "0.005",
+  "review_price_tolerance_fraction": "0.01"
+}

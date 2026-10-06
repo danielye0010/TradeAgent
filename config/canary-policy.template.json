@@ -1,0 +1,47 @@
+{
+  "policy": {
+    "version": "autonomous-equity-grant-v1",
+    "grant_id": "REPLACE_EXTERNALLY_WITH_UNIQUE_CANARY_ID",
+    "phase": "CANARY",
+    "issued_at": 0,
+    "expires_at": 0,
+    "context": {
+      "account_digest": "REPLACE_WITH_VERIFIED_CONTEXT",
+      "deployment_version": "REPLACE_WITH_VERIFIED_CONTEXT",
+      "deployment_hash": "REPLACE_WITH_VERIFIED_CONTEXT",
+      "strategy_id": "REPLACE_WITH_VERIFIED_CONTEXT",
+      "strategy_hash": "REPLACE_WITH_VERIFIED_CONTEXT",
+      "config_hash": "REPLACE_WITH_VERIFIED_CONTEXT",
+      "risk_hash": "REPLACE_WITH_VERIFIED_CONTEXT",
+      "schema_hash": "REPLACE_WITH_VERIFIED_CONTEXT",
+      "universe_rules_hash": "REPLACE_WITH_VERIFIED_CONTEXT",
+      "universe_evidence_hash": "REPLACE_WITH_VERIFIED_CONTEXT"
+    },
+    "limits": {
+      "max_order_notional": "3",
+      "max_order_fraction": "0.03",
+      "max_single_name_fraction": "0.03",
+      "max_portfolio_fraction": "0.03",
+      "min_cash_fraction": "0.97",
+      "max_positions": 1,
+      "max_daily_turnover_fraction": "0.06",
+      "daily_loss_halt_fraction": "0.02",
+      "max_drawdown_fraction": "0.10",
+      "max_quote_age_seconds": 120,
+      "max_book_age_seconds": 120,
+      "max_book_future_skew_seconds": 0.25,
+      "max_spread_fraction": "0.005",
+      "min_depth_shares": 1000
+    },
+    "asset_class": "equity",
+    "long_only": true,
+    "no_leverage": true,
+    "allowed_session": "XNYS_REGULAR",
+    "order_type": "limit",
+    "time_in_force": "gfd",
+    "max_canary_buys": 1,
+    "max_canary_sells": 1
+  },
+  "simulation": false,
+  "signature": "UNSIGNED_TEMPLATE_NOT_AUTHORIZATION"
+}
