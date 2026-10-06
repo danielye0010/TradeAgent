@@ -8,17 +8,17 @@ from pathlib import Path
 import pytest
 from test_release_policy import artifact, facts, histories, tiny_snapshot
 
-from tradebot.canary import CanarySelector
-from tradebot.cli import main
-from tradebot.model import Config, Halt, Risk, digest
-from tradebot.policy import GrantContext, PolicyGuard, PolicyLimits, PolicySignature
-from tradebot.release import require_real_release
-from tradebot.simulator import SimClock, SimulatedMCP
-from tradebot.standalone import run_policy_once
-from tradebot.standalone_mcp import ExternalOAuthToken, StandaloneMCP
-from tradebot.standalone_reference import STATUS_URL, action_rows
-from tradebot.state import State
-from tradebot.supervised import OfficialExecutionAdapter
+from tradeagent.canary import CanarySelector
+from tradeagent.cli import main
+from tradeagent.model import Config, Halt, Risk, digest
+from tradeagent.policy import GrantContext, PolicyGuard, PolicyLimits, PolicySignature
+from tradeagent.release import require_real_release
+from tradeagent.simulator import SimClock, SimulatedMCP
+from tradeagent.standalone import run_policy_once
+from tradeagent.standalone_mcp import ExternalOAuthToken, StandaloneMCP
+from tradeagent.standalone_reference import STATUS_URL, action_rows
+from tradeagent.state import State
+from tradeagent.supervised import OfficialExecutionAdapter
 
 
 @contextmanager
@@ -213,7 +213,7 @@ def test_limited_run_once_does_not_force_positive_signal(tmp_path, monkeypatch):
 
 
 def test_direct_transport_never_redirects_retries_or_calls_codex(monkeypatch):
-    import tradebot.standalone_mcp as module
+    import tradeagent.standalone_mcp as module
 
     sends = []
 
@@ -245,7 +245,7 @@ def test_direct_transport_never_redirects_retries_or_calls_codex(monkeypatch):
 
 
 def test_before_send_runs_after_token_and_can_stop_network(monkeypatch):
-    import tradebot.standalone_mcp as module
+    import tradeagent.standalone_mcp as module
 
     order = []
 
@@ -265,7 +265,7 @@ def test_before_send_runs_after_token_and_can_stop_network(monkeypatch):
         order.append("token")
         return "SYNTHETIC_TOKEN"
 
-    from tradebot.standalone_mcp import WireAuthorization
+    from tradeagent.standalone_mcp import WireAuthorization
 
     permit = WireAuthorization(
         None, None, "synthetic", "place_equity_order", digest({}), None, None, None
@@ -331,9 +331,9 @@ def test_real_signed_boundary_fails_closed_with_synthetic_key(tmp_path, monkeypa
     import hashlib
     import subprocess
 
-    import tradebot.policy as module
-    from tradebot.model import Intent, dec
-    from tradebot.state import dumps
+    import tradeagent.policy as module
+    from tradeagent.model import Intent, dec
+    from tradeagent.state import dumps
 
     with runtime(tmp_path, monkeypatch) as (_run, sim, state, clock, simulated):
         private, public, msg, sig = (
@@ -412,8 +412,8 @@ def test_real_signed_boundary_fails_closed_with_synthetic_key(tmp_path, monkeypa
 def test_direct_json_and_sse_catalog_initialization_without_codex(monkeypatch):
     import io
 
-    import tradebot.standalone_mcp as module
-    from tradebot.schema import Contracts
+    import tradeagent.standalone_mcp as module
+    from tradeagent.schema import Contracts
 
     calls = []
     pins = Contracts()
@@ -483,9 +483,9 @@ def test_new_execution_boundary_with_actual_synthetic_signature_no_network(
     import hashlib
     import subprocess
 
-    import tradebot.policy as module
-    from tradebot.standalone_mcp import StandaloneExecutionTransport
-    from tradebot.state import dumps
+    import tradeagent.policy as module
+    from tradeagent.standalone_mcp import StandaloneExecutionTransport
+    from tradeagent.state import dumps
 
     with runtime(tmp_path, monkeypatch) as (_run, sim, state, clock, simulated):
         private, public, msg, sig = (
@@ -584,7 +584,7 @@ def test_new_execution_boundary_with_actual_synthetic_signature_no_network(
 
 
 def test_raw_transport_callback_is_not_a_release_bypass(monkeypatch):
-    import tradebot.standalone_mcp as module
+    import tradeagent.standalone_mcp as module
 
     def prohibited(*args, **kwargs):
         raise AssertionError("network touched")

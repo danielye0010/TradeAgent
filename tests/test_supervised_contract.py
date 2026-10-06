@@ -4,10 +4,10 @@ from decimal import Decimal as D
 
 import pytest
 
-from tradebot import state as state_module
-from tradebot.execution import Execution
-from tradebot.model import Config, Halt, Intent, Risk, Snapshot, digest
-from tradebot.state import State
+from tradeagent import state as state_module
+from tradeagent.execution import Execution
+from tradeagent.model import Config, Halt, Intent, Risk, Snapshot, digest
+from tradeagent.state import State
 
 
 @pytest.mark.parametrize("receipt", ["timeout", "ack_only", "filled"])

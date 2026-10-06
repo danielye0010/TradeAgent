@@ -1,7 +1,7 @@
 # Contributor instructions
 
-TradeBot connects strategies to broker adapters with risk checks,
-signed execution controls, and durable order state. Read README and the four
+TradeAgent connects strategies to broker adapters with risk checks,
+signed execution controls, and durable execution state. Read README and the four
 guides in docs before changing a component.
 
 - Preserve strategy, account eligibility, sizing, risk, execution, reconciliation,

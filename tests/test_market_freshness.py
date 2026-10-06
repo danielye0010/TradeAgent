@@ -4,8 +4,8 @@ from datetime import timedelta
 import pytest
 from test_broker_contract import NOW, RawReadFake
 
-from tradebot.broker import Broker
-from tradebot.model import (
+from tradeagent.broker import Broker
+from tradeagent.model import (
     MAX_FUTURE_SKEW_SECONDS,
     Config,
     Halt,
@@ -14,7 +14,7 @@ from tradebot.model import (
     dec,
     timestamp_fresh,
 )
-from tradebot.risk import check_order, check_state
+from tradeagent.risk import check_order, check_state
 
 
 @pytest.mark.parametrize(
@@ -113,8 +113,8 @@ def test_quote_skew_remains_bounded_and_account_future_timestamp_remains_strict(
 def test_synthetic_shadow_with_skew_records_intent_and_zero_broker_writes(tmp_path, monkeypatch):
     import time
 
-    from tradebot.runner import cycle
-    from tradebot.state import State
+    from tradeagent.runner import cycle
+    from tradeagent.state import State
 
     monkeypatch.setattr(time, "time", lambda: NOW.timestamp())
     raw, config, risk, _ = snapshot_with_book_offset(0.125)

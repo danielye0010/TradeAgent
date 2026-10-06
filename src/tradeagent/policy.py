@@ -354,7 +354,7 @@ def grant_context(root, adapter, config, risk, facts, selector):
         "predeployment-policy-v1",
         deployment_hash(root),
         config.strategy_version,
-        hashlib.sha256((root / "src/tradebot/strategy.py").read_bytes()).hexdigest(),
+        hashlib.sha256((root / "src/tradeagent/strategy.py").read_bytes()).hexdigest(),
         digest(asdict(config)),
         digest(asdict(risk)),
         adapter.contracts.hash,

@@ -5,13 +5,13 @@ from pathlib import Path
 import pytest
 from test_broker_contract import NOW, RawReadFake
 
-from tradebot.account_policy import POLICY, capital, eligible
-from tradebot.broker import Broker
-from tradebot.model import Config, Halt, Risk, dec, load_config
-from tradebot.risk import check_order
-from tradebot.simulator import SimClock, funded_snapshot
-from tradebot.strategy import STATUS, StrategySignal
-from tradebot.strategy import TestTrendStrategy as TrendStrategy
+from tradeagent.account_policy import POLICY, capital, eligible
+from tradeagent.broker import Broker
+from tradeagent.model import Config, Halt, Risk, dec, load_config
+from tradeagent.risk import check_order
+from tradeagent.simulator import SimClock, funded_snapshot
+from tradeagent.strategy import STATUS, StrategySignal
+from tradeagent.strategy import TestTrendStrategy as TrendStrategy
 
 
 @pytest.mark.parametrize(
@@ -33,8 +33,8 @@ def test_midnight_utc_daily_candle_is_incomplete_until_exchange_close(hour, expe
 def test_small_funded_shadow_records_no_broker_writes_and_suppresses_repeat(tmp_path, monkeypatch):
     import time
 
-    from tradebot.runner import cycle
-    from tradebot.state import State
+    from tradeagent.runner import cycle
+    from tradeagent.state import State
 
     monkeypatch.setattr(time, "time", lambda: NOW.timestamp())
     bridge = RawReadFake()

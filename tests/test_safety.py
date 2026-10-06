@@ -7,17 +7,17 @@ from types import SimpleNamespace
 
 import pytest
 
-from tradebot.account_policy import POLICY
-from tradebot.broker import Broker, utc_time
-from tradebot.codex_bridge import READ_TOOLS, CodexBridge
-from tradebot.execution import Execution
-from tradebot.model import Config, Halt, Intent, Risk, Snapshot, dec
-from tradebot.risk import check_order, check_state
-from tradebot.runner import cycle
-from tradebot.state import State
-from tradebot.strategy import signal
-from tradebot.vendor import run_lock
-from tradebot.vendor.client import _parse_result
+from tradeagent.account_policy import POLICY
+from tradeagent.broker import Broker, utc_time
+from tradeagent.codex_bridge import READ_TOOLS, CodexBridge
+from tradeagent.execution import Execution
+from tradeagent.model import Config, Halt, Intent, Risk, Snapshot, dec
+from tradeagent.risk import check_order, check_state
+from tradeagent.runner import cycle
+from tradeagent.state import State
+from tradeagent.strategy import signal
+from tradeagent.vendor import run_lock
+from tradeagent.vendor.client import _parse_result
 
 
 @pytest.fixture

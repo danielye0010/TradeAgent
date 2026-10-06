@@ -1,27 +1,28 @@
-# TradeBot
+# TradeAgent
 
-A Python trading system for simulation, shadow trading, and controlled live execution.
+Open-source Python trading agent with deterministic risk controls,
+shadow trading, durable execution state, and broker reconciliation.
 
 [Getting Started](docs/getting-started.md) ·
 [Architecture](docs/architecture.md) ·
 [Deployment](docs/deployment.md)
 
-TradeBot separates strategy, risk management, execution, and broker reconciliation.
-It includes a local simulator, live-data shadow mode, persistent execution state,
-and controlled live equity trading.
+TradeAgent supports local simulation, live-market shadow trading, and
+controlled equity execution. The current broker integration uses
+Robinhood's official Trading MCP.
 
 ## Quick Start
 
 ```bash
-git clone https://github.com/danielye0010/tradebot.git
-cd tradebot
+git clone https://github.com/danielye0010/tradeagent.git
+cd tradeagent
 
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e ".[dev]"
 
-tradebot simulate --demo-dir data/demo
-tradebot inspect --config data/demo/inspect.example.json
+tradeagent simulate --demo-dir data/demo
+tradeagent inspect --config data/demo/inspect.example.json
 ```
 
 This runs a complete synthetic trading cycle locally. No brokerage account is required.
@@ -33,12 +34,12 @@ for installation and configuration.
 ## Features
 
 - Local equity and options simulation
-- Live-data shadow trading
+- Live-market shadow trading
 - Deterministic portfolio and order risk controls
 - Persistent SQLite execution state
 - Duplicate-order protection and recovery
 - Broker reconciliation after interrupted submissions
-- Signed controls for live equity execution
+- Controlled live equity execution
 
 ## Architecture
 
@@ -58,7 +59,7 @@ reconciliation and recovery. See [Architecture](docs/architecture.md) for the mo
 
 ## Broker Integration
 
-The current broker adapter uses Robinhood's official Trading MCP.
+The current broker integration uses Robinhood's official Trading MCP.
 
 See [Getting Started](docs/getting-started.md#connect-robinhood) for connection
 and shadow-mode setup.
@@ -74,12 +75,17 @@ See [Deployment](docs/deployment.md) for supervised, canary, and limited autonom
 equity operation. The included EMA strategy is an example with no established live
 performance record.
 
-## Documentation
+## Shadow Trading
 
-- [Getting Started](docs/getting-started.md) — installation, demo, and broker setup
-- [Architecture](docs/architecture.md) — strategy, risk, execution, and integrations
-- [Safety](docs/safety.md) — risk controls and order recovery
-- [Deployment](docs/deployment.md) — operating modes, state, and recovery
+Shadow trading reads live account and market data and records decisions without
+sending orders. After [connecting the broker](docs/getting-started.md#connect-robinhood), run:
+
+```bash
+tradeagent shadow
+tradeagent inspect
+```
+
+See [Safety](docs/safety.md) for deterministic risk controls and broker reconciliation.
 
 ## Development
 
@@ -100,4 +106,4 @@ full checks and [Security](SECURITY.md) for sensitive reports.
 Original code is licensed under [Apache-2.0](LICENSE). Reused components retain
 their [MIT licenses](THIRD_PARTY.md). Trading involves risk and can lose money.
 
-TradeBot is an independent project and is not affiliated with or endorsed by Robinhood Markets, Inc.
+TradeAgent is an independent project and is not affiliated with or endorsed by Robinhood Markets, Inc.

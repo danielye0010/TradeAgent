@@ -11,19 +11,19 @@ from pathlib import Path
 
 import pytest
 
-from tradebot.account_policy import POLICY, capital, eligible
-from tradebot.accounting import Accounting
-from tradebot.calendar import regular_session
-from tradebot.codex_bridge import CodexBridge
-from tradebot.model import Config, Halt, Intent, Risk, dec
-from tradebot.options import OptionIntent, OptionsReader, check_option_order, normalize_order
-from tradebot.risk import check_order, check_state
-from tradebot.schema import Contracts
-from tradebot.simulator import SimClock, SimulatedMCP, funded_snapshot
-from tradebot.state import State
-from tradebot.strategy import STATUS
-from tradebot.strategy import TestTrendStrategy as TrendStrategy
-from tradebot.supervised import (
+from tradeagent.account_policy import POLICY, capital, eligible
+from tradeagent.accounting import Accounting
+from tradeagent.calendar import regular_session
+from tradeagent.codex_bridge import CodexBridge
+from tradeagent.model import Config, Halt, Intent, Risk, dec
+from tradeagent.options import OptionIntent, OptionsReader, check_option_order, normalize_order
+from tradeagent.risk import check_order, check_state
+from tradeagent.schema import Contracts
+from tradeagent.simulator import SimClock, SimulatedMCP, funded_snapshot
+from tradeagent.state import State
+from tradeagent.strategy import STATUS
+from tradeagent.strategy import TestTrendStrategy as TrendStrategy
+from tradeagent.supervised import (
     HumanApproval,
     NativeExecutionTransport,
     OfficialExecutionAdapter,
@@ -34,8 +34,8 @@ from tradebot.supervised import (
 def test_human_external_signature_verification_and_tamper(monkeypatch):
     # Ephemeral TEST key only, outside the repository and erased on exit.
     # Production has no signing method/key and remains independently locked.
-    import tradebot.supervised as module
-    from tradebot.state import dumps
+    import tradeagent.supervised as module
+    from tradeagent.state import dumps
 
     binding = {"key": "synthetic-signature-test", "simulation": False, "expires": 1791208830}
     with tempfile.TemporaryDirectory() as directory:
@@ -86,7 +86,7 @@ def test_human_external_signature_verification_and_tamper(monkeypatch):
 def test_shadow_uses_same_risk_and_adapter_but_never_reviews_or_writes(tmp_path, monkeypatch):
     import time
 
-    from tradebot.runner import cycle
+    from tradeagent.runner import cycle
 
     clock = SimClock()
     monkeypatch.setattr(time, "time", clock)
@@ -552,7 +552,7 @@ def test_both_real_capability_gates_independent():
         with pytest.raises(Halt, match="disabled"):
             bridge.execution_call(name, {})
     assert bridge.serial == 0 and not bridge.calls
-    from tradebot.supervised_cli import main as supervised_main
+    from tradeagent.supervised_cli import main as supervised_main
 
     with pytest.raises(Halt, match="real SUPERVISED execution is disabled"):
         supervised_main(["submit", "--config", "does-not-exist"])

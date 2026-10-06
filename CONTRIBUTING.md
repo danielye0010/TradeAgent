@@ -23,7 +23,7 @@ Update docs for user-facing changes. Refresh the deployment manifest when deploy
 
 ## Reporting bugs
 
-Open an [issue](https://github.com/danielye0010/tradebot/issues) with the version, environment, expected result, and a synthetic reproducer. Remove credentials, account details, order receipts, and personal paths. Follow [Security](SECURITY.md) for sensitive issues.
+Open an [issue](https://github.com/danielye0010/tradeagent/issues) with the version, environment, expected result, and a synthetic reproducer. Remove credentials, account details, order receipts, and personal paths. Follow [Security](SECURITY.md) for sensitive issues.
 
 After changing source, tests, public configs, dependencies, or licenses, regenerate
 `docs/deployment_manifest.json` with `python scripts/check_project.py --update-manifest`.

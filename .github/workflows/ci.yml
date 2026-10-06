@@ -31,9 +31,9 @@ jobs:
       - run: python -m pytest -q
       - name: Demo
         run: |
-          tradebot validate
-          tradebot simulate --demo-dir work/ci-demo > work/ci-demo-output.json
-          tradebot inspect --config work/ci-demo/inspect.example.json
+          tradeagent validate
+          tradeagent simulate --demo-dir work/ci-demo > work/ci-demo-output.json
+          tradeagent inspect --config work/ci-demo/inspect.example.json
 
   quality:
     runs-on: ubuntu-24.04
@@ -49,7 +49,7 @@ jobs:
       - run: ruff check src tests scripts
       - run: ruff format --check src tests scripts
       - run: python -m compileall -q src
-      - run: python -c "import tradebot"
+      - run: python -c "import tradeagent"
       - run: python scripts/check_project.py
 
   package:

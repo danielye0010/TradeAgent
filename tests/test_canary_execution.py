@@ -7,13 +7,13 @@ from test_broker_contract import NOW, RawReadFake
 from test_execution_lifecycle import approval, equity, harness
 from test_release_policy import facts, histories, tiny_snapshot
 
-from tradebot.broker import Broker
-from tradebot.canary import CanarySelector, canary_known_action_check
-from tradebot.codex_bridge import SERVER, CodexBridge
-from tradebot.model import MAX_FUTURE_SKEW_SECONDS, Config, Halt, Intent, Risk, dec
-from tradebot.risk import check_order
-from tradebot.schema import Contracts
-from tradebot.simulator import SimClock
+from tradeagent.broker import Broker
+from tradeagent.canary import CanarySelector, canary_known_action_check
+from tradeagent.codex_bridge import SERVER, CodexBridge
+from tradeagent.model import MAX_FUTURE_SKEW_SECONDS, Config, Halt, Intent, Risk, dec
+from tradeagent.risk import check_order
+from tradeagent.schema import Contracts
+from tradeagent.simulator import SimClock
 
 
 def receipt_snapshot(monkeypatch, offset):
@@ -25,7 +25,7 @@ def receipt_snapshot(monkeypatch, offset):
         def now(cls, tz=None):
             return datetime.fromtimestamp(next(moments), tz)
 
-    monkeypatch.setattr("tradebot.broker.datetime", ReceiptClock)
+    monkeypatch.setattr("tradeagent.broker.datetime", ReceiptClock)
     raw = RawReadFake()
     stamp = datetime.fromtimestamp(receipt + offset, timezone.utc).isoformat()
     quote = raw.payloads["get_equity_quotes"]["results"][0]["quote"]
@@ -64,7 +64,7 @@ def test_validation_receipt_calendar_still_blocks_after_close(monkeypatch):
         def now(cls, tz=None):
             return next(moments).astimezone(tz)
 
-    monkeypatch.setattr("tradebot.broker.datetime", ReceiptClock)
+    monkeypatch.setattr("tradeagent.broker.datetime", ReceiptClock)
     raw = RawReadFake()
     quote = raw.payloads["get_equity_quotes"]["results"][0]["quote"]
     quote["venue_last_trade_time"] = start.isoformat()

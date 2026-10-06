@@ -14,12 +14,12 @@ from pathlib import Path
 import pytest
 from test_broker_contract import NOW, RawReadFake
 
-from tradebot.autonomous import AutonomousCanaryLifecycle, AutonomousPolicyLifecycle
-from tradebot.broker import Broker
-from tradebot.canary import CanarySelector, InstrumentFacts
-from tradebot.health import health_report
-from tradebot.model import Config, Halt, Intent, Risk, dec, digest
-from tradebot.policy import (
+from tradeagent.autonomous import AutonomousCanaryLifecycle, AutonomousPolicyLifecycle
+from tradeagent.broker import Broker
+from tradeagent.canary import CanarySelector, InstrumentFacts
+from tradeagent.health import health_report
+from tradeagent.model import Config, Halt, Intent, Risk, dec, digest
+from tradeagent.policy import (
     GRANT_VERSION,
     GrantContext,
     PolicyGuard,
@@ -28,9 +28,9 @@ from tradebot.policy import (
     deployment_hash,
     require_autonomous_release,
 )
-from tradebot.simulator import SimClock, SimulatedMCP, funded_snapshot
-from tradebot.state import State, dumps
-from tradebot.supervised import OfficialExecutionAdapter
+from tradeagent.simulator import SimClock, SimulatedMCP, funded_snapshot
+from tradeagent.state import State, dumps
+from tradeagent.supervised import OfficialExecutionAdapter
 
 
 def tiny_snapshot(clock, symbols=("TINY",)):
@@ -470,7 +470,7 @@ def test_sqlite_interrupted_transaction_rolls_back(tmp_path):
 
 def test_second_process_and_killed_process_preserve_lease(tmp_path):
     directory = tmp_path / "locked"
-    program = "from pathlib import Path; from tradebot.state import State; import sys,time; s=State(Path(sys.argv[1]));\nwith s.lock(60):\n print('LOCKED',flush=True); time.sleep(30)"
+    program = "from pathlib import Path; from tradeagent.state import State; import sys,time; s=State(Path(sys.argv[1]));\nwith s.lock(60):\n print('LOCKED',flush=True); time.sleep(30)"
     process = subprocess.Popen(
         [sys.executable, "-c", program, str(directory)],
         stdout=subprocess.PIPE,
@@ -497,7 +497,7 @@ def test_second_process_and_killed_process_preserve_lease(tmp_path):
 
 
 def test_policy_signature_valid_tamper_and_wrong_key(tmp_path, monkeypatch):
-    import tradebot.policy as module
+    import tradeagent.policy as module
 
     private, public, message, sig = (
         tmp_path / x for x in ("private.pem", "public.pem", "message", "signature")
@@ -586,7 +586,7 @@ def test_canary_history_does_not_accept_unvalidated_bars(fault):
 
 
 def test_local_health_cli_readonly_and_persistent_halt(tmp_path, monkeypatch):
-    from tradebot.health import halt_entries
+    from tradeagent.health import halt_entries
 
     with harness(tmp_path, monkeypatch) as (e, sim, s, _c):
         before = s.path.read_bytes()
@@ -604,7 +604,7 @@ def test_local_health_cli_readonly_and_persistent_halt(tmp_path, monkeypatch):
 
 def test_raw_official_fill_fee_reconciles_through_production_lifecycle(tmp_path, monkeypatch):
     # Real wire normalizer, synthetic raw official data, no execution transport.
-    from tradebot.supervised import SupervisedLifecycle
+    from tradeagent.supervised import SupervisedLifecycle
 
     raw = RawReadFake()
 

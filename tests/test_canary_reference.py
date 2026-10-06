@@ -4,9 +4,9 @@ from zoneinfo import ZoneInfo
 import pytest
 from test_release_policy import histories, tiny_snapshot
 
-from tradebot.canary import CanarySelector, nasdaq_common_reference
-from tradebot.model import Config, Halt, Risk, dec
-from tradebot.simulator import SimClock
+from tradeagent.canary import CanarySelector, nasdaq_common_reference
+from tradeagent.model import Config, Halt, Risk, dec
+from tradeagent.simulator import SimClock
 
 NOW = datetime(2026, 10, 6, 12, 30, tzinfo=ZoneInfo("America/New_York")).timestamp()
 HEADER = (

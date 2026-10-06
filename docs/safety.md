@@ -10,7 +10,7 @@ Stable decision identifiers and unique submission references prevent a repeated 
 
 ## Interrupted submissions
 
-If a submission times out after the request may have reached the broker, TradeBot records it as unresolved and reconciles the existing broker order. It does not automatically replay the request. Acknowledgements, partial fills, and final fills are handled separately.
+If a submission times out after the request may have reached the broker, TradeAgent records it as unresolved and reconciles the existing broker order. It does not automatically replay the request. Acknowledgements, partial fills, and final fills are handled separately.
 
 ## Runtime state
 
