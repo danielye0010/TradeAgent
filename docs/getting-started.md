@@ -2,7 +2,7 @@
 
 ## Requirements
 
-- Python 3.11–3.14
+- Python 3.12–3.14
 - Linux or Ubuntu on WSL2
 - Git, Python venv support, and `findmnt` from util-linux
 

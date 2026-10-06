@@ -19,7 +19,7 @@ The demo fills synthetic equity and option orders, suppresses a duplicate decisi
 
 ## Installation
 
-Use Python 3.11–3.14 on Linux or Ubuntu on WSL2. Keep the checkout and runtime state on a local Linux filesystem.
+Use Python 3.12–3.14 on Linux or Ubuntu on WSL2. Keep the checkout and runtime state on a local Linux filesystem.
 
 Install from a source checkout with the commands above, then check your configuration:
 

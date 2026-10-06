@@ -16,7 +16,7 @@ classifiers = [
   "Topic :: Office/Business :: Financial :: Investment",
 ]
 
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = ["exchange-calendars==4.13.2", "jsonschema==4.26.0"]
 license-files = ["LICENSE", "licenses/*.txt"]
 
