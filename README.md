@@ -1,7 +1,6 @@
 # TradeAgent
 
-Open-source Python trading agent with deterministic risk controls,
-shadow trading, durable execution state, and broker reconciliation.
+TradeAgent is a full-stack trading agent that takes you from strategy to live execution.
 
 [Getting Started](docs/getting-started.md) ·
 [Architecture](docs/architecture.md) ·
