@@ -25,8 +25,15 @@ come from the existing exchange-calendars XNYS dependency.
 
 The default isolated adapter calls only Alpaca's historical market-data endpoint
 `https://data.alpaca.markets/v2/stocks/bars`, using raw SIP 1-minute bars.
-It reads `APCA_API_KEY_ID` and `APCA_API_SECRET_KEY` from the environment;
-it does not open authentication files or call broker/account/trading APIs.
+It first reads `APCA_API_KEY_ID` and `APCA_API_SECRET_KEY` from the environment.
+When either is missing and uncached real data is needed, an interactive terminal
+prompts only for missing values. Both inputs are hidden, including the key ID.
+Credentials remain in process memory; they are never printed, written to files,
+caches or SQLite, copied into the environment, or fingerprinted.
+Non-interactive runs with missing credentials return an actionable REVIEW summary
+without waiting for input. Failure to disable echo cancels input before fallback.
+Cached or supplied data does not prompt. No authentication files or
+broker/account/trading APIs are accessed.
 No extra dependency is needed. Missing credentials produce a REVIEW summary with no database and an explicit reason;
 implementation and fixture validation do not require credentials.
 

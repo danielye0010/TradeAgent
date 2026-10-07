@@ -1,7 +1,10 @@
 """Commissioning-only minute data boundary; no account or trading endpoints."""
 
+import getpass
 import json
 import os
+import sys
+import warnings
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -13,6 +16,38 @@ from urllib.request import Request, urlopen
 from .domain import Bar, canonical, identity, iso, timestamp
 
 
+def alpaca_credentials():
+    """Environment first, otherwise terminal-only hidden input; never persist values."""
+    key, secret = os.getenv("APCA_API_KEY_ID"), os.getenv("APCA_API_SECRET_KEY")
+    if key and secret:
+        return key, secret
+    guidance = (
+        "historical data unavailable: missing Alpaca market-data credentials; "
+        "run replay-history in an interactive terminal for hidden input, "
+        "set APCA_API_KEY_ID/APCA_API_SECRET_KEY, or supply --input cached minute data"
+    )
+    if not sys.stdin.isatty() or not sys.stderr.isatty():
+        raise ValueError(guidance)
+    try:
+        with warnings.catch_warnings():
+            # getpass otherwise falls back to echoing input when terminal control fails.
+            warnings.simplefilter("error", getpass.GetPassWarning)
+            if not key:
+                key = getpass.getpass("Alpaca API Key ID (hidden): ")
+            if not key:
+                raise ValueError(guidance)
+            if not secret:
+                secret = getpass.getpass("Alpaca API Secret (hidden): ")
+    except (getpass.GetPassWarning, EOFError, KeyboardInterrupt, OSError):
+        raise ValueError(
+            "historical data unavailable: hidden credential input unavailable or canceled; "
+            "use an interactive terminal with echo control or environment credentials"
+        ) from None
+    if not secret:
+        raise ValueError(guidance)
+    return key, secret
+
+
 class HistorySource(Protocol):
     def fetch(self, symbols, start, end) -> dict: ...
 
@@ -21,12 +56,7 @@ class AlpacaHistory:
     """Raw SIP bars, timestamped by minute START; availability is an assumption."""
 
     def fetch(self, symbols, start, end):
-        key, secret = os.getenv("APCA_API_KEY_ID"), os.getenv("APCA_API_SECRET_KEY")
-        if not key or not secret:
-            raise ValueError(
-                "historical data unavailable: set APCA_API_KEY_ID/APCA_API_SECRET_KEY "
-                "for market data only, or supply --input cached minute data"
-            )
+        key, secret = alpaca_credentials()
         pages, bars, token = [], [], None
         while True:
             params = {
@@ -51,6 +81,10 @@ class AlpacaHistory:
             except HTTPError as exc:
                 # Do not echo credential headers or vendor error bodies.
                 raise ValueError(f"historical market-data HTTP {exc.code}") from None
+            except OSError as exc:
+                raise ValueError(
+                    f"historical market-data request failed ({type(exc).__name__})"
+                ) from None
             pages.append(page)
             for symbol, values in (page.get("bars") or {}).items():
                 for item in values:

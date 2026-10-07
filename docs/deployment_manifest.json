@@ -48,7 +48,7 @@
     "src/tradeagent/research/evolution.py": "097f76735f54a3d463727d302c3653dcc45a93a1f62bc283dbbdccfa363fd426",
     "src/tradeagent/research/expressions.py": "b8d1d93958b71a2405646cda47dc3ac8f86a3b67365107f86b9106c3fe7914d6",
     "src/tradeagent/research/feedback.py": "9f2200e4a14572e4c1029189d81d6e8c5d7d5b8206bd941e88a518c2c0016c36",
-    "src/tradeagent/research/history_data.py": "c5a53c0c1b48af4049fbb828c815500c4d7036bfd00134eb7a734f776dc534df",
+    "src/tradeagent/research/history_data.py": "3c7533f0bda994d8b32bfac3790f70e69392048553b9eaeaef098cb5183a3174",
     "src/tradeagent/research/lab.py": "98af87dae40f2d9a73cf4a85341f7dc517da4772b56a07f3d8de443e1c274458",
     "src/tradeagent/research/learning.py": "e3ab8458ae14850fb1dfd4039640ec25d366673a2ba9a9044a4ebe63d5b22f62",
     "src/tradeagent/research/market.py": "b616f8cab65a13378eac1a7fef97f24e957b2d242ce18b879aa14616f0909060",
@@ -79,6 +79,7 @@
     "tests/test_commissioning.py": "83b54169dd739c0f8653d4a1d63a28cb184892cf6038277ef8a4a4e6c0d922da",
     "tests/test_contract_pins.py": "099c3be87dc2b96cdbc54ed9ccd7bd64ea139d700e9ec6a7c64e8ca498860b84",
     "tests/test_execution_lifecycle.py": "c8594a21bc1f0e1668774bb94a5512ab69dcd487ef71bc99184fa9990d4a5508",
+    "tests/test_history_auth.py": "fc5a37aef6c236b7768d4ac7b9232cf052175cdf00caf108e427562645fa6048",
     "tests/test_market_freshness.py": "d4100c767168cdc1c42b244c9d1d95ba52ebd538dbc627592f560f4aad3e291b",
     "tests/test_onboarding.py": "dc4ba00657f8c2000771d389cf31fe77136434c91ee796b6e49f3cb161bb4583",
     "tests/test_release_policy.py": "406a8f771658e1815cecbab48293b497ac95fd05751f1b5fa726f079629bbf7a",
@@ -88,5 +89,5 @@
     "tests/test_standalone.py": "aff198185b7235300e5acd61575a9f1b214bcbd44d02b92ec25c2715839447d0",
     "tests/test_supervised_contract.py": "60bf5ed95f5fe2143faa634b9dd80c7198521f05cdca3a95abdc1e5af5e9aa3c"
   },
-  "framework_sha256": "c15a62ef85411f216d26509ef514497e85fc026d112ba6b921373ae03505feca"
+  "framework_sha256": "3a9426b40911d9d8d12bbde2de88af5543f56573bc451c15802c0d932890ceb8"
 }
