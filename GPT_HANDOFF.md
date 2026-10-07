@@ -4,12 +4,15 @@
 
 - Starting TradeAgent `main`: `167397fe66ff342e65b97e8b503f5fe76839430f`, clean.
 - Frozen annotated tag: `v0.1-execution-core`, pushed to origin at that commit.
-- Development branch: `rsi-v0.2`; never merged into `main`.
+- Development branch: [rsi-v0.2](https://github.com/danielye0010/TradeAgent/tree/rsi-v0.2); never merged into `main`.
+- Draft [PR #1](https://github.com/danielye0010/TradeAgent/pull/1) targets main and remains unmerged.
 - Implementation commit: `9c9b051f72a10f67033ec94f34d984ca80fdb5a7` — prediction-first
   RSI loop and isolated v0.1 execution controls.
 - Documentation/demo commit: `39c103e66e3248bd08a01d22ab5978a281077255`.
-- This handoff is the final logical commit. Its exact SHA is available from
-  `git rev-parse HEAD` and the completion message; embedding its own SHA is impossible.
+- Handoff commit: `c06d6fa68b7196ded643ed6cd43addd6c1479c49`.
+- Remote README edit `78d17e76c503b76c816277668b6d8c5c35b175a3` was preserved by
+  merging origin/main into rsi-v0.2, including its full-stack product tagline.
+  This did not merge rsi-v0.2 into main. Final HEAD is in the completion receipt.
 - Canonical repository: [danielye0010/TradeAgent](https://github.com/danielye0010/TradeAgent).
   Actual work was done in the existing WSL TradeAgent checkout, not the incomplete
   Windows export configured as the app project. The older private development

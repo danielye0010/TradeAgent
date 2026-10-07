@@ -1,6 +1,8 @@
 # TradeAgent
 
-TradeAgent is a self-improving short-horizon trading research and execution system.
+TradeAgent is a full-stack trading agent that takes you from strategy to live execution.
+
+Its v0.2 core is a self-improving short-horizon trading research and execution system.
 It evaluates a population of quantitative strategies, records prospective predictions
 and outcomes, learns which versions work in which regimes, and creates challengers
 for later out-of-sample comparison. Selected forecasts can be expressed through
