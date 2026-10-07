@@ -40,6 +40,10 @@
     "src/tradeagent/legacy/supervised_cli.py": "2e998c255edcc01d5645114c8f5fbb9c7f3adac5bbfe708ae9f9696a144790b9",
     "src/tradeagent/model.py": "7cb091ce279096232d52a49a4082b26f2d0693d2f820514d35b6b22d3d6a9ff8",
     "src/tradeagent/options.py": "ad85b4b3662947d3bd4a9ccfd1a76326e88751b4091d1208d34537f3f20c50a8",
+    "src/tradeagent/prospective/__init__.py": "ec6da6bc1a0b0d491b3deb49ab9ffb0f967de702e9cd2ce560c2132b98399d9b",
+    "src/tradeagent/prospective/access.py": "8a2e79855862bc8123a28f85f4227dc05c8fae55ee39853eb10bce3df6360f0e",
+    "src/tradeagent/prospective/collector.py": "16dfaa231b94029bd35d338c4c46ffd0e0528cee9f06821391430fba4d0b5a4c",
+    "src/tradeagent/prospective/service.py": "9b979a79c073a4ea0e2706121be3515e1144e5e699852837ac4945cf6167c8c7",
     "src/tradeagent/research/__init__.py": "c6b7d096648fdf0a1eb0233cbdf078da4a4fa3e2549e0da9f8f6a83b713ec464",
     "src/tradeagent/research/agent_market.py": "ed70ddf7f4ede46db7dbe9b78cf9e6140b989d95e5fdd4b5748c9b7a356d306b",
     "src/tradeagent/research/attribution.py": "29f6844442b8b1bc29072ee904203a311d7b8f3b092e2f2d7a18297390b604f0",
@@ -83,6 +87,7 @@
     "tests/test_history_auth.py": "fc5a37aef6c236b7768d4ac7b9232cf052175cdf00caf108e427562645fa6048",
     "tests/test_market_freshness.py": "d4100c767168cdc1c42b244c9d1d95ba52ebd538dbc627592f560f4aad3e291b",
     "tests/test_onboarding.py": "dc4ba00657f8c2000771d389cf31fe77136434c91ee796b6e49f3cb161bb4583",
+    "tests/test_prospective.py": "0ba0cb0d87266123f0ccb376e7a1281e50ee385af4d29281f569e1a43c067f84",
     "tests/test_release_policy.py": "406a8f771658e1815cecbab48293b497ac95fd05751f1b5fa726f079629bbf7a",
     "tests/test_research_integrity.py": "7e23af828a9974495d97824e92300aa262a7d3a89d2e69245dee4b4f18358106",
     "tests/test_research_loop.py": "bd863a6df5f40260072dac426bb4041dfb9fa2df2d02ae278bc36c2820478b72",
@@ -90,5 +95,5 @@
     "tests/test_standalone.py": "aff198185b7235300e5acd61575a9f1b214bcbd44d02b92ec25c2715839447d0",
     "tests/test_supervised_contract.py": "60bf5ed95f5fe2143faa634b9dd80c7198521f05cdca3a95abdc1e5af5e9aa3c"
   },
-  "framework_sha256": "7cf83c19965a0539117b3e8c2e52963be0e75583b52c7714f3cc7281e9556d9e"
+  "framework_sha256": "b14b225a30643f2c71d41ae6a248a03fdbc64340cdfbf550e974d3a5fee2ef01"
 }
