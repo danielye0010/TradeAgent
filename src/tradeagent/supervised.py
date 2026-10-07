@@ -89,7 +89,7 @@ class NativeExecutionTransport:
         self.contracts = Contracts()
 
     def invoke(self, name, arguments):
-        from .release import require_real_release
+        from .legacy.release import require_real_release
 
         require_real_release()  # Broker capability gate; no Config option overrides it.
         return self.bridge.execution_call(name, arguments)

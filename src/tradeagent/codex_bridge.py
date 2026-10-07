@@ -295,7 +295,7 @@ class CodexBridge:
         return contracts.validate(name, parsed, "outputSchema")
 
     def execution_call(self, name, arguments):
-        from .release import require_real_release
+        from .legacy.release import require_real_release
 
         require_real_release()  # Independent of Config, CLI and caller-supplied tokens.
         from .schema import Contracts

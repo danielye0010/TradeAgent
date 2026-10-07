@@ -8,15 +8,15 @@ from pathlib import Path
 import pytest
 from test_release_policy import artifact, facts, histories, tiny_snapshot
 
-from tradeagent.canary import CanarySelector
-from tradeagent.cli import main
+from tradeagent.legacy.canary import CanarySelector
+from tradeagent.legacy.policy import GrantContext, PolicyGuard, PolicyLimits, PolicySignature
+from tradeagent.legacy.release import require_real_release
+from tradeagent.legacy.standalone import run_policy_once
+from tradeagent.legacy.standalone_cli import main
+from tradeagent.legacy.standalone_reference import STATUS_URL, action_rows
 from tradeagent.model import Config, Halt, Risk, digest
-from tradeagent.policy import GrantContext, PolicyGuard, PolicyLimits, PolicySignature
-from tradeagent.release import require_real_release
 from tradeagent.simulator import SimClock, SimulatedMCP
-from tradeagent.standalone import run_policy_once
 from tradeagent.standalone_mcp import ExternalOAuthToken, StandaloneMCP
-from tradeagent.standalone_reference import STATUS_URL, action_rows
 from tradeagent.state import State
 from tradeagent.supervised import OfficialExecutionAdapter
 
@@ -331,7 +331,7 @@ def test_real_signed_boundary_fails_closed_with_synthetic_key(tmp_path, monkeypa
     import hashlib
     import subprocess
 
-    import tradeagent.policy as module
+    import tradeagent.legacy.policy as module
     from tradeagent.model import Intent, dec
     from tradeagent.state import dumps
 
@@ -483,7 +483,7 @@ def test_new_execution_boundary_with_actual_synthetic_signature_no_network(
     import hashlib
     import subprocess
 
-    import tradeagent.policy as module
+    import tradeagent.legacy.policy as module
     from tradeagent.standalone_mcp import StandaloneExecutionTransport
     from tradeagent.state import dumps
 

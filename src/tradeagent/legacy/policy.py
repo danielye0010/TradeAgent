@@ -9,8 +9,8 @@ import tempfile
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from .model import MAX_FUTURE_SKEW_SECONDS, Halt, Intent, dec, digest
-from .state import dumps
+from ..model import MAX_FUTURE_SKEW_SECONDS, Halt, Intent, dec, digest
+from ..state import dumps
 
 AUTONOMOUS_PUBLIC_KEY_SHA256 = None
 MAX_GRANT_LIFETIME_SECONDS = 7 * 86400
@@ -290,7 +290,7 @@ class PolicyGuard:
         notional = intent.quantity * intent.limit_price
         if notional > min(dec(limit.max_order_notional), nav * dec(limit.max_order_fraction)):
             raise Halt("grant per-order exposure")
-        from .model import timestamp_fresh
+        from ..model import timestamp_fresh
 
         for times in (snapshot.quote_times, snapshot.bid_times, snapshot.ask_times):
             if not timestamp_fresh(
@@ -354,7 +354,7 @@ def grant_context(root, adapter, config, risk, facts, selector):
         "predeployment-policy-v1",
         deployment_hash(root),
         config.strategy_version,
-        hashlib.sha256((root / "src/tradeagent/strategy.py").read_bytes()).hexdigest(),
+        hashlib.sha256((root / "src/tradeagent/legacy/strategy.py").read_bytes()).hexdigest(),
         digest(asdict(config)),
         digest(asdict(risk)),
         adapter.contracts.hash,

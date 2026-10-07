@@ -14,12 +14,11 @@ from pathlib import Path
 import pytest
 from test_broker_contract import NOW, RawReadFake
 
-from tradeagent.autonomous import AutonomousCanaryLifecycle, AutonomousPolicyLifecycle
 from tradeagent.broker import Broker
-from tradeagent.canary import CanarySelector, InstrumentFacts
 from tradeagent.health import health_report
-from tradeagent.model import Config, Halt, Intent, Risk, dec, digest
-from tradeagent.policy import (
+from tradeagent.legacy.autonomous import AutonomousCanaryLifecycle, AutonomousPolicyLifecycle
+from tradeagent.legacy.canary import CanarySelector, InstrumentFacts
+from tradeagent.legacy.policy import (
     GRANT_VERSION,
     GrantContext,
     PolicyGuard,
@@ -28,6 +27,7 @@ from tradeagent.policy import (
     deployment_hash,
     require_autonomous_release,
 )
+from tradeagent.model import Config, Halt, Intent, Risk, dec, digest
 from tradeagent.simulator import SimClock, SimulatedMCP, funded_snapshot
 from tradeagent.state import State, dumps
 from tradeagent.supervised import OfficialExecutionAdapter
@@ -497,7 +497,7 @@ def test_second_process_and_killed_process_preserve_lease(tmp_path):
 
 
 def test_policy_signature_valid_tamper_and_wrong_key(tmp_path, monkeypatch):
-    import tradeagent.policy as module
+    import tradeagent.legacy.policy as module
 
     private, public, message, sig = (
         tmp_path / x for x in ("private.pem", "public.pem", "message", "signature")

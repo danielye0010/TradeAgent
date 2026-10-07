@@ -9,9 +9,9 @@ from html.parser import HTMLParser
 from urllib.parse import urlencode, urlsplit
 from zoneinfo import ZoneInfo
 
-from .broker import data, rows
+from ..broker import data, rows
+from ..model import Halt
 from .canary import NASDAQ_DIRECTORY_URL, canary_known_action_check, nasdaq_common_reference
-from .model import Halt
 
 STATUS_URL = "https://www.nasdaqtrader.com/Trader.aspx?id=nasdaq-security-status-updates"
 EX_DATE_URL = "https://www.nasdaqtrader.com/Trader.aspx?id=nasdaq-ex-date"

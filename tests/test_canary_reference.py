@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo
 import pytest
 from test_release_policy import histories, tiny_snapshot
 
-from tradeagent.canary import CanarySelector, nasdaq_common_reference
+from tradeagent.legacy.canary import CanarySelector, nasdaq_common_reference
 from tradeagent.model import Config, Halt, Risk, dec
 from tradeagent.simulator import SimClock
 

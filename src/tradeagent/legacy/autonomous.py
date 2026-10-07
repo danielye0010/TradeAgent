@@ -5,9 +5,9 @@ from dataclasses import asdict
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from .model import Halt, digest
+from ..model import Halt, digest
+from ..supervised import SupervisedLifecycle
 from .policy import require_autonomous_release
-from .supervised import SupervisedLifecycle
 
 
 class GrantDecisionVerifier:

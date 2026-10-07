@@ -2,15 +2,15 @@
 
 from dataclasses import asdict
 
-from .model import Halt, digest
+from ..model import Halt, digest
 
 MILESTONE = "SIGNED_CANARY_ONLY"
 
 
 def require_real_release(guard=None, intent=None, snapshot=None, baseline=None):
-    from .calendar import regular_session
+    from ..calendar import regular_session
+    from ..risk import check_order
     from .policy import PolicyGuard, require_autonomous_release
-    from .risk import check_order
 
     if type(guard) is not PolicyGuard or guard.simulation is not False:
         raise Halt("real broker execution capability disabled: signed production guard required")

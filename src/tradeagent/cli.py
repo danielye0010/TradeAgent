@@ -1,83 +1,109 @@
-"""One-shot CLI. SHADOW default; autonomous writes require a pinned signed policy."""
+"""One-shot prediction lab. Live execution is a separate legacy library boundary."""
 
 import argparse
 import json
+import sqlite3
 import sys
-from datetime import datetime, timezone
+import time
 from pathlib import Path
 
-from .broker import Broker
-from .codex_bridge import CodexBridge
-from .model import Halt, load_config
-from .runner import cycle
-from .state import State
+from .research.domain import MarketSnapshot
+from .research.evolution import evolve_weekly, retire
+from .research.feedback import import_feedback
+from .research.lab import scan, seed
+from .research.learning import learn_daily, retire_lesson
+from .research.outcomes import resolve
+from .research.store import Experience
 
 
 def main(argv=None):
     supplied = list(sys.argv[1:] if argv is None else argv)
-    if supplied and supplied[0] in {"canary-buy", "canary-exit", "run-once"}:
-        from .standalone_cli import main as standalone_main
+    if supplied and (
+        supplied[0] in {"validate", "tools", "shadow", "simulate", "execution"}
+        or (supplied[0] == "inspect" and "--config" in supplied)
+    ):
+        from .legacy.cli import main as execution_main
 
-        return standalone_main(supplied)
+        return execution_main(supplied[1:] if supplied[0] == "execution" else supplied)
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["validate", "tools", "shadow", "inspect", "simulate"])
-    parser.add_argument("--config", type=Path, default=Path("config/config.example.json"))
-    parser.add_argument("--risk", type=Path, default=Path("config/risk.example.json"))
-    parser.add_argument("--demo-dir", type=Path)
-    parser.add_argument("--read-evidence", type=Path)
-    args = parser.parse_args(argv)
-    state = None
+    parser.add_argument(
+        "command",
+        choices=[
+            "init",
+            "scan",
+            "resolve",
+            "learn-daily",
+            "evolve-weekly",
+            "inspect",
+            "demo",
+            "retire",
+            "retire-lesson",
+            "import-execution",
+        ],
+    )
+    parser.add_argument("--state-dir", type=Path, default=Path("data/research"))
+    parser.add_argument("--input", type=Path)
+    parser.add_argument("--proposal", type=Path)
+    parser.add_argument("--demo-dir", type=Path, default=Path("data/rsi-demo"))
+    parser.add_argument(
+        "--evidence-kind", choices=["prospective", "synthetic"], default="prospective"
+    )
+    parser.add_argument("--max-selected", type=int, default=3)
+    parser.add_argument("--strategy-id")
+    parser.add_argument("--version")
+    parser.add_argument("--reason")
+    parser.add_argument("--lesson-id")
+    args = parser.parse_args(supplied)
+    store = None
     try:
-        config, risk = load_config(args.config, args.risk)
-        if args.command == "validate":
-            print(
-                json.dumps(
-                    {
-                        "valid": True,
-                        "mode": config.mode,
-                        "production_broker": "read-only",
-                        "scheduler": "absent",
-                    }
-                )
-            )
-            return 0
-        if config.mode != "SHADOW":
-            raise Halt("CLI permits SHADOW only in this release")
-        if args.command == "simulate":
-            from .demo import run_demo
+        if args.command == "demo":
+            from .research.demo import run_demo
 
-            directory = args.demo_dir or Path(config.state_dir) / "simulations" / (
-                "simulation-" + datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-            )
-            result = run_demo(directory, args.read_evidence)
-            print(json.dumps(result, indent=2, default=str, allow_nan=False))
-            return 0
-        state = State(Path(config.state_dir))
-        if args.command == "inspect":
-            report = {
-                table: [dict(row) for row in state.db.execute(f"SELECT * FROM {table}")]
-                for table in ("runs", "intents", "baseline")
-            }
-            report["integrity"] = state.db.execute("PRAGMA integrity_check").fetchone()[0]
-            print(json.dumps(report, indent=2))
-            return 0
-        with CodexBridge(Path.cwd(), config.request_timeout_seconds) as bridge:
-            if args.command == "tools":
-                print(
-                    json.dumps(
-                        {"auth": bridge.auth_status, "effective_tools": sorted(bridge.tools)}
-                    )
-                )
-                return 0
-            result = cycle(Broker(bridge, config, risk), state, config, risk)
-            print(json.dumps(result, indent=2, default=str, allow_nan=False))
-            return {"completed": 0, "halted": 2, "failed": 1}[result["status"]]
-    except (Halt, OSError) as exc:
+            result = run_demo(args.demo_dir)
+        else:
+            store = Experience(args.state_dir)
+            with store.lock():
+                now = time.time()
+                if args.command == "init":
+                    seed(store, now)
+                    result = store.inspect()
+                elif args.command in {"scan", "resolve"}:
+                    if args.input is None:
+                        raise ValueError(
+                            "scan/resolve requires --input with timestamped market data"
+                        )
+                    dataset = json.loads(args.input.read_text())
+                    if args.command == "scan":
+                        result = scan(
+                            store, MarketSnapshot.from_dict(dataset), now, args.max_selected
+                        )
+                    else:
+                        result = resolve(store, dataset, now)
+                elif args.command == "learn-daily":
+                    result = learn_daily(store, now, args.evidence_kind)
+                elif args.command == "evolve-weekly":
+                    proposal = json.loads(args.proposal.read_text()) if args.proposal else None
+                    result = evolve_weekly(store, now, proposal, args.evidence_kind)
+                elif args.command == "retire":
+                    retire(store, args.strategy_id, args.version, now, args.reason)
+                    result = {"retired": args.strategy_id, "version": args.version}
+                elif args.command == "retire-lesson":
+                    retire_lesson(store, args.lesson_id, now, args.reason)
+                    result = {"retired_lesson": args.lesson_id}
+                elif args.command == "import-execution":
+                    if args.input is None:
+                        raise ValueError("import-execution requires --input")
+                    result = import_feedback(store, json.loads(args.input.read_text()), now)
+                else:
+                    result = store.inspect()
+        print(json.dumps(result, indent=2, default=str, allow_nan=False))
+        return 0
+    except (ValueError, OSError, KeyError, TypeError, sqlite3.Error) as exc:
         print(json.dumps({"status": "halted", "reason": str(exc)}), file=sys.stderr)
         return 2
     finally:
-        if state:
-            state.close()
+        if store:
+            store.close()
 
 
 if __name__ == "__main__":

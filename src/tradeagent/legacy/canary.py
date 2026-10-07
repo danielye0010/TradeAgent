@@ -4,8 +4,8 @@ from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timezone
 from decimal import ROUND_CEILING, ROUND_FLOOR
 
-from .model import Halt, Intent, dec, digest, timestamp_fresh
-from .risk import TERMINAL, check_order
+from ..model import Halt, Intent, dec, digest, timestamp_fresh
+from ..risk import TERMINAL, check_order
 
 
 @dataclass(frozen=True)
@@ -92,7 +92,7 @@ class CanarySelector:
                 bars = histories.get(symbol, [])
                 if len(bars) < self.rules.min_history_bars:
                     raise Halt("inadequate completed history")
-                from .broker import utc_time
+                from ..broker import utc_time
 
                 times = [utc_time(bar["begins_at"]) for bar in bars]
                 if any(a >= b for a, b in zip(times, times[1:], strict=False)) or any(

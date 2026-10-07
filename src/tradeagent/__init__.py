@@ -1,1 +1,1 @@
-"""TradeAgent: deterministic risk controls, shadow trading, and broker reconciliation."""
+"""TradeAgent: prospective quantitative learning with separate durable execution."""

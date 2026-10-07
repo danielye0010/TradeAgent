@@ -325,7 +325,7 @@ class WireAuthorization:
             raise Halt("network payload differs from signed whole-equity intent")
 
     def __call__(self):
-        from .release import require_real_release
+        from .legacy.release import require_real_release
 
         require_real_release(self.guard, self.intent, self.snapshot, self.baseline)
         row = self.state.db.execute(
@@ -351,8 +351,8 @@ class StandaloneExecutionTransport:
         self.bridge, self.state, self.broker, self.guard = bridge, state, broker, guard
 
     def invoke(self, name, arguments):
+        from .legacy.standalone import intent_from_row
         from .model import digest
-        from .standalone import intent_from_row
         from .supervised import state_binding
 
         if name not in {"review_equity_order", "place_equity_order"}:

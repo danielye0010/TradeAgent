@@ -11,11 +11,11 @@ from tradeagent.account_policy import POLICY
 from tradeagent.broker import Broker, utc_time
 from tradeagent.codex_bridge import READ_TOOLS, CodexBridge
 from tradeagent.execution import Execution
+from tradeagent.legacy.runner import cycle
+from tradeagent.legacy.strategy import signal
 from tradeagent.model import Config, Halt, Intent, Risk, Snapshot, dec
 from tradeagent.risk import check_order, check_state
-from tradeagent.runner import cycle
 from tradeagent.state import State
-from tradeagent.strategy import signal
 from tradeagent.vendor import run_lock
 from tradeagent.vendor.client import _parse_result
 

@@ -6,9 +6,9 @@ from dataclasses import asdict
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+from ..model import Halt, Intent, dec
+from ..risk import check_state
 from .autonomous import AutonomousCanaryLifecycle, AutonomousPolicyLifecycle
-from .model import Halt, Intent, dec
-from .risk import check_state
 from .strategy import TestTrendStrategy
 
 

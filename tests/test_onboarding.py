@@ -2,14 +2,14 @@
 
 import json
 
-from tradeagent.cli import main
+from tradeagent.legacy.cli import main
 
 
 def test_demo_inspection_uses_synthetic_equity_journal(tmp_path, monkeypatch, capsys):
     def no_native_connection(*args, **kwargs):
         raise AssertionError("offline onboarding must not connect to a broker")
 
-    monkeypatch.setattr("tradeagent.cli.CodexBridge", no_native_connection)
+    monkeypatch.setattr("tradeagent.legacy.cli.CodexBridge", no_native_connection)
     directory = tmp_path / "demo"
     assert main(["validate"]) == 0
     capsys.readouterr()

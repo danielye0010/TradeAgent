@@ -15,14 +15,14 @@ from tradeagent.account_policy import POLICY, capital, eligible
 from tradeagent.accounting import Accounting
 from tradeagent.calendar import regular_session
 from tradeagent.codex_bridge import CodexBridge
+from tradeagent.legacy.strategy import STATUS
+from tradeagent.legacy.strategy import TestTrendStrategy as TrendStrategy
 from tradeagent.model import Config, Halt, Intent, Risk, dec
 from tradeagent.options import OptionIntent, OptionsReader, check_option_order, normalize_order
 from tradeagent.risk import check_order, check_state
 from tradeagent.schema import Contracts
 from tradeagent.simulator import SimClock, SimulatedMCP, funded_snapshot
 from tradeagent.state import State
-from tradeagent.strategy import STATUS
-from tradeagent.strategy import TestTrendStrategy as TrendStrategy
 from tradeagent.supervised import (
     HumanApproval,
     NativeExecutionTransport,
@@ -86,7 +86,7 @@ def test_human_external_signature_verification_and_tamper(monkeypatch):
 def test_shadow_uses_same_risk_and_adapter_but_never_reviews_or_writes(tmp_path, monkeypatch):
     import time
 
-    from tradeagent.runner import cycle
+    from tradeagent.legacy.runner import cycle
 
     clock = SimClock()
     monkeypatch.setattr(time, "time", clock)
@@ -552,7 +552,7 @@ def test_both_real_capability_gates_independent():
         with pytest.raises(Halt, match="disabled"):
             bridge.execution_call(name, {})
     assert bridge.serial == 0 and not bridge.calls
-    from tradeagent.supervised_cli import main as supervised_main
+    from tradeagent.legacy.supervised_cli import main as supervised_main
 
     with pytest.raises(Halt, match="real SUPERVISED execution is disabled"):
         supervised_main(["submit", "--config", "does-not-exist"])

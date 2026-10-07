@@ -113,7 +113,7 @@ def test_quote_skew_remains_bounded_and_account_future_timestamp_remains_strict(
 def test_synthetic_shadow_with_skew_records_intent_and_zero_broker_writes(tmp_path, monkeypatch):
     import time
 
-    from tradeagent.runner import cycle
+    from tradeagent.legacy.runner import cycle
     from tradeagent.state import State
 
     monkeypatch.setattr(time, "time", lambda: NOW.timestamp())

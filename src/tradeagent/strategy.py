@@ -1,118 +1,132 @@
-"""A narrow upstream trend pillar used only as an infrastructure test strategy."""
+"""Account-free quantitative strategies: MarketSnapshot -> immutable Prediction."""
 
-import math
-from dataclasses import asdict, dataclass, field
-from decimal import ROUND_CEILING, ROUND_FLOOR
+import hashlib
+from pathlib import Path
 from typing import Protocol
 
-from .model import Config, Halt, Intent, Snapshot, dec
-from .vendor.indicators import ema_series
-from .vendor.trend import score_trend
+from .research.domain import Payload, Prediction, identity
+from .research.market import features, snapshot_identity
 
-STATUS = "TEST_STRATEGY_NOT_VALIDATED_FOR_LIVE_TRADING"
+FAMILIES = {
+    "opening_momentum": ("opening_return", 1),
+    "opening_reversal": ("opening_return", -1),
+    "gap_continuation": ("gap", 1),
+    "gap_reversal": ("gap", -1),
+    "relative_strength": ("relative_momentum", 1),
+    "mean_reversion": ("mean_deviation", -1),
+    "null_control": (None, 0),
+    "random_control": (None, 0),
+}
+DEFAULT_FAMILIES = (
+    "opening_momentum",
+    "opening_reversal",
+    "gap_continuation",
+    "relative_strength",
+    "mean_reversion",
+    "null_control",
+    "random_control",
+)
+DEFAULT_PARAMS = {"threshold": 0.001, "scale": 0.5, "horizon": 3600, "max_expected": 0.03}
 
 
-@dataclass(frozen=True)
-class StrategySignal:
-    symbol: str
-    bar_time: str
-    score: float
-    direction: str
-    strategy_id: str
-    strategy_version: str
-    confidence: float | None = None
-    rank: int | None = None
-    holding_horizon: str | None = None
-    features: dict = field(default_factory=dict)
-    status: str = STATUS
+def implementation_hash():
+    package = Path(__file__).parent
+    files = (Path(__file__), package / "research/market.py", package / "research/domain.py")
+    return hashlib.sha256(b"".join(p.read_bytes() for p in files)).hexdigest()
 
-    def validate(self):
-        from .broker import utc_time
 
-        utc_time(self.bar_time)
-        if (
-            not self.symbol
-            or not self.strategy_id
-            or not self.strategy_version
-            or not math.isfinite(float(dec(self.score)))
-            or self.direction not in {"long", "exit", "hold"}
-            or (self.confidence is not None and not 0 <= dec(self.confidence) <= 1)
-            or (self.rank is not None and (type(self.rank) is not int or self.rank < 1))
-        ):
-            raise Halt("invalid normalized strategy signal")
-        return self
+def validate_params(params):
+    from .research.domain import finite
+
+    if set(params) != set(DEFAULT_PARAMS):
+        raise ValueError("unknown/missing strategy parameter")
+    for key in ("threshold", "scale", "max_expected"):
+        finite(params[key])
+    if (
+        not 0 <= params["threshold"] <= 0.05
+        or not 0 < params["scale"] <= 2
+        or not 0 < params["max_expected"] <= 0.05
+        or type(params["horizon"]) is not int
+        or not 300 <= params["horizon"] <= 21600
+    ):
+        raise ValueError("strategy outside fixed research bounds")
 
 
 class Strategy(Protocol):
-    def universe(self, config: Config) -> list[str]: ...
-    def signals(self, histories: dict, config: Config) -> dict[str, StrategySignal]: ...
-    def proposal(
-        self, signal: StrategySignal, snapshot: Snapshot, config: Config
-    ) -> Intent | None: ...
+    def predict(self, snapshot, created_at: float) -> Prediction: ...
 
 
-class TestTrendStrategy:
-    def universe(self, config):
-        return list(config.allowed_symbols)
+class BaselineStrategy:
+    def __init__(self, strategy_id, version, family, params):
+        if family not in FAMILIES:
+            raise ValueError("unsupported strategy family")
+        validate_params(params)
+        self.strategy_id, self.version, self.family = strategy_id, version, family
+        self.params = Payload.of(params)
 
-    def signals(self, histories, config):
-        result = {}
-        for symbol in self.universe(config):
-            bars = histories[symbol]
-            raw = signal([b["close_price"] for b in bars], bars[-1]["begins_at"])
-            result[symbol] = StrategySignal(
-                symbol,
-                raw["bar_time"],
-                raw["score"],
-                "long" if raw["score"] >= 1 else "exit" if raw["score"] <= -1 else "hold",
-                "oft3r-trend-infrastructure-test",
-                config.strategy_version,
-                holding_horizon="daily-test",
-                features=raw,
-            ).validate()
-        return result
-
-    def proposal(self, sig, snapshot, config):
-        sig.validate()
-        if sig.strategy_version != config.strategy_version:
-            raise Halt("strategy/config identity mismatch")
-        return propose(sig.symbol, asdict(sig), snapshot, config)
-
-
-def signal(closes: list, bar_time: str):
-    prices = [float(dec(v)) for v in closes]
-    if len(prices) < 205 or any(not math.isfinite(v) or v <= 0 for v in prices):
-        raise Halt("insufficient/invalid daily historical bars")
-    e20, e50, e200 = (ema_series(prices, n) for n in (20, 50, 200))
-    ind = {
-        "close": prices[-1],
-        "ema20": e20[-1],
-        "ema50": e50[-1],
-        "ema200": e200[-1],
-        "ema200_slope": e200[-1] - e200[-6],
-    }
-    score, reason = score_trend(ind)
-    return {
-        "score": score,
-        "reason": reason,
-        "bar_time": bar_time,
-        "last_close": str(closes[-1]),
-        "indicators": ind,
-    }
-
-
-def propose(symbol: str, sig: dict, s: Snapshot, c: Config):
-    held = s.positions.get(symbol, dec(0))
-    if sig["score"] <= -1 and held >= 1:
-        return Intent(
-            symbol,
-            "sell",
-            held.to_integral_value(rounding=ROUND_FLOOR),
-            s.bids[symbol].quantize(dec("0.01"), rounding=ROUND_FLOOR),
+    def predict(self, snapshot, created_at):
+        f = features(snapshot)
+        params = self.params.value
+        field, sign = FAMILIES[self.family]
+        signal = f[field] * sign if field and f[field] is not None else None
+        if self.family == "random_control":
+            # Stable, unrelated to future returns; repeat invocations reproduce the control.
+            signal = (
+                0.004
+                if int(identity([snapshot.symbol, snapshot.decision_time])[:8], 16) % 2
+                else -0.004
+            )
+        active = signal is not None and abs(signal) > params["threshold"]
+        if self.family.startswith(("opening_", "gap_")):
+            active = (
+                active
+                and f["minutes_since_open"] is not None
+                and 0 <= f["minutes_since_open"] <= 90
+            )
+        direction = (1 if signal > 0 else -1) if active else 0
+        expected = (
+            max(-params["max_expected"], min(params["max_expected"], signal * params["scale"]))
+            if active
+            else 0.0
         )
-    if sig["score"] >= 1 and held == 0:
-        price = s.asks[symbol].quantize(dec("0.01"), rounding=ROUND_CEILING)
-        q = (s.nav * dec(c.target_fraction) / price).to_integral_value(rounding=ROUND_FLOOR)
-        if q > 0:
-            return Intent(symbol, "buy", q, price)
-    return None
+        confidence = min(0.7, 0.5 + abs(expected) * 5) if active else 0.0
+        snap_id = snapshot_identity(snapshot)
+        pred_id = identity(
+            [
+                self.strategy_id,
+                self.version,
+                snapshot.symbol,
+                snapshot.decision_time,
+                params["horizon"],
+            ]
+        )
+        return Prediction(
+            pred_id,
+            self.strategy_id,
+            self.version,
+            snap_id,
+            snapshot.symbol,
+            snapshot.decision_time,
+            params["horizon"],
+            direction,
+            expected,
+            confidence,
+            Payload.of(f),
+            Payload.of(
+                {
+                    "regime": f["regime"],
+                    "source": snapshot.source,
+                    "benchmark": snapshot.benchmark,
+                    "evidence_kind": snapshot.evidence_kind,
+                }
+            ),
+            Payload.of(
+                {
+                    "kind": "point_estimate",
+                    "mean": expected,
+                    "sigma": f["volatility"],
+                    "calibrated_probability": False,
+                }
+            ),
+            created_at,
+        )

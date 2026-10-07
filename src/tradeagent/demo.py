@@ -5,11 +5,11 @@ import json
 from dataclasses import asdict
 from pathlib import Path
 
+from .legacy.strategy import TestTrendStrategy
 from .model import Config, Halt, Risk, dec, digest
 from .options import OptionIntent
 from .simulator import SimClock, SimulatedMCP
 from .state import State
-from .strategy import TestTrendStrategy
 from .supervised import OfficialExecutionAdapter, SupervisedLifecycle
 
 

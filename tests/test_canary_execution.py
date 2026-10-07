@@ -8,8 +8,8 @@ from test_execution_lifecycle import approval, equity, harness
 from test_release_policy import facts, histories, tiny_snapshot
 
 from tradeagent.broker import Broker
-from tradeagent.canary import CanarySelector, canary_known_action_check
 from tradeagent.codex_bridge import SERVER, CodexBridge
+from tradeagent.legacy.canary import CanarySelector, canary_known_action_check
 from tradeagent.model import MAX_FUTURE_SKEW_SECONDS, Config, Halt, Intent, Risk, dec
 from tradeagent.risk import check_order
 from tradeagent.schema import Contracts

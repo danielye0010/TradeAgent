@@ -63,6 +63,11 @@ class OptionQuote:
     ask_size: int
     volume: int
     open_interest: int
+    implied_volatility: Decimal | None = None
+    delta: Decimal | None = None
+    gamma: Decimal | None = None
+    theta: Decimal | None = None
+    vega: Decimal | None = None
 
 
 @dataclass(frozen=True)
@@ -348,6 +353,10 @@ class OptionsReader:
             q["ask_size"],
             q["volume"],
             q["open_interest"],
+            **{
+                key: dec(q[key]) if q.get(key) is not None else None
+                for key in ("implied_volatility", "delta", "gamma", "theta", "vega")
+            },
         )
 
     def enrich(self, snapshot):
