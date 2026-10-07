@@ -40,3 +40,6 @@ secrets.*
 *.p12
 *.pfx
 config/*policy.local.*
+
+# Internal assistant handoffs belong in ignored local work
+GPT_HANDOFF.md

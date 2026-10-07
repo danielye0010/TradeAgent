@@ -1,7 +1,7 @@
 {
   "scope": "Source, tests, public configs, contracts, dependencies and licenses.",
   "files": {
-    ".gitignore": "d0658fb2a6909493d972a326617a7bc5a9ea0427fd77cb2cf68e4bb3dc8d9a87",
+    ".gitignore": "5c2dc2af3985686dfd63f8ed47d3a6ee6a3cb6982ebe96e208c786e5a6b5bbea",
     "LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
     "config/canary-policy.template.json": "bce82f503024f7c134e46ba24ab2a798a3a23c671a6c628224e067502f2b1ef7",
     "config/canary.example.json": "7628c1dd465c461365c8a437799e5523cf2bd43560681e58078ba3deea46298a",
@@ -21,6 +21,7 @@
     "src/tradeagent/canary_review_cli.py": "44eda2c1d64f0eb1482681ba219172ab44bc37084c4877c9cacb2ade5f7bc77f",
     "src/tradeagent/cli.py": "ee006767a6ab4bcb2c8cf1ddcb761c76569f5a331044fe8b2ea91006006d8f5e",
     "src/tradeagent/codex_bridge.py": "851b287ce6e9ba1879e226789b81b907c72c71d50c5ade686e3970b0e333413d",
+    "src/tradeagent/contracts/market-data-1.7.0.json": "33922285db496c5a655a909fcc149cebe7ecf1fdfa52b4ef7aed8d5f6b391cfe",
     "src/tradeagent/contracts/official-1.6.2.json": "836d6c9340b472470e12a7294aa9df9d8059e1a18df1f389fc2ac61b8a3fd89a",
     "src/tradeagent/contracts/official-1.7.0.json": "fce9254bc0bafe91cca3526c2d2533e1ee609a451e89916f8343e684435a61e8",
     "src/tradeagent/demo.py": "f561d340185e51ddeddc371bfbddf091a5902a09842aaf66af96ca34a608d67a",
@@ -42,8 +43,9 @@
     "src/tradeagent/options.py": "ad85b4b3662947d3bd4a9ccfd1a76326e88751b4091d1208d34537f3f20c50a8",
     "src/tradeagent/prospective/__init__.py": "ec6da6bc1a0b0d491b3deb49ab9ffb0f967de702e9cd2ce560c2132b98399d9b",
     "src/tradeagent/prospective/access.py": "8a2e79855862bc8123a28f85f4227dc05c8fae55ee39853eb10bce3df6360f0e",
-    "src/tradeagent/prospective/collector.py": "cfaab21f231eefb6b3ab43b27657f9c8e61ea85b28f9b15b9d2482d2031605c4",
-    "src/tradeagent/prospective/service.py": "0f14c15e084f579bb876f5606e839d3d61046408f0a67b9a85c7c1e63d19e278",
+    "src/tradeagent/prospective/collector.py": "1e350381e046ae9a0735c536f45a15bdef4a8c12add560ec7ed385ac36362994",
+    "src/tradeagent/prospective/providers.py": "d45f83cff33a7265140cb5f6ec129b675d85cb508fbd21c779b0d95e98e14347",
+    "src/tradeagent/prospective/service.py": "33cfeb5c1995263b66f3bbee8d7a1da5628f71a5c23be549325d2aed838f0f5d",
     "src/tradeagent/research/__init__.py": "c6b7d096648fdf0a1eb0233cbdf078da4a4fa3e2549e0da9f8f6a83b713ec464",
     "src/tradeagent/research/agent_market.py": "ed70ddf7f4ede46db7dbe9b78cf9e6140b989d95e5fdd4b5748c9b7a356d306b",
     "src/tradeagent/research/attribution.py": "29f6844442b8b1bc29072ee904203a311d7b8f3b092e2f2d7a18297390b604f0",
@@ -86,8 +88,9 @@
     "tests/test_execution_lifecycle.py": "22de96fb9b5572edd75470e97cdf54a05902a76e3999e9cf1382f34102ae7df2",
     "tests/test_history_auth.py": "fc5a37aef6c236b7768d4ac7b9232cf052175cdf00caf108e427562645fa6048",
     "tests/test_market_freshness.py": "d4100c767168cdc1c42b244c9d1d95ba52ebd538dbc627592f560f4aad3e291b",
+    "tests/test_market_providers.py": "02e297c465b9d3c7c466be06c621d6e703dde9539f779f7122566e8477abe0f4",
     "tests/test_onboarding.py": "dc4ba00657f8c2000771d389cf31fe77136434c91ee796b6e49f3cb161bb4583",
-    "tests/test_prospective.py": "54777441a9aa24abfbe589d08fdd3e95511cbab806f677933e6f5af1766042d4",
+    "tests/test_prospective.py": "596505f0c76bd3ca1f60d49255e01c228bf5dd99101d36ea0e5fdd225b8275e3",
     "tests/test_release_policy.py": "406a8f771658e1815cecbab48293b497ac95fd05751f1b5fa726f079629bbf7a",
     "tests/test_research_integrity.py": "7e23af828a9974495d97824e92300aa262a7d3a89d2e69245dee4b4f18358106",
     "tests/test_research_loop.py": "bd863a6df5f40260072dac426bb4041dfb9fa2df2d02ae278bc36c2820478b72",
@@ -95,5 +98,5 @@
     "tests/test_standalone.py": "aff198185b7235300e5acd61575a9f1b214bcbd44d02b92ec25c2715839447d0",
     "tests/test_supervised_contract.py": "60bf5ed95f5fe2143faa634b9dd80c7198521f05cdca3a95abdc1e5af5e9aa3c"
   },
-  "framework_sha256": "a87424c26dd36c64450b204bcc757e19a8bee544d61acce7fde933ba47e0b33c"
+  "framework_sha256": "2bed5060175060a7c99f41c8e1cf051d07ab9295322181716d36ebaab71dce50"
 }

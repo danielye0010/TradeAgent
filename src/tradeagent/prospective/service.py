@@ -11,21 +11,23 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from ..calendar import session_bounds
+from ..model import Halt
 from ..research.domain import canonical, iso
 from ..research.lab import scan, seed
 from ..research.learning import learn_daily
 from ..research.outcomes import resolve
 from ..research.store import Experience
-from . import access
-from .collector import CUTOFF_BLOCKER, SOURCE, SYMBOLS, Alpaca, Collection
+from .collector import CUTOFF_BLOCKER, Collection
+from .providers import ROBINHOOD_SOURCE, SYMBOLS, open_provider, provider_adapter, provider_source
 
 NY = ZoneInfo("America/New_York")
 FIRST_SESSION = date(2026, 10, 8)
 CONFIG = {
     "symbols": list(SYMBOLS[:2]),
     "benchmark": "SPY",
-    "source": SOURCE,
-    "feed": "sip",
+    "source": ROBINHOOD_SOURCE,
+    "market_data_provider": "robinhood",
+    "broker_provider": "robinhood",
     "bar_seconds": 60,
     "decision": "09:33 America/New_York",
     "capture_window_seconds": 30,
@@ -35,6 +37,13 @@ CONFIG = {
     "first_eligible_session": FIRST_SESSION.isoformat(),
     "learner_initialization": "cold",
 }
+
+
+def configuration(provider="robinhood"):
+    result = {**CONFIG, "source": provider_source(provider), "market_data_provider": provider}
+    if provider == "alpaca":
+        result["feed"] = "sip"
+    return result
 
 
 def decision_for(day):
@@ -58,15 +67,19 @@ def atomic(path, content):
     temporary.replace(path)
 
 
-def prospective_only(store):
+def prospective_only(store, source=ROBINHOOD_SOURCE):
     if store.db.execute(
         "SELECT 1 FROM market_snapshots WHERE evidence_kind!='prospective' LIMIT 1"
     ).fetchone():
         raise ValueError("non-prospective evidence in shadow state; refusing to run")
     if store.db.execute("SELECT 1 FROM live_expressions LIMIT 1").fetchone():
         raise ValueError("broker evidence is forbidden in shadow state")
-    if store.db.execute("SELECT 1 FROM observations WHERE source!=? LIMIT 1", (SOURCE,)).fetchone():
+    if store.db.execute("SELECT 1 FROM observations WHERE source!=? LIMIT 1", (source,)).fetchone():
         raise ValueError("non-prospective source observations are forbidden")
+    if store.db.execute(
+        "SELECT 1 FROM market_snapshots WHERE source!=? LIMIT 1", (source,)
+    ).fetchone():
+        raise ValueError("different provider snapshot source in shadow state")
     for row in store.db.execute("SELECT configuration FROM learning_runs"):
         if json.loads(row[0]).get("evidence_kind") != "prospective":
             raise ValueError("non-prospective learner state is forbidden")
@@ -76,7 +89,9 @@ def prospective_only(store):
 
 
 class Shadow:
-    def __init__(self, directory, now):
+    def __init__(self, directory, now, provider="robinhood"):
+        self.configuration = configuration(provider)
+        self.source = self.configuration["source"]
         self.directory = directory.resolve()
         self.directory.mkdir(mode=0o700, parents=True, exist_ok=True)
         # Acquire the same lifetime lock as one-shot research commands before state writes.
@@ -96,16 +111,18 @@ class Shadow:
         marker = self.directory / "deployment.json"
         if marker.exists():
             self.deployment = json.loads(marker.read_text())
-            if self.deployment["configuration"] != CONFIG:
+            if self.deployment["configuration"] != self.configuration:
                 raise ValueError("deployment configuration changed; refusing state reuse")
         else:
             if (self.directory / "experience.sqlite3").exists():
                 raise ValueError("unmarked existing DB cannot initialize a cold shadow deployment")
-            self.deployment = {"configuration": CONFIG, "started_at": now}
+            self.deployment = {"configuration": self.configuration, "started_at": now}
             atomic(marker, canonical(self.deployment))
         self.store = Experience(self.directory)
-        prospective_only(self.store)
-        self.collection = Collection(self.directory)
+        prospective_only(self.store, self.source)
+        self.collection = Collection(
+            self.directory, provider_adapter(self.configuration["market_data_provider"])
+        )
         self.last_tick = max(
             self.deployment["started_at"],
             json.loads((self.directory / "status.json").read_text())["heartbeat"]
@@ -177,7 +194,7 @@ class Shadow:
             # The unattended collector never promotes or changes champion pointers.
 
     def tick(self, now):
-        prospective_only(self.store)
+        prospective_only(self.store, self.source)
         if now < self.last_tick:
             raise ValueError("wall clock moved backwards; shadow halted")
         self.decisions(now)
@@ -216,7 +233,7 @@ class Shadow:
             "blocks": [block] if block else [],
             "latest_failure": failures[0]["reason"] if failures else None,
             "information_cutoff": "scheduled decision; actual receipt must be at or before cutoff",
-            "configuration": CONFIG,
+            "configuration": self.configuration,
             "service": service,
             "pid": os.getpid(),
             "heartbeat": now,
@@ -289,9 +306,13 @@ class Shadow:
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--state-dir", type=Path, required=True)
+    parser.add_argument(
+        "--market-data-provider", choices=("robinhood", "alpaca"), default="robinhood"
+    )
+    parser.add_argument("--oauth-helper", type=Path)
     args = parser.parse_args()
     os.umask(0o077)
-    shadow = Shadow(args.state_dir, time.time())
+    shadow = Shadow(args.state_dir, time.time(), args.market_data_provider)
     running = True
 
     def stop(signum, frame):
@@ -304,29 +325,45 @@ def main():
     try:
         shadow.initialize()
         try:
-            values = access.load()
-        except (ValueError, OSError):
+            with open_provider(
+                args.market_data_provider, Path(__file__).resolve().parents[3], args.oauth_helper
+            ) as source:
+                while running:
+                    now = time.time()
+                    bounds = session_bounds(datetime.fromtimestamp(now, NY).date())
+                    if bounds and bounds[0] <= now <= bounds[1] + 120:
+                        try:
+                            payload, started, received = source.fetch(
+                                bounds,
+                                shadow.collection.history_start(
+                                    bounds, shadow.deployment["started_at"]
+                                ),
+                            )
+                            shadow.collection.ingest(
+                                payload,
+                                started,
+                                received,
+                                bounds,
+                                shadow.collection.history_start(
+                                    bounds, shadow.deployment["started_at"]
+                                ),
+                            )
+                        except (ValueError, Halt, OSError):
+                            shadow.collection.failure(
+                                time.time(), "market-data unavailable or invalid"
+                            )
+                    shadow.tick(time.time())
+                    if now - report_at >= 30:
+                        shadow.report(time.time())
+                        report_at = now
+                    time.sleep(2 if bounds and bounds[0] <= now <= bounds[1] + 120 else 10)
+        except (ValueError, Halt, OSError):
             shadow.status(
-                time.time(), service="blocked", block="market-data credential unavailable"
+                time.time(),
+                service="blocked",
+                block=f"{args.market_data_provider} market-data authentication or contract unavailable",
             )
             raise
-        source = Alpaca(values)
-        while running:
-            now = time.time()
-            bounds = session_bounds(datetime.fromtimestamp(now, NY).date())
-            if bounds and bounds[0] <= now <= bounds[1] + 120:
-                try:
-                    payload, started, received = source.fetch()
-                    shadow.collection.ingest(
-                        payload, started, received, bounds, shadow.deployment["started_at"]
-                    )
-                except ValueError as error:
-                    shadow.collection.failure(time.time(), str(error))
-            shadow.tick(time.time())
-            if now - report_at >= 30:
-                shadow.report(time.time())
-                report_at = now
-            time.sleep(2 if bounds and bounds[0] <= now <= bounds[1] + 120 else 10)
         shadow.report(time.time(), service="stopped")
     finally:
         shadow.close()

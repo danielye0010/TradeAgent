@@ -54,7 +54,6 @@ def check():
             "SECURITY.md",
             "THIRD_PARTY.md",
             "pyproject.toml",
-            "GPT_HANDOFF.md",
         )
         if (ROOT / n).is_file()
     ]

@@ -16,16 +16,19 @@ import pytest
 
 from tradeagent.calendar import session_bounds
 from tradeagent.prospective import access
-from tradeagent.prospective.collector import CUTOFF_BLOCKER, URL, Alpaca, NoRedirect
+from tradeagent.prospective.collector import CUTOFF_BLOCKER
+from tradeagent.prospective.providers import URL, Alpaca, NoRedirect
 from tradeagent.prospective.service import (
-    CONFIG,
     Shadow,
+    configuration,
     decision_for,
     next_decision,
     prospective_only,
 )
 from tradeagent.research.domain import iso
 from tradeagent.research.lab import scan
+
+CONFIG = configuration("alpaca")
 
 DAY = date(2026, 10, 8)
 OPEN = session_bounds(DAY)[0]
@@ -45,7 +48,7 @@ def payload(start, quote_time=None):
 
 @pytest.fixture
 def shadow(tmp_path):
-    instance = Shadow(tmp_path / "prospective", OPEN - 30)
+    instance = Shadow(tmp_path / "prospective", OPEN - 30, provider="alpaca")
     instance.initialize()
     yield instance
     instance.close()
@@ -99,7 +102,7 @@ def test_restart_does_not_backfill_or_duplicate_skip(shadow):
     shadow.status(DECISION + 60)
     directory = shadow.directory
     shadow.close()
-    resumed = Shadow(directory, DECISION + 120)
+    resumed = Shadow(directory, DECISION + 120, provider="alpaca")
     try:
         resumed.initialize()
         resumed.tick(DECISION + 120)
@@ -137,7 +140,7 @@ def test_exact_core_scan_horizon_learning_restart_idempotency(shadow):
     directory = shadow.directory
     shadow.status(DECISION + 3601)
     shadow.close()
-    resumed = Shadow(directory, DECISION + 3602)
+    resumed = Shadow(directory, DECISION + 3602, provider="alpaca")
     try:
         resumed.initialize()
         resumed.tick(DECISION + 3602)
@@ -200,7 +203,7 @@ def test_replay_state_refused(shadow):
 
     scan(shadow.store, replace(snapshot, evidence_kind="replay"), DECISION)
     with pytest.raises(ValueError, match="non-prospective"):
-        prospective_only(shadow.store)
+        prospective_only(shadow.store, shadow.source)
     with pytest.raises(ValueError, match="non-prospective"):
         shadow.tick(DECISION)
     assert shadow.store.inspect()["counts"]["learning_runs"] == 0
@@ -211,12 +214,12 @@ def test_unmarked_existing_database_and_changed_config_refused(tmp_path):
     directory.mkdir()
     (directory / "experience.sqlite3").write_bytes(b"not a valid cold source")
     with pytest.raises(ValueError, match="unmarked"):
-        Shadow(directory, OPEN)
+        Shadow(directory, OPEN, provider="alpaca")
     (directory / "deployment.json").write_text(
         json.dumps({"configuration": {**CONFIG, "feed": "iex"}, "started_at": OPEN})
     )
     with pytest.raises(ValueError, match="configuration changed"):
-        Shadow(directory, OPEN)
+        Shadow(directory, OPEN, provider="alpaca")
 
 
 def test_exchange_holidays_weekend_early_close_and_dst():
@@ -422,7 +425,7 @@ def test_fractional_poll_duplicate_and_restart_are_idempotent(shadow):
     directory = shadow.directory
     shadow.status(DECISION + 3.9)
     shadow.close()
-    resumed = Shadow(directory, DECISION + 10)
+    resumed = Shadow(directory, DECISION + 10, provider="alpaca")
     try:
         resumed.initialize()
         resumed.tick(DECISION + 10)
@@ -438,7 +441,7 @@ def test_lifetime_owner_lock_precedes_writes_and_covers_cli(shadow):
 
     marker = (shadow.directory / "deployment.json").read_bytes()
     with pytest.raises(BlockingIOError):
-        Shadow(shadow.directory, DECISION)
+        Shadow(shadow.directory, DECISION, provider="alpaca")
     assert (shadow.directory / "deployment.json").read_bytes() == marker
     other = Experience(shadow.directory)
     try:
@@ -449,7 +452,7 @@ def test_lifetime_owner_lock_precedes_writes_and_covers_cli(shadow):
         other.close()
     directory = shadow.directory
     shadow.close()
-    resumed = Shadow(directory, DECISION)
+    resumed = Shadow(directory, DECISION, provider="alpaca")
     resumed.close()  # Kernel releases the lock; stale lock files do not block restart.
 
 
@@ -547,7 +550,9 @@ def test_service_missing_credential_persists_block_and_releases_owner(tmp_path, 
     import tradeagent.prospective.service as service
 
     directory = tmp_path / "cold"
-    monkeypatch.setattr(sys, "argv", ["shadow", "--state-dir", str(directory)])
+    monkeypatch.setattr(
+        sys, "argv", ["shadow", "--state-dir", str(directory), "--market-data-provider", "alpaca"]
+    )
     monkeypatch.setattr(service.time, "time", lambda: OPEN - 30)
     monkeypatch.delenv("CREDENTIALS_DIRECTORY", raising=False)
     monkeypatch.setattr(service.signal, "signal", lambda *args: None)
@@ -555,9 +560,9 @@ def test_service_missing_credential_persists_block_and_releases_owner(tmp_path, 
         service.main()
     report = json.loads((directory / "status.json").read_text())
     assert report["mode"] == "SHADOW" and report["health"] == "blocked"
-    assert report["blocks"] == ["market-data credential unavailable"]
+    assert report["blocks"] == ["alpaca market-data authentication or contract unavailable"]
     assert report["predictions"] == report["resolved"] == 0
-    resumed = Shadow(directory, OPEN - 29)
+    resumed = Shadow(directory, OPEN - 29, provider="alpaca")
     resumed.close()
 
 

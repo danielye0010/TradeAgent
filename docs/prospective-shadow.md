@@ -1,123 +1,114 @@
 # Prospective shadow operation
 
-The prospective worker has no broker/account/order client. It collects QQQ and IWM
-against SPY from the fixed Alpaca SIP market-data endpoint and records immutable
-predictions and one-hour outcomes. It never reviews, places or cancels broker orders.
+Default: **Robinhood market data + Robinhood execution**. Optional:
+**Alpaca market data + Robinhood execution**. This service performs only the
+market-data and SHADOW prediction/outcome path. It never reviews, places or cancels
+orders and has no research-to-live bridge.
 
-## Time and data contract
+## Timing
 
-The decision is **09:33 America/New_York** on an eligible XNYS session, starting
-October 8, 2026. At a typical decision the signal uses the two opening minutes,
-ending 09:31 and 09:32, actually received before 09:33. The provider minute timestamp
-is its start; completion is start + 60 seconds; availability is actual local receipt.
-Alpaca emits minute bars after the minute boundary, so completion and availability
-cannot be treated as the same instant.
-[Provider timing documentation](https://docs.alpaca.markets/us/docs/real-time-stock-pricing-data).
+A decision may consume only data available by its decision time. The frozen target
+is **09:33 America/New_York** on eligible XNYS sessions from October 8, 2026.
+Provider bar timestamps denote UTC minute starts. The normalizer sets end = start
++ 60 seconds and availability = actual local receipt. Forming bars, synthesized
+gap-fill bars, stale quotes and post-cutoff receipts cannot enter a decision.
 
-The scheduler may persist the frozen snapshot from decision time through decision +
-30 seconds. Creation time is separately recorded; this window never admits a bar,
-quote or reference received after the decision. There must be at least two contiguous
-opening bars with aligned symbol/benchmark ends and a final-bar age at most 120
-seconds. Quotes must also be fresh. A missed window or unavailable frozen input
-records one skip, with no replay/backfill. Normal fractional polling times work.
+Snapshots require at least two contiguous opening minutes and matching symbol/SPY
+endpoints, with final-bar age at most 120 seconds. A 30-second capture window permits
+persistence after target while retaining the fixed information cutoff. Missed or
+unavailable decisions are skipped, never repaired with later historical data.
 
-The horizon remains exactly 3600 seconds after decision. The resolver needs
-contiguous symbol AND benchmark observations from 09:33 through 10:33, actually
-received before resolution. For delayed signal bars it measures returns from the
-09:33 bar open, not the old 09:32 signal close. The signal remains prior information;
-the decision entry open is later outcome evidence, never a strategy input.
-Missing minutes remain unresolved. First-observed bar facts never change; revised
-numeric source facts remain in separate receipts.
+The 3600-second horizon begins at decision time. Resolution requires every minute
+for both symbol and benchmark through the exact endpoint. When the signal bar ends
+before decision, entry is the decision-minute open observed later; predecision
+movement is excluded. Missing minutes remain unresolved. First-observed facts
+remain frozen; repeated requests and restarts cannot replace them.
 
-XNYS sessions exclude holidays/weekends and bound regular-session collection;
-New York timezone rules handle DST. Whole-machine suspension may miss a decision.
-Historical inputs and replay databases never enter prospective collection.
+XNYS holidays, weekends, early closes and New York DST use the shared calendar.
+Startup after the opening minutes cannot backfill an opening prediction.
+Provider semantics and capability limits are described in [Market data](market-data.md).
 
-## Ownership and state
+## Robinhood setup
 
-One systemd user unit, `tradeagent-prospective.service`, owns the loop. Its lifetime
-`experience.lock` is acquired before deployment/database writes and also excludes
-one-shot research commands using that state. Two-symbol snapshots commit together.
-A crash before the separate scheduler receipt is recovered by prediction identities,
-without duplicated rows. Interrupted lock files do not need deletion.
+Provide a local external OAuth helper for
+https://agent.robinhood.com/mcp/trading. This project does not perform login,
+store passwords/tokens, or implement OAuth refresh. The helper owns authentication
+and must reside outside the repository, on local Linux storage, owned by the user,
+executable, with no group/other permissions. Its stdout contract is:
 
-The current-user Windows task `TradeAgentProspectiveWSL` only holds WSL alive.
-Task Scheduler suppresses overlap; a Linux `flock` additionally prevents orphaned
-wrapper restarts from creating extra lifetime anchors. It never starts research
-or execution itself.
-[Microsoft explains why WSL needs lifetime support](https://learn.microsoft.com/en-us/windows/wsl/systemd).
+~~~json
+{"access_token": "<external token>", "expires_at": 1234567890,
+ "resource": "https://agent.robinhood.com/mcp/trading"}
+~~~
 
-The revised source/configuration uses `work/prospective-v2`, a fresh cold Linux
-state directory. The original `work/prospective` state is preserved unchanged.
-Existing deployment markers refuse changed configurations instead of silently
-mixing decision contracts or outcomes. No counters are backfilled.
+Use an actual future expiry, 30 seconds to 24 hours from the request.
+Helper stderr and credential values are never logged. Interactive authentication
+must be completed by the operator outside the unattended worker.
 
-`experience.sqlite3` owns predictions/outcomes; `collection.sqlite3` owns normalized
-receipt facts and scheduler steps. Only due unresolved predictions trigger resolution;
-resolved history is not repeatedly imported on every poll.
-
-Daily statistics run after outcomes commit. Learner failure is recorded and leaves
-core collection intact; explicitly rerun learning to repair failed research work.
-The unattended collector does not generate or evaluate challengers or change champion
-pointers. Use explicit `evolve-weekly`/retirement commands and frozen evaluation rules
-in an operator-controlled research window. No parameters or learner formulas were tuned.
-
-Status has one mode, SHADOW, and separate health/blocks. Reports run every 30 seconds;
-status-file I/O failure does not undo predictions or stop market collection.
-SQLite/integrity uncertainty and unknown evidence sources still halt.
-
-## Installation and credentials
-
-In an interactive WSL terminal:
-
-```bash
-.venv/bin/python -m tradeagent.prospective.access
-.venv/bin/python scripts/install_shadow.py
-```
-
-Hidden setup uses `getpass` and aborts without echo suppression. systemd encrypts
-the credential outside the repository; the worker reads only its private runtime
-credential through `LoadCredentialEncrypted`. No plaintext persistent copy,
-credentials in argv/environment or interactive fallback is introduced. Missing
-credentials fail closed with a sanitized blocked status. Entitlement/connectivity
-cannot be inferred from a credential's existence.
-
-The installer defaults to fresh `work/prospective-v2`; an explicit `--state-dir`
-may select another compatible local state directory. It reuses the same unit name,
-never installs a second trading owner. Enable user lingering administratively.
-Run `scripts/install_shadow_host.ps1` on Windows for the lifetime task. No Windows
-password or execution-policy change is needed. RemoteSigned may reject invoking
-the unsigned installer directly from a WSL network path; the same existing-task
-action can be configured with native Task Scheduler commands.
-
-Redirects are rejected. Only whitelisted numeric data facts are persisted; vendor
-error bodies/headers and credential-bearing tracebacks are excluded. Core dumps are
-disabled. The former recursive credential/report/journal scan is no longer a runtime
-prerequisite; the credential comparison helper remains available for explicit diagnostics.
-
-## Safe checks and outstanding validation
-
-```bash
+~~~bash
+.venv/bin/python scripts/install_shadow.py --oauth-helper /absolute/external/helper
 systemctl --user status tradeagent-prospective.service
-cat work/prospective-v2/STATUS.md
-tradeagent demo --demo-dir work/new-shadow-smoke
-tradeagent execution simulate --demo-dir work/new-execution-smoke
-```
+cat work/prospective-robinhood/STATUS.md
+~~~
 
-Use new synthetic directories. Neither demo supplies prospective evidence. Runtime
-status includes heartbeat, latest collection, decision/prediction/resolution times,
-counts and explicit zero broker reads/reviews/placements/cancellations.
+The default helper path is $HOME/.local/libexec/robinhood-mcp-oauth-helper.
+The service has no Alpaca credential directive. Missing Robinhood authentication or
+a changed official schema fails closed with a sanitized blocker.
+No silent fallback, login prompt, redirect or order operation is introduced.
 
-Authenticated baseline and post-refactor live smoke collection are blocked when the
-encrypted market-data credential is absent. After operator setup, check fresh receipt
-timestamps and the first eligible shadow capture before interpreting any results.
-No profitability, SIP entitlement, live fill behavior or physical sleep/power recovery
-is established by synthetic tests.
+## Optional Alpaca setup
 
-Stop with `systemctl --user disable --now tradeagent-prospective.service` and disable
-the named Windows task. Preserve state and encrypted credentials for recovery.
+~~~bash
+.venv/bin/python -m tradeagent.prospective.access
+.venv/bin/python scripts/install_shadow.py --market-data-provider alpaca
+cat work/prospective-alpaca/STATUS.md
+~~~
 
-Optional learned-selector metadata failure preserves valid shadow predictions and
-records an unavailable-selection rationale with NO_TRADE plans. Strategy identity,
-snapshot validity and SQLite errors still fail closed. This fallback does not create
-a substitute selected trading strategy.
+Alpaca uses hidden terminal input and systemd-encrypted credentials outside the
+repository. Only explicit Alpaca mode adds LoadCredentialEncrypted=alpaca:...
+Its SIP entitlement and publication latency must be verified independently.
+No Alpaca credentials are read in Robinhood mode.
+
+Both installers reuse tradeagent-prospective.service. Their default cold state
+directories are provider-specific. An explicit --state-dir can select compatible
+state; deployment markers refuse configuration/source changes. Previously collected
+Alpaca state remains preserved separately, with no evidence conversion.
+
+## Ownership and persistence
+
+The systemd user service is the sole unattended owner. Its lifetime
+experience.lock is acquired before deployment/database writes and excludes
+overlapping service or one-shot research commands. Two-symbol prediction commits
+are atomic; durable identities suppress duplicates across crashes and restarts.
+
+The Windows TradeAgentProspectiveWSL task only keeps WSL available. IgnoreNew and
+a Linux flock suppress duplicate lifetime helpers. It never starts a trading loop.
+[Microsoft documents WSL lifetime behavior](https://learn.microsoft.com/en-us/windows/wsl/systemd).
+User lingering and the existing Windows task remain separate host setup.
+
+experience.sqlite3 owns predictions/outcomes; collection.sqlite3 owns normalized
+market facts and scheduler steps. Only due unresolved forecasts trigger resolution.
+Daily learning runs after outcomes commit and fails softly. Challenger proposals,
+evaluation and promotion remain explicit research commands; the collector never
+changes champion pointers. Unknown evidence sources and database uncertainty halt.
+
+SHADOW mode is separate from health and blockers. Status reports run every 30
+seconds, including receipt/prediction/resolution times and zero broker operations.
+Status-file failure does not undo predictions or stop collection.
+
+## Safe verification
+
+~~~bash
+tradeagent demo --demo-dir work/fresh-shadow-smoke
+tradeagent execution simulate --demo-dir work/fresh-execution-smoke
+systemctl --user status tradeagent-prospective.service
+~~~
+
+Use fresh synthetic directories. Outside regular hours, historical data reads can
+verify provider capability but cannot establish a live-session prospective decision.
+Observe actual opening receipts, aligned inputs and the exact-horizon resolution
+before interpreting performance. Tests do not establish real fill behavior, alpha
+or physical sleep/power recovery.
+
+Stop with systemctl --user disable --now tradeagent-prospective.service and disable
+the named Windows lifetime task. Preserve state and external authentication.

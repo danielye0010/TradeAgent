@@ -1,50 +1,19 @@
-"""Forward-only Alpaca SIP snapshots with actual local receipt times."""
+"""Provider-independent completed observations, decision cutoffs and durable collection."""
 
 import json
+import math
 import sqlite3
-import time
-from dataclasses import asdict
-from datetime import datetime, timezone
-from urllib.error import HTTPError
-from urllib.request import HTTPRedirectHandler, Request, build_opener
 
-from ..calendar import session_bounds
-from ..research.domain import Bar, MarketSnapshot, canonical, timestamp
+from ..research.domain import Bar, MarketSnapshot, canonical, finite
+from .providers import SYMBOLS
 
-SYMBOLS = ("QQQ", "IWM", "SPY")
-SOURCE = "alpaca-sip-prospective-minute-v2"
-URL = "https://data.alpaca.markets/v2/stocks/snapshots?symbols=QQQ%2CIWM%2CSPY&feed=sip"
 CUTOFF_BLOCKER = "insufficient fresh completed bars/quotes actually received by the decision"
 
 
-class NoRedirect(HTTPRedirectHandler):
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
-        return None
-
-
-class Alpaca:
-    def __init__(self, values):
-        self._key, self._secret = values
-        self._opener = build_opener(NoRedirect())
-
-    def fetch(self):
-        started = time.time()
-        request = Request(
-            URL,
-            headers={"APCA-API-KEY-ID": self._key, "APCA-API-SECRET-KEY": self._secret},
-        )
-        try:
-            with self._opener.open(request, timeout=8) as response:
-                payload = json.load(response)
-            return payload, started, time.time()
-        except HTTPError as error:
-            raise ValueError(f"Alpaca market-data HTTP {error.code}") from None
-        except (OSError, ValueError):
-            raise ValueError("Alpaca market-data transport/JSON failure") from None
-
-
 class Collection:
-    def __init__(self, directory):
+    def __init__(self, directory, provider):
+        self.provider = provider
+        self.source = provider.source
         self.db = sqlite3.connect(directory / "collection.sqlite3")
         self.db.row_factory = sqlite3.Row
         self.db.execute("PRAGMA synchronous=FULL")
@@ -77,47 +46,74 @@ class Collection:
                 )
         self.db.commit()
 
+    def history_start(self, bounds, startup):
+        """Request the first missing minute, with one completed-minute overlap."""
+        start = max(bounds[0], math.ceil(startup / 60) * 60)
+        frontiers = []
+        for symbol in SYMBOLS:
+            frontier = start
+            for row in self.db.execute(
+                "SELECT start,end FROM bars WHERE symbol=? AND start>=? AND end<=? ORDER BY start",
+                (symbol, start, bounds[1]),
+            ):
+                if row["start"] != frontier:
+                    break
+                frontier = row["end"]
+            frontiers.append(frontier)
+        return max(start, min(frontiers) - 60)
+
     def ingest(self, payload, started, received, bounds, startup):
         if received < started or not bounds:
             raise ValueError("invalid live collection clock/session")
-        normalized, quotes, refs = [], [], []
-        try:
-            for symbol in SYMBOLS:
-                item = payload[symbol]
-                raw, quote, previous = item["minuteBar"], item["latestQuote"], item["prevDailyBar"]
-                start = timestamp(raw["t"])
-                bar = Bar(
-                    symbol,
-                    start,
-                    start + 60,
-                    received,
-                    *[float(raw[k]) for k in ("o", "h", "l", "c", "v")],
-                )
-                # Deployment-day health never imports a bar from before startup.
-                if start < max(bounds[0], startup) or bar.end > bounds[1]:
-                    raise ValueError("minute bar is outside forward collection interval")
-                qt, bid, ask = timestamp(quote["t"]), float(quote["bp"]), float(quote["ap"])
-                if not 0 < bid <= ask or qt > received or received - qt > 120:
-                    raise ValueError("stale/invalid live quote")
-                if received - bar.end > 120:
-                    raise ValueError("stale live minute bar")
-                close = float(previous["c"])
-                previous_start = timestamp(previous["t"])
-                previous_bounds = session_bounds(
-                    datetime.fromtimestamp(previous_start, timezone.utc).date()
-                )
-                if not previous_bounds:
-                    raise ValueError("invalid previous daily session")
-                close_time = previous_bounds[1]
-                if not close > 0 or close_time >= bounds[0]:
-                    raise ValueError("invalid previous daily reference")
-                normalized.append(asdict(bar))
-                quotes.append((symbol, received, qt, bid, ask))
-                refs.append((symbol, received, close, close_time))
-        except (KeyError, TypeError, OverflowError, ValueError):
-            raise ValueError("missing/stale/invalid forward SIP snapshot") from None
-        # Whitelist normalized numeric facts; never persist vendor error bodies/headers.
-        facts = {"source": SOURCE, "bars": normalized, "quotes": quotes, "references": refs}
+        facts = self.provider.normalize(payload, received, bounds, startup)
+        normalized, quotes, refs = facts["bars"], facts["quotes"], facts["references"]
+        seen = set()
+        for item in normalized:
+            bar = Bar.from_dict(item)
+            key = (bar.symbol, bar.start)
+            if (
+                key in seen
+                or bar.symbol not in SYMBOLS
+                or bar.end - bar.start != 60
+                or bar.start % 60
+                or bar.start < max(bounds[0], startup)
+                or bar.end > bounds[1]
+                or bar.available_at != received
+            ):
+                raise ValueError("invalid completed provider observation")
+            seen.add(key)
+        for symbol in SYMBOLS:
+            own = [b for b in normalized if b["symbol"] == symbol]
+            if not own or received - max(b["end"] for b in own) > 120:
+                raise ValueError("missing/stale completed provider observations")
+        if (
+            len(quotes) != len(SYMBOLS)
+            or len(refs) != len(SYMBOLS)
+            or {q[0] for q in quotes} != set(SYMBOLS)
+            or {r[0] for r in refs} != set(SYMBOLS)
+        ):
+            raise ValueError("missing/duplicate provider quotes or references")
+        for symbol, receipt, qt, bid, ask in quotes:
+            for value in (receipt, qt, bid, ask):
+                finite(value)
+            if (
+                symbol not in SYMBOLS
+                or receipt != received
+                or qt > received
+                or received - qt > 120
+                or not 0 < bid <= ask
+            ):
+                raise ValueError("stale/invalid provider quote")
+        for symbol, receipt, close, close_time in refs:
+            for value in (receipt, close, close_time):
+                finite(value)
+            if (
+                symbol not in SYMBOLS
+                or receipt != received
+                or not close > 0
+                or close_time >= bounds[0]
+            ):
+                raise ValueError("invalid previous daily reference")
         with self.db:
             self.db.execute(
                 "INSERT INTO receipts(requested_at,received_at,payload) VALUES(?,?,?)",
@@ -168,7 +164,7 @@ class Collection:
         return MarketSnapshot(
             symbol,
             decision,
-            SOURCE,
+            self.source,
             "prospective",
             "SPY",
             own,
@@ -205,7 +201,7 @@ class Collection:
 
     def dataset(self, start=0):
         return {
-            "source": SOURCE,
+            "source": self.source,
             "bars": [
                 json.loads(r[0])
                 for r in self.db.execute(

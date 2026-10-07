@@ -24,14 +24,10 @@ source_schema_sha256 is SHA-256 of the complete captured live tool map serialize
 with sorted keys and compact JSON separators: `a930fe7924b76571de412dc12cbc2adf8e8c35a5e94cabb5a23cf6ed68e58b98`.
 The unmodified 1.6.2 snapshot remains available for reproducible comparison.
 
-Full raw inventory and comparison are durable, owner-only external evidence at
-`$HOME/.local/state/robinhood-agent/mcp-contract-repair-20261007/metadata.json`
-and `comparison.json`. Neither contains access tokens or account responses.
-Contracts still rejects every version other than 1.7.0 and every required
-structural mismatch. It does not allow arbitrary future versions. Existing
-strategy, selectors, RSI, risk, execution, grants, budgets and sizing are unchanged.
+Contracts rejects every version other than 1.7.0 and every required structural
+mismatch. Existing strategy, risk, execution, grants, budgets and sizing are unchanged.
 
-Regression coverage checks the unchanged old/new structural maps, prior and
-future version rejection, every required tool/schema, read-only annotations,
-and description-only acceptance. See [GPT_HANDOFF.md](../GPT_HANDOFF.md) for
-executed validation and the separate operational readiness outcome.
+Regression coverage checks unchanged old/new structural maps, prior and future
+version rejection, required schemas, read-only annotations, and description-only
+acceptance. Market-data schemas are separately pinned in
+[market-data-1.7.0.json](../src/tradeagent/contracts/market-data-1.7.0.json).

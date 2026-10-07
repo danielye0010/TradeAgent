@@ -30,7 +30,7 @@ submit it as a new prospective scan.
 
 Timestamps may be Unix seconds or ISO 8601 with timezone. Prices are finite JSON
 numbers. Only completed decision-time bars are accepted; the latest symbol and
-benchmark bars end exactly at the decision. Inputs need truthful source availability
+benchmark bars end together, at most 120 seconds before decision. Inputs need truthful source availability
 timestamps, including session references. Missing session references abstain in
 opening/gap families; missing history abstains when a feature cannot be computed.
 
@@ -51,8 +51,8 @@ tradeagent evolve-weekly --state-dir data/research
 tradeagent inspect --state-dir data/research
 ```
 
-Each command runs once. Use an external scheduler and data collector for unattended
-operation. Automated broker-market collection is not installed in this version.
+Each command runs once. For unattended collection, use the Robinhood-default
+[prospective service](prospective-shadow.md); Alpaca is an explicit optional provider.
 The CLI does not accept a backdated `--asof` override. Synthetic experiments use
 their separate evidence pool (`--evidence-kind synthetic` for learning/evolution).
 

@@ -1,107 +1,111 @@
 # TradeAgent
 
 TradeAgent is a Python trading system with timestamped market snapshots,
-account-free strategies, durable shadow predictions, deterministic risk controls
+account-free strategies, durable shadow predictions, deterministic risk controls,
 and recoverable broker execution.
 
-The installed runtime is **SHADOW**: it collects QQQ/IWM/SPY market data and records
-prospective predictions and outcomes. It cannot review, place or cancel broker
-orders. The separate execution substrate has durable intent identity, risk gates,
-fill reconciliation and crash recovery. Connecting research plans to real orders
-remains deferred; there is no enabled LIVE trading loop or established profitability record.
+**Default:** Robinhood market data + Robinhood execution.
+
+**Optional:** Alpaca market data + Robinhood execution.
+
+The unattended runtime is **SHADOW**: it records QQQ/IWM predictions against SPY
+and resolves one-hour outcomes. It cannot review, place, or cancel orders. Robinhood
+execution and reconciliation remain a separate, explicitly authorized substrate;
+there is no automatic research-to-live bridge or established profitability record.
 
 ## Run locally
 
 Use Python 3.12–3.14 on Linux or Ubuntu/WSL2. Keep SQLite on persistent local Linux storage.
 
-```bash
+~~~bash
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e ".[dev]"
 tradeagent demo --demo-dir data/fresh-demo
 tradeagent inspect --state-dir data/fresh-demo
 tradeagent execution simulate --demo-dir data/fresh-execution-demo
-```
+~~~
 
-These commands use synthetic state and require no brokerage credentials. Choose
-new directories for demos. They do not establish prospective market performance.
+These demonstrations use synthetic state and require no credentials. Choose fresh
+directories; demonstration results do not establish prospective performance.
 
-## Core runtime
+## Robinhood deployment
 
-```text
-market data -> MarketSnapshot -> Strategy.predict -> Prediction / TradePlan
-            -> durable shadow recording -> exact-horizon outcome recording
+Configure an external OAuth helper for the official
+[Robinhood Trading MCP](https://robinhood.com/us/en/support/articles/agentic-trading-overview/).
+Authentication stays outside this repository. The helper must be an owner-only
+local executable returning a resource-bound token; see
+[Prospective operation](docs/prospective-shadow.md) for its contract.
+
+~~~bash
+.venv/bin/python scripts/install_shadow.py --oauth-helper /absolute/external/helper
+systemctl --user status tradeagent-prospective.service
+cat work/prospective-robinhood/STATUS.md
+~~~
+
+The service defaults to Robinhood and requires no Alpaca credential. One systemd
+user service owns the loop. The Windows lifetime task keeps WSL available.
+Unavailable authentication or market data fails safely without switching providers.
+
+A decision consumes only data available by **09:33 America/New_York**.
+Completed one-minute bars, fresh bid/ask, and aligned benchmark history pass through
+one provider-independent strategy path. A missed decision is skipped; historical
+data never backfills predictions. Outcomes require the exact 60-minute path.
+
+## Optional Alpaca market data
+
+Alpaca retains its completed-minute SIP snapshot adapter and encrypted credential
+setup. Select it explicitly:
+
+~~~bash
+.venv/bin/python -m tradeagent.prospective.access
+.venv/bin/python scripts/install_shadow.py --market-data-provider alpaca
+cat work/prospective-alpaca/STATUS.md
+~~~
+
+The installer reconfigures the same service and uses a separate cold state directory.
+There is no silent fallback or mixing of provider evidence. Alpaca SIP entitlement
+and live collection must be verified independently. The separate historical
+commissioning command remains an optional Alpaca/input-file experiment.
+
+## Research and execution
+
+~~~text
+Robinhood (default) / Alpaca (optional)
+    -> MarketSnapshot -> Strategy.predict -> Prediction / TradePlan
+    -> durable shadow recording -> exact-horizon outcomes
 
 separate execution: Intent -> deterministic risk -> durable submission
-                   -> broker -> reconciliation -> execution journal
-```
+    -> official Robinhood broker -> reconciliation -> execution journal
+~~~
 
-Strategies live in `strategy.py`; risk lives in `risk.py` and `options.py`.
-The research database and execution journal have separate ownership. Acknowledged
-orders are reconciled against observed fills, fees, cash and positions. Ambiguous
-submissions are never blindly retried.
+All enabled versions predict in shadow. Daily learning appends statistical state
+without rewriting strategies. Challenger proposals and promotion require explicit
+research commands; learner and selector failures cannot create broker orders.
+Strategies, thresholds, risk bounds, and execution recovery rules remain frozen.
 
-One systemd user service owns prospective collection. The Windows scheduled task
-only keeps WSL alive; it does not start trading. Process locks suppress overlapping
-invocations and immutable identities suppress duplicate predictions and intents.
-See [Architecture](docs/architecture.md) and [Prospective operation](docs/prospective-shadow.md).
+For explicit input-file research:
 
-## Prospective shadow operation
-
-The SIP collector uses completed minute bars actually received by a fixed **09:33
-America/New_York** decision. A bounded 30-second capture window tolerates normal
-scheduler polling; it does not admit data received after the decision. Missing or
-stale data and missed windows produce skips, never backfilled predictions.
-
-```bash
-# Operator-only hidden market-data credential setup, in an interactive WSL terminal:
-.venv/bin/python -m tradeagent.prospective.access
-.venv/bin/python scripts/install_shadow.py
-systemctl --user status tradeagent-prospective.service
-cat work/prospective-v2/STATUS.md
-```
-
-SIP entitlement, real receipt timing and end-to-end prospective outcomes remain
-unverified until authenticated collection runs. No historical observations or
-synthetic demo records enter the cold prospective database.
-
-For explicit input-file operation:
-
-```bash
+~~~bash
 tradeagent init --state-dir data/research
 tradeagent scan --state-dir data/research --input decision-snapshot.json
 tradeagent resolve --state-dir data/research --input future-observations.json
 tradeagent learn-daily --state-dir data/research
 tradeagent evolve-weekly --state-dir data/research
-```
+~~~
 
-All enabled strategy versions predict in shadow; controls and challengers remain
-unselected until an explicit promotion workflow. Daily learning appends statistical
-state without rewriting strategy code or parameters. Optional learning/report failures
-do not undo predictions or outcomes. Unavailable learned selection preserves predictions
-and emits NO_TRADE plans. Challenger generation and promotion run through
-explicit research commands, outside the unattended collector.
+Broker submissions persist identity before network I/O, reconcile observed fills,
+fees, cash, and positions, and never blindly retry ambiguous submissions.
+Options counterfactuals require recorded executable quotes. Automatic option
+allocation and the research-to-live bridge remain deferred.
 
-## Research and execution boundaries
-
-The existing families, thresholds, learner formulas and promotion rules are retained.
-Backtesting, attribution, reporting and challenger comparisons operate on separate
-evidence pools. Historical and synthetic evidence cannot establish prospective alpha.
-`tradeagent replay-history` runs isolated historical commissioning; it is not
-required to operate shadow collection.
-
-Long-premium option counterfactuals use recorded executable quote sides; missing
-quotes remain unavailable. Automatic option allocation and the plan-to-live bridge
-remain deferred. Preserved signed/canary/autonomous workflows live in `tradeagent.legacy`
-and are not scheduled by the shadow service. Real broker operations require a separate
-explicitly authorized workflow.
-
+[Architecture](docs/architecture.md) · [Provider capabilities](docs/market-data.md) ·
 [Research protocol](docs/research-protocol.md) · [Getting started](docs/getting-started.md) ·
-[Execution boundary](docs/deployment.md) · [Task handoff](GPT_HANDOFF.md)
+[Execution boundary](docs/deployment.md)
 
 ## Development
 
-```bash
+~~~bash
 python -m pytest -q
 ruff check src tests scripts
 ruff format --check src tests scripts
@@ -109,11 +113,11 @@ python -m compileall -q src
 python -m build
 python -m twine check dist/*
 python scripts/check_project.py
-```
+~~~
 
-Tests use fresh synthetic local state and mocked brokers. Safe smoke checks are
-the offline prediction demo, preserved execution simulation, and credential-free
-service status inspection. Never use a real broker order to test this cleanup.
+Tests use fresh synthetic state and mocked brokers. Internal handoffs, validation
+transcripts, runtime databases, and authentication artifacts belong in ignored
+local work directories.
 
 ## License
 

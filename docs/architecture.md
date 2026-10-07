@@ -1,11 +1,16 @@
 # Architecture
 
+Default: Robinhood market data + Robinhood execution. Optional: Alpaca market data
++ Robinhood execution. Provider selection is explicit; there is no silent fallback.
+
 The installed production owner is the prospective SHADOW service. The execution
 substrate is separately callable and has no automatic research-to-broker bridge.
 
 ```mermaid
 flowchart LR
-    Data[Alpaca SIP market data] --> Cache[Forward receipts / completed bars]
+    RH[Robinhood default market data] --> Provider[MarketDataProvider]
+    AP[Alpaca optional market data] --> Provider
+    Provider --> Cache[Completed observations / local availability]
     Cache --> Snapshot[MarketSnapshot at fixed decision cutoff]
     Snapshot --> Strategy[Strategy.predict]
     Strategy --> Prediction[Immutable Prediction / TradePlan]
@@ -17,7 +22,7 @@ flowchart LR
     Outcomes --> Research[Explicit reporting / challenger evaluation]
     Intent[Separate execution intent] --> Risk[Deterministic risk]
     Risk --> Execution[Durable intent before submit]
-    Execution --> Broker[Official broker boundary]
+    Execution --> Broker[Official Robinhood broker boundary]
     Broker --> Reconcile[Observed orders / fills / cash / positions]
     Reconcile --> Journal[Execution journal]
 ```
@@ -42,7 +47,8 @@ execution workflows and are retained for compatibility, not promoted to global m
   timestamps remain a data-provider responsibility.
 - `research/store.py`: normalized SQLite experience schema, migration version and
   append-only SQL triggers. `experience.sqlite3` is separate from v0.1 `state.sqlite3`.
-- `prospective/collector.py`, `service.py`: forward-only source receipts, calendar decisions,
+- `prospective/providers.py`: isolated official Robinhood/default and optional Alpaca adapters.
+- `prospective/collector.py`, `service.py`: shared completed observations, calendar decisions,
   bounded capture, atomic two-symbol prediction commits and pending-only resolution.
 - `research/lab.py`: contemporaneous one-shot capture. All enabled nonrejected and
   nonretired versions predict, including challengers and former champions. Predictions,

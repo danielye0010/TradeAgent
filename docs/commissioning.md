@@ -23,7 +23,8 @@ come from the existing exchange-calendars XNYS dependency.
 
 ## Data boundary
 
-The default isolated adapter calls only Alpaca's historical market-data endpoint
+This optional commissioning command's isolated adapter calls only Alpaca's historical
+market-data endpoint
 `https://data.alpaca.markets/v2/stocks/bars`, using raw SIP 1-minute bars.
 It first reads `APCA_API_KEY_ID` and `APCA_API_SECRET_KEY` from the environment.
 When either is missing and uncached real data is needed, an interactive terminal

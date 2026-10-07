@@ -33,5 +33,5 @@ tradeagent demo --demo-dir work/fresh-rsi-demo
 ```
 
 Commit only source and sanitized reproducible artifacts. Never commit runtime DBs,
-private reports, authentication files or real-account data. Leave GPT_HANDOFF.md for
-substantial changes, pointing to canonical files and observed validation.
+private reports, authentication files or real-account data. Keep internal handoffs and validation evidence under ignored work/ only; never
+commit AI handoff artifacts. Public docs describe the software and its operation.
