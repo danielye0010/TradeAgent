@@ -1,3 +1,84 @@
+# Daily signal timing repair — 2026-10-07
+
+**NOT_READY.** The timestamp blocker is repaired and passed live evaluation.
+The one newly authorized review-only attempt then HALTed because official Robinhood
+`search` returned a broker-tool error during CANARY instrument classification.
+It was not NO_TRADE. No canary order was constructed or reviewed.
+
+- Source commit on clean `rsi-v0.2`: `59581ae79ab720f25714489a4916c00ca9e2d630`. PR remains unmerged; no push.
+- Root cause: the new collector conflated completed bar end with current decision,
+  while frozen snapshots required quotes/history to be available by that same end.
+  Truthful later receipt could not satisfy those constraints. The earlier attempt
+  actually used five-minute data and lost its raw history; its filtered-bar failure
+  was not proof of a daily-provider failure.
+- Fix: explicit daily signal label `signal_bar_begins_at` preserves original provider
+  identity. Calendar mapping derives official XNYS completion, including early closes.
+  Completed close <= actual history receipt <= actual current decision; quote and
+  book freshness still use current validation time. Existing intraday exact-end
+  checks remain. No timestamps are rewritten/backdated and no historical N-second
+  freshness rule was added.
+- The review adapter now requests regular-session daily closes as specified; this
+  is an input-frequency change from the prior new five-minute adapter. This branch's
+  RSI is its research population, not an RSI oscillator. No oscillator was invented.
+  Strategy/feature numerical sources, parameters, ranking, universe, risk, order
+  construction, execution, grant/key policy and MCP 1.7.0 pins are byte-identical.
+  Tests compare all seven families' floating-point outputs bit-for-bit for identical
+  completed closes. Exact reviewed old/new composite hash compatibility preserves
+  immutable registered versions; unknown implementation drift still fails closed.
+- Daily labels resolve only as UTC midnight date labels, New York midnight or exact
+  regular open. Ambiguous/non-session/future labels fail closed. Today's candle is
+  excluded before calendar close; after close it requires a real provider bar.
+  Canonical final bar start/session close identifies the daily signal. Repeated
+  observation clocks do not create another snapshot, population or review.
+- Files: `calendar.py`, `canary_review.py`, `research/domain.py`, `research/lab.py`,
+  focused daily tests, replacement of the old bug-expectation test, narrow protocol/
+  review docs, deployment manifest and this handoff. No database schema migration.
+- Validation: **561 passed in 43.35s**; focused **90 passed in 6.56s**. Ruff lint/
+  formatting, compileall, 56 package-module imports, pip check, build/Twine,
+  wheel/source identity, project/privacy/provenance/manifest checks and fresh
+  synthetic demo passed. Synthetic daily review proves one review, zero intents/
+  writes, unchanged production authorization and duplicate suppression.
+- Existing configured review window: XNYS regular session only, 09:30–16:00 ET
+  (08:30–15:00 Chicago today). It was open; it was not widened. Exactly one new
+  live attempt ran. Authentication, origin/schema, manifest, regular session,
+  account/accounting/startup reconciliation and daily RSI/scan/rank passed.
+- Live daily data: 501 completed bars each for OPEN/SPY; latest provider label
+  `2026-10-06T00:00:00Z`, mapped close October 6 at 16:00 ET. Live observation
+  October 7 at approximately 12:55 ET. All seven predictions persisted.
+  Mean reversion ranked first and selected long; relative strength ranked second,
+  bearish, resulting in NO_TRADE for that expression. Controls were not selected;
+  opening/gap families abstained because session reference inputs remain unavailable.
+- CANARY classification failed at the official frozen request
+  `search(query=OPEN, asset_type=equity, limit=20)`. Exact provider rejection reason
+  was not retained. Deterministic canary selection, order sizing and order-specific
+  risk checks were NOT_RUN. Candidate/quantity/limit/notional/review: none.
+- Authoritative actual reads/review/place/cancel: **10/0/0/0** (one failed search
+  attempt included). Previous authorized task: 9/0/0/0; combined two distinct
+  authorized launches: **19/0/0/0**, not an automatic retry.
+- Unresolved reporting defect: `MCPError` escaped the existing handler. Its finally
+  block journaled the true counters, but CLI finally wrote default 0/0/0/0 to
+  `run/result.json`. Use `journal-result.json` and matching SQLite/JSONL event as
+  authoritative; originals are preserved. No out-of-scope error-handler edit.
+- State: new audit has 1 HALT run, 6 matching events, 0 intents/budgets; lease empty,
+  lock released, integrity ok. RSI store retains 7 original version records and now
+  has 1 snapshot, 7 predictions, 7 selections and 7 research plans. Existing
+  execution SQLite/log/lock bytes unchanged. No grant, key enrollment or write.
+- Next prerequisite: separately resolve official classification search failure and
+  the incomplete CLI failure report. Today's completed-bar signal is already
+  captured; do not reset/delete evidence or force another same-bar preparation.
+  No automatic retry, scheduler or execution follows.
+
+Owner-only detailed evidence:
+`$HOME/.local/state/robinhood-agent/daily-signal-timing-20261007/`:
+`GPT_HANDOFF.md`, `inspection.json`, `observed-result.json`,
+`journal-result.json`, `state-before.json`, validation/window checks,
+`live_attempt_claim.json`, `run/state.sqlite3`, `run/events.jsonl`, `stderr.txt`.
+Private account/market details remain outside Git.
+
+---
+
+## Prior task handoffs (historical status)
+
 # Review-only RSI CANARY handoff — 2026-10-07
 
 **NOT READY FOR USER-CONFIRMED MANUAL CANARY.** Exactly one live attempt HALTed at
