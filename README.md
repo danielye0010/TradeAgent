@@ -68,6 +68,21 @@ There is no silent fallback or mixing of provider evidence. Alpaca SIP entitleme
 and live collection must be verified independently. The separate historical
 commissioning command remains an optional Alpaca/input-file experiment.
 
+## Historical alpha research
+
+Evaluate the five frozen baselines as long-only portfolios with modeled costs,
+chronological holdouts and passive/exposure benchmarks:
+
+~~~bash
+tradeagent research-history --start 2020-01-01 --validation-start 2023-01-01 \
+  --test-start 2025-01-01 --end 2026-01-01 --output work/alpha-2020-2025
+~~~
+
+Uses Alpaca historical SIP minutes or explicit cached input, independently of the
+Robinhood shadow service. See [running and interpreting historical research](docs/historical-alpha.md)
+for data requirements and the limited real-market sample findings. Historical
+results do not establish profitability or promote strategies.
+
 ## Research and execution
 
 ~~~text
