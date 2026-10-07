@@ -1,94 +1,101 @@
-# Getting Started
+# Getting started
 
-Install TradeAgent and run a local simulation before connecting a broker.
+Use Python 3.12–3.14 on Linux or Ubuntu/WSL2, with `findmnt` from util-linux.
+SQLite state and locks require ext2/ext3/ext4, btrfs or xfs, not a Windows mount,
+network share or tmpfs. Install `python -m pip install -e ".[dev]"` from the checkout.
 
-## Requirements
-
-- Python 3.12–3.14
-- Linux or Ubuntu on WSL2
-- Git, Python venv support, and `findmnt` from util-linux
-
-Runtime state must live on a local Linux filesystem because the locking layer uses POSIX file locks. Supported filesystems are ext2/ext3/ext4, btrfs, and xfs. On WSL, use your Linux home directory. Windows mounts, network shares, and tmpfs are not supported for state.
-
-Codex CLI and a Robinhood account are needed only for real-data runs. Installation downloads Python dependencies; the demo runs offline.
-
-## Install
+## Offline demonstration
 
 ```bash
-git clone https://github.com/danielye0010/tradeagent.git
-cd tradeagent
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -e ".[dev]"
-tradeagent validate
+tradeagent demo --demo-dir data/rsi-demo
+tradeagent inspect --state-dir data/rsi-demo
 ```
 
-The validation output includes `"valid": true` and `"mode": "SHADOW"`. Run commands from the repository root so the example configs are available.
+Use a fresh directory. Outputs are `experience.sqlite3`, `summary.json`, `events.json`,
+`snapshot.example.json` and `future.example.json`. These are synthetic and ignored by
+Git. The example snapshot is historical fixture data: inspect its shape; do not
+submit it as a new prospective scan.
 
-## Run the demo
+## Input data contract
+
+`scan --input` accepts one JSON MarketSnapshot with:
+
+- symbol, benchmark, UTC decision_time, source, evidence_kind (`prospective` normally);
+- arrays `bars` and `benchmark_bars`: symbol, start, end, available_at,
+  open, high, low, close and optional volume;
+- bid, ask, quote_time, quote_available_at;
+- optional session_open, previous_close and their `_time` timestamps;
+- optional `options`: contract_id, underlying, kind (call/put), expiration,
+  strike, asof, available_at, bid, ask; optional mark, IV/Greeks, volume/open interest.
+
+Timestamps may be Unix seconds or ISO 8601 with timezone. Prices are finite JSON
+numbers. Only completed decision-time bars are accepted; the latest symbol and
+benchmark bars end exactly at the decision. Inputs need truthful source availability
+timestamps, including session references. Missing session references abstain in
+opening/gap families; missing history abstains when a feature cannot be computed.
+
+`resolve --input` accepts `{ "source": "same-source", "bars": [...], "options": [...] }`.
+Future bars use the same Bar schema. Options use the same quote schema at the exact
+horizon. The command stores actual ingestion time and rejects observations not yet
+available. Missing symbol/benchmark path segments leave predictions unresolved.
+
+Initialize before the first decision, then provide a freshly collected snapshot:
 
 ```bash
-tradeagent simulate --demo-dir data/demo
-tradeagent inspect --config data/demo/inspect.example.json
+tradeagent init --state-dir data/research
+tradeagent scan --state-dir data/research --input decision-snapshot.json
+# Later:
+tradeagent resolve --state-dir data/research --input future-observations.json
+tradeagent learn-daily --state-dir data/research
+tradeagent evolve-weekly --state-dir data/research
+tradeagent inspect --state-dir data/research
 ```
 
-The demo creates one synthetic equity order and one synthetic option order. Repeating the same decision is suppressed. The result includes `"account_and_orders": "SYNTHETIC"` and SQLite integrity `"ok"`.
+Each command runs once. Use an external scheduler and data collector for unattended
+operation. Automated broker-market collection is not installed in this version.
+The CLI does not accept a backdated `--asof` override. Synthetic experiments use
+their separate evidence pool (`--evidence-kind synthetic` for learning/evolution).
 
-`data/demo/demonstration.json` contains the summary. The `equity/` and `option/` directories contain separate broker and agent journals. Inspection uses the generated config to show the equity demo's runs and intent.
+## Agent challenger proposal
 
-Use a new directory for each demo, such as `data/demo-2`, and use the same directory in the inspection command. Generated data is ignored by Git.
-
-## Configuration
-
-Copy the examples to local files:
-
-```bash
-cp config/config.example.json config/config.local.json
-cp config/risk.example.json config/risk.local.json
-tradeagent validate --config config/config.local.json --risk config/risk.local.json
+```json
+{
+  "strategy_id": "opening_momentum",
+  "parent_version": "v1",
+  "hypothesis": "A larger abstention threshold may reduce noisy opening predictions",
+  "params": {"threshold": 0.00125, "scale": 0.5, "horizon": 3600, "max_expected": 0.03}
+}
 ```
 
-The config sets mode, symbols, strategy version, target fraction, timeout, lease duration, and state directory. The risk config sets cash, exposure, turnover, loss, spread, and data-age limits. Pass both paths on subsequent commands. Local files are ignored by Git.
+Run `tradeagent evolve-weekly --proposal hypothesis.json`. Bounds and incumbent
+identity are checked. The new version starts in shadow and receives a frozen test
+plan. There is no immediate parent replacement.
 
-The other examples cover specific uses: `small-balance-shadow.example.json` selects a single symbol for whole-share sizing; `canary.example.json` configures a canary run; `canary-policy.template.json` shows the signed-policy fields. See [Deployment](deployment.md) for real execution requirements.
+`tradeagent retire --strategy-id ID --version VERSION --reason TEXT` records a
+reason and excludes that version from future scans while preserving all history.
+Retiring the incumbent disables the strategy population until an explicit future
+administrative workflow is implemented; historical state remains inspectable.
+`tradeagent retire-lesson --lesson-id ID --reason TEXT` appends a retired lesson
+revision. `inspect` includes generation/regime performance and learned/raw selection
+comparisons, using the frozen selections actually recorded at decision time.
 
-## Connect Robinhood
+## External execution calibration
 
-Install [Codex CLI](https://developers.openai.com/codex/cli) in the same Linux environment. You need an eligible Robinhood Agentic Trading account.
+`tradeagent import-execution --input reconciled-fills.json` accepts an object with
+`reconciled: true` and a `records` array. Each record needs prediction_id,
+execution_key, observed_at, expected_entry, quantity and status (filled/rejected/failed/pending).
+Filled records need actual_entry and fees; actual_exit is optional. All timestamps
+here are finite Unix seconds. Quantity denotes long price units: include the option
+multiplier for option records. The importer trusts the external reconciliation
+attestation and neither contacts a broker nor creates an order. Late fill diagnostics
+append separately and never alter original forecasts, attribution or alpha scores.
 
-```bash
-codex login
-codex login status
-codex mcp add robinhood-trading --url https://agent.robinhood.com/mcp/trading
-codex mcp login robinhood-trading
-codex mcp get robinhood-trading
-tradeagent tools
-```
+## Execution compatibility
 
-Complete authentication in the provider's browser flow. If `robinhood-trading` is already configured, use `codex mcp get` rather than adding it again. Credentials stay outside the project. See the [Codex MCP guide](https://developers.openai.com/codex/extend/mcp) for connection settings.
+`tradeagent execution simulate --demo-dir data/execution-demo` runs preserved
+synthetic equity and option submission/reconciliation tests. Its generated
+`inspect.example.json` can be passed to `tradeagent execution inspect --config ...`.
+Old validate/tools/shadow/simulate aliases remain for execution compatibility.
+`inspect` defaults to the research DB; `inspect --config` routes to execution inspection.
 
-The native client uses Codex app-server and pinned Robinhood MCP 1.6.2 contracts. Check compatibility when upgrading Codex or the server. `tools` checks the connection and tool schemas; it also initializes the configured local state directory.
-
-## Shadow mode
-
-```bash
-tradeagent shadow
-tradeagent inspect
-```
-
-Shadow mode reads real account and market data, evaluates the strategy and risk checks, and records hypothetical decisions. It never reviews, places, or cancels orders. No trade or a risk rejection is a normal result.
-
-These commands use the configured state directory, which defaults to `data/`. Demo inspection uses its own generated config.
-
-## Troubleshooting
-
-| Problem | What to check |
-| --- | --- |
-| Missing `venv` or `ensurepip` | Install your distribution's Python venv package. |
-| Missing `findmnt` | Install util-linux. |
-| Unsupported filesystem | Use a local Linux checkout and a new demo directory. |
-| Demo directory already exists | Choose another directory and update the inspection path. |
-| Config file not found | Run from the repository root or pass `--config` and `--risk`. |
-| Authentication or schema error | Check Codex sign-in, the official endpoint, and server compatibility. |
-
-A completed shadow cycle exits with 0, a safety halt with 2, and an unexpected cycle failure with 1. Read the JSON error before rerunning. See [State and recovery](deployment.md#state-and-recovery) for interrupted orders.
+See [Execution boundary](deployment.md) before using any older operational library.

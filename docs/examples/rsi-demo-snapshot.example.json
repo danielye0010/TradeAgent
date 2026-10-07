@@ -1,0 +1,193 @@
+{
+  "symbol": "XYZ",
+  "decision_time": 1767628800.0,
+  "source": "deterministic-fixture",
+  "evidence_kind": "synthetic",
+  "benchmark": "SPY",
+  "bars": [
+    {
+      "symbol": "XYZ",
+      "start": 1767607200.0,
+      "end": 1767610800.0,
+      "available_at": 1767610800.0,
+      "open": 100.0,
+      "high": 100.2,
+      "low": 99.9,
+      "close": 100.1,
+      "volume": 10000
+    },
+    {
+      "symbol": "XYZ",
+      "start": 1767610800.0,
+      "end": 1767614400.0,
+      "available_at": 1767614400.0,
+      "open": 100.1,
+      "high": 100.3,
+      "low": 100.0,
+      "close": 100.19999999999999,
+      "volume": 10000
+    },
+    {
+      "symbol": "XYZ",
+      "start": 1767614400.0,
+      "end": 1767618000.0,
+      "available_at": 1767618000.0,
+      "open": 100.2,
+      "high": 100.4,
+      "low": 100.10000000000001,
+      "close": 100.3,
+      "volume": 10000
+    },
+    {
+      "symbol": "XYZ",
+      "start": 1767618000.0,
+      "end": 1767621600.0,
+      "available_at": 1767621600.0,
+      "open": 100.3,
+      "high": 100.5,
+      "low": 100.2,
+      "close": 100.39999999999999,
+      "volume": 10000
+    },
+    {
+      "symbol": "XYZ",
+      "start": 1767621600.0,
+      "end": 1767625200.0,
+      "available_at": 1767625200.0,
+      "open": 100.4,
+      "high": 100.60000000000001,
+      "low": 100.30000000000001,
+      "close": 100.5,
+      "volume": 10000
+    },
+    {
+      "symbol": "XYZ",
+      "start": 1767625200.0,
+      "end": 1767628800.0,
+      "available_at": 1767628800.0,
+      "open": 100.5,
+      "high": 100.7,
+      "low": 100.4,
+      "close": 100.6,
+      "volume": 10000
+    }
+  ],
+  "benchmark_bars": [
+    {
+      "symbol": "SPY",
+      "start": 1767607200.0,
+      "end": 1767610800.0,
+      "available_at": 1767610800.0,
+      "open": 500.0,
+      "high": 500.2,
+      "low": 499.9,
+      "close": 500.1,
+      "volume": 10000
+    },
+    {
+      "symbol": "SPY",
+      "start": 1767610800.0,
+      "end": 1767614400.0,
+      "available_at": 1767614400.0,
+      "open": 500.1,
+      "high": 500.3,
+      "low": 500.0,
+      "close": 500.20000000000005,
+      "volume": 10000
+    },
+    {
+      "symbol": "SPY",
+      "start": 1767614400.0,
+      "end": 1767618000.0,
+      "available_at": 1767618000.0,
+      "open": 500.2,
+      "high": 500.4,
+      "low": 500.09999999999997,
+      "close": 500.3,
+      "volume": 10000
+    },
+    {
+      "symbol": "SPY",
+      "start": 1767618000.0,
+      "end": 1767621600.0,
+      "available_at": 1767621600.0,
+      "open": 500.3,
+      "high": 500.5,
+      "low": 500.2,
+      "close": 500.40000000000003,
+      "volume": 10000
+    },
+    {
+      "symbol": "SPY",
+      "start": 1767621600.0,
+      "end": 1767625200.0,
+      "available_at": 1767625200.0,
+      "open": 500.4,
+      "high": 500.59999999999997,
+      "low": 500.29999999999995,
+      "close": 500.5,
+      "volume": 10000
+    },
+    {
+      "symbol": "SPY",
+      "start": 1767625200.0,
+      "end": 1767628800.0,
+      "available_at": 1767628800.0,
+      "open": 500.5,
+      "high": 500.7,
+      "low": 500.4,
+      "close": 500.6,
+      "volume": 10000
+    }
+  ],
+  "bid": 100.59,
+  "ask": 100.61,
+  "quote_time": 1767628800.0,
+  "quote_available_at": 1767628800.0,
+  "session_open": 100.0,
+  "previous_close": 99.8,
+  "options": [
+    {
+      "contract_id": "fixture-call",
+      "underlying": "XYZ",
+      "kind": "call",
+      "expiration": "2027-01-15",
+      "strike": 100.0,
+      "asof": 1767628800.0,
+      "available_at": 1767628800.0,
+      "bid": 1.9,
+      "ask": 2.1,
+      "mark": 2.0,
+      "multiplier": 100,
+      "iv": 0.5,
+      "delta": 0.5,
+      "gamma": 0.1,
+      "theta": -0.1,
+      "vega": 0.2,
+      "volume": 1000,
+      "open_interest": 1000
+    },
+    {
+      "contract_id": "fixture-put",
+      "underlying": "XYZ",
+      "kind": "put",
+      "expiration": "2027-01-15",
+      "strike": 100.0,
+      "asof": 1767628800.0,
+      "available_at": 1767628800.0,
+      "bid": 1.9,
+      "ask": 2.1,
+      "mark": 2.0,
+      "multiplier": 100,
+      "iv": null,
+      "delta": null,
+      "gamma": null,
+      "theta": null,
+      "vega": null,
+      "volume": null,
+      "open_interest": null
+    }
+  ],
+  "session_open_time": 1767625200.0,
+  "previous_close_time": 1767564000.0
+}

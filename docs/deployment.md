@@ -1,55 +1,53 @@
-# Deployment
+# Execution boundary
 
-TradeAgent runs once per invocation. Its current broker integration uses Robinhood's official Trading MCP.
+The default v0.2 operations are `init`, `scan`, `resolve`, `learn-daily`,
+`evolve-weekly`, `inspect`, `retire` and `demo`. They operate on market inputs and
+experience state without broker placement. No signing keys, deployment manifest,
+broker account, funded account or live canary is needed for the RSI loop.
 
-## Modes
+Scheduling and production market collection remain external. No production schedule,
+daemon or automatic source-editing agent is installed. Prospective input collection
+must preserve actual information availability times.
 
-| Mode | Operation |
-| --- | --- |
-| Simulation | Synthetic equity and option orders with local journals. |
-| Shadow | Real account and market reads; no order review, submission, or cancellation. |
-| Supervised | Equity orders bound to exact external approval. |
-| Canary | Equity execution within a small signed account, quantity, and economic limit. |
-| Limited autonomous equity | Repeated execution within a signed policy's limits. |
+## Preserved v0.1 substrate
 
-The default configuration is SHADOW. Production verification keys are not enrolled, and the deployed autonomous phase is CANARY. Live options and scheduled unattended operation are not supported.
+The complete pre-refactor baseline is tagged `v0.1-execution-core`. Broker normalization,
+official contracts, account/risk boundaries, durable intent, submission references,
+ambiguous-submission recovery, accurate fill persistence, process locking and fenced
+leases are retained and tested.
 
-## Shadow mode
+Legacy signed policy, enrolled verification keys, deployment hashes and canary/
+autonomous wrappers are isolated in `tradeagent.legacy`. Their controls continue to
+fail closed. They are compatibility infrastructure, not the research operating model.
+The legacy manifest covers current source bytes for those optional library checks;
+the normal project checker verifies provenance and documentation without requiring
+signed deployment artifacts. No keys were enrolled and no real orders were submitted.
 
-Set up the [official MCP connection](getting-started.md#connect-robinhood), then run:
+The old final real-money canary is canceled. `canary-buy`, `canary-exit` and `run-once`
+are absent from the product CLI. The preserved legacy standalone CLI is a library
+interface for separately authorized future execution; it is not scheduled or called
+by any research operation.
 
-```bash
-tradeagent shadow
-tradeagent inspect
-```
+## Future live calibration
 
-Each invocation runs once and records its decisions in the configured state directory.
+Research TradePlans do not automatically submit orders. A future bridge must size
+within deterministic capital/instrument bounds and pass plans through the existing
+durable lifecycle; it must preserve intent-before-I/O, duplicate protection and
+no blind retry. That bridge and new live authorization model are deferred.
 
-## Real equity execution
-
-Real execution requires:
-
-- An eligible account and compatible authenticated MCP connection
-- Current instrument classification, market data, and corporate-action inputs
-- A deployment manifest matching the installed files
-- A human-owned public verification key enrolled in the production code
-- An externally signed approval or policy covering the account, deployment, strategy, config, risk settings, instruments, and permitted phase
-- Persistent state, order monitoring, and restart/reconciliation handling
-
-Keep the private signing key outside the repository and runtime. Policies have expiry, quantity, session, and economic limits. Deployed file changes require a refreshed manifest and matching signature. The public policy template contains placeholder fields and needs completed context and an external signature.
-
-Configure and test account-specific deployment before enabling real execution. Advance from canary to broader equity operation with its own configuration, instrument coverage, and signed limits. The included strategy has no established live performance record.
-
-## Standalone mode
-
-`run-once`, `canary-buy`, and `canary-exit` use the direct MCP client. Supply `--oauth-helper` with an absolute path to an owner-only local executable outside the checkout. The helper handles OAuth login and refresh. It must return a token, expiry, and official resource to the client; tokens are held in memory.
-
-Real mode also requires `--policy`, `--public-key`, and `--universe-evidence`. The helper is supplied by the operator. Direct authenticated connection and account compatibility need to be checked for that deployment. The project does not install a scheduler or service.
+Sparse real fills should calibrate execution quality. The experience schema includes
+live-expression records, independent of alpha observations. `import-execution --input`
+imports externally reconciled records and appends separate fill attributions even
+after alpha attribution exists. No automatic broker-fill reader is implemented.
 
 ## State and recovery
 
-Store real state on persistent local Linux storage. The default directory is `data/`; use separate directories for simulation and real accounts. Backups should protect account and order information and stay out of Git.
+Research uses `experience.sqlite3`; execution retains `state.sqlite3`, journal and
+leases. Never reinterpret execution history as prospective predictions or overwrite
+a DB to clear uncertainty. Research initializes a new versioned DB and refuses
+unknown schemas. Use new local directories for development and demos.
 
-After an interrupted submission, stop new entries and preserve the journal. Match the broker order to its persisted submission reference, then reconcile fills, fees, cash, positions, and open orders. Do not retry, reprice, cancel, reset allowances, or replace approval while the result is unresolved.
-
-A durable lease can outlive the worker's OS lock. Wait for normal expiry and check ownership rather than deleting it. Unresolved identity, unexplained cash movement, mismatched fills, expired policy, or approval-required receipts need operator handling. Exits outside a signed policy require new authorization.
+After an interrupted execution submission, preserve the journal and reconcile the
+persisted reference against the broker. Match fills, fees, positions and cash before
+new entries. Never automatically retry an ambiguous result. Acknowledgement is not
+a fill. The legacy lease may outlive its worker; wait for normal expiry.

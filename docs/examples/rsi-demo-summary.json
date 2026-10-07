@@ -1,0 +1,35 @@
+{
+  "status": "passed",
+  "evidence": "SYNTHETIC_ONLY_NOT_ALPHA_VALIDATION",
+  "real_broker_calls": 0,
+  "prediction_count": 150,
+  "outcome_count": 150,
+  "attribution_count": 150,
+  "lesson_revisions": 222,
+  "daily_learning_runs": 15,
+  "challengers_created": 5,
+  "challenger_paired_days": 9,
+  "challenger_state": "continue_testing",
+  "correct_alpha_poor_option_expression": 57,
+  "initial_weights": {
+    "gap_continuation": 0.9968223530597463,
+    "mean_reversion": 0.8623946371077127,
+    "null_control": 0.9477744026448149,
+    "opening_momentum": 0.9968223530597463,
+    "opening_reversal": 0.8623946371077127,
+    "random_control": 0.8623946371077127,
+    "relative_strength": 0.9477744026448149
+  },
+  "final_weights": {
+    "gap_continuation": 1.1540940659962091,
+    "mean_reversion": 0.32289430902160077,
+    "null_control": 0.8508184789919591,
+    "opening_momentum": 1.1540940659962091,
+    "opening_reversal": 0.32289430902160077,
+    "random_control": 0.8085266948782307,
+    "relative_strength": 0.8508184789919591
+  },
+  "selector_state_changed": true,
+  "schema_version": 1,
+  "integrity": "ok"
+}

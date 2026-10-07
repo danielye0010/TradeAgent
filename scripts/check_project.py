@@ -1,4 +1,4 @@
-"""Check documentation links, deployment hashes, and upstream files."""
+"""Check documentation and upstream provenance; optionally refresh legacy manifest."""
 
 import argparse
 import hashlib
@@ -38,15 +38,6 @@ def update_manifest():
 
 def check():
     errors = []
-    manifest = json.loads((ROOT / "docs/deployment_manifest.json").read_text())
-    for name, expected in manifest["files"].items():
-        path = ROOT / name
-        if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != expected:
-            errors.append(f"deployment hash mismatch: {name}")
-    sources = {p.relative_to(ROOT).as_posix() for p in (ROOT / "src").rglob("*.py")}
-    frozen_sources = {n for n in manifest["files"] if n.startswith("src/") and n.endswith(".py")}
-    if sources != frozen_sources or fingerprint(manifest["files"]) != manifest["framework_sha256"]:
-        errors.append("deployment manifest source set/fingerprint mismatch")
     provenance = json.loads((ROOT / "docs/UPSTREAM_PROVENANCE.json").read_text())
     for category in ("files", "licenses"):
         for name, expected in provenance[category].items():

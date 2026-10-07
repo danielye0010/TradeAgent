@@ -1,0 +1,91 @@
+{
+  "source": "deterministic-fixture",
+  "bars": [
+    {
+      "symbol": "XYZ",
+      "start": 1767628800.0,
+      "end": 1767630600.0,
+      "available_at": 1767630600.0,
+      "open": 100.6,
+      "high": 101.2036,
+      "low": 100.4994,
+      "close": 100.90179999999998,
+      "volume": 0
+    },
+    {
+      "symbol": "XYZ",
+      "start": 1767630600.0,
+      "end": 1767632400.0,
+      "available_at": 1767632400.0,
+      "open": 100.90179999999998,
+      "high": 101.30419999999998,
+      "low": 100.4994,
+      "close": 101.0024,
+      "volume": 0
+    },
+    {
+      "symbol": "SPY",
+      "start": 1767628800.0,
+      "end": 1767630600.0,
+      "available_at": 1767630600.0,
+      "open": 500.6,
+      "high": 501.1006,
+      "low": 500.0994,
+      "close": 500.65006,
+      "volume": 0
+    },
+    {
+      "symbol": "SPY",
+      "start": 1767630600.0,
+      "end": 1767632400.0,
+      "available_at": 1767632400.0,
+      "open": 500.65006,
+      "high": 501.1006,
+      "low": 500.0994,
+      "close": 500.75018,
+      "volume": 0
+    }
+  ],
+  "options": [
+    {
+      "contract_id": "fixture-call",
+      "underlying": "XYZ",
+      "kind": "call",
+      "expiration": "2027-01-15",
+      "strike": 100.0,
+      "asof": 1767632400.0,
+      "available_at": 1767632400.0,
+      "bid": 1.7,
+      "ask": 1.9,
+      "mark": 1.8,
+      "multiplier": 100,
+      "iv": 0.5,
+      "delta": 0.5,
+      "gamma": 0.1,
+      "theta": -0.1,
+      "vega": 0.2,
+      "volume": 1000,
+      "open_interest": 1000
+    },
+    {
+      "contract_id": "fixture-put",
+      "underlying": "XYZ",
+      "kind": "put",
+      "expiration": "2027-01-15",
+      "strike": 100.0,
+      "asof": 1767632400.0,
+      "available_at": 1767632400.0,
+      "bid": 1.4,
+      "ask": 1.6,
+      "mark": 1.5,
+      "multiplier": 100,
+      "iv": null,
+      "delta": null,
+      "gamma": null,
+      "theta": null,
+      "vega": null,
+      "volume": null,
+      "open_interest": null
+    }
+  ]
+}

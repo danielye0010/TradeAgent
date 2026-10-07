@@ -31,6 +31,8 @@ jobs:
       - run: python -m pytest -q
       - name: Demo
         run: |
+          tradeagent demo --demo-dir work/ci-rsi-demo
+          tradeagent inspect --state-dir work/ci-rsi-demo
           tradeagent validate
           tradeagent simulate --demo-dir work/ci-demo > work/ci-demo-output.json
           tradeagent inspect --config work/ci-demo/inspect.example.json

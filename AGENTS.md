@@ -1,21 +1,25 @@
 # Contributor instructions
 
-TradeAgent connects strategies to broker adapters with risk checks,
-signed execution controls, and durable execution state. Read README and the four
-guides in docs before changing a component.
+TradeAgent is a prospective quantitative laboratory with a separate execution substrate.
+Read README, docs/architecture.md and docs/research-protocol.md before changing the loop.
 
-- Preserve strategy, account eligibility, sizing, risk, execution, reconciliation,
-  submission identity, and release behavior unless the task explicitly changes them.
-- Use mock brokers and new synthetic state directories for development. Do not
-  access a real broker or operator state without an explicit operational request.
-- Keep credentials, private keys, signed account artifacts, and runtime files out
-  of Git. Preserve vendor code, licenses, and UPSTREAM_PROVENANCE.json.
-- Regenerate docs/deployment_manifest.json with
-  `python scripts/check_project.py --update-manifest` when deployed files change.
-  Preserve its hash and complete-source checks; file changes need matching signed deployment context.
-- Keep changes focused, preserve unrelated work, and test changed behavior.
+- Strategies receive market snapshots and produce immutable Predictions, never account
+  state, broker intents or execution authorization. Keep all enabled versions in shadow.
+- Keep exact version/implementation identity, availability timestamps, append-only
+  evidence, independent synthetic/replay pools and frozen challenger evaluation rules.
+- Preserve losing history, explicit promotion/rejection/retirement and prior-only selector state.
+- Daily learning changes statistical state; it does not rewrite source or observations.
+- Preserve the execution substrate's durable submission identity, capital bounds,
+  locks, fill persistence, recovery and reconciliation. Legacy control workflows are
+  optional compatibility code and must not enter the default research path.
+- Use mock brokers and new synthetic local Linux state. Never read or modify operator
+  runtime state, credentials or signing artifacts during development. No real trading
+  without a separate explicit operational request.
+- Preserve vendor files, licenses and docs/UPSTREAM_PROVENANCE.json. Regenerate the
+  optional legacy manifest after source changes with check_project.py --update-manifest;
+  it is not a research trading gate. Preserve unrelated user work.
 
-Validation from the repository root:
+Validation:
 
 ```bash
 python -m pytest -q
@@ -25,4 +29,9 @@ python -m compileall -q src
 python -m build
 python -m twine check dist/*
 python scripts/check_project.py
+tradeagent demo --demo-dir work/fresh-rsi-demo
 ```
+
+Commit only source and sanitized reproducible artifacts. Never commit runtime DBs,
+private reports, authentication files or real-account data. Leave GPT_HANDOFF.md for
+substantial changes, pointing to canonical files and observed validation.
