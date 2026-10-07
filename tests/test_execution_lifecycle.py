@@ -518,8 +518,11 @@ def test_stale_review_latency_cannot_reset_freshness(tmp_path):
 
 def test_schema_and_version_drift_rejected():
     c = Contracts()
-    c.check_current(c.tools, "1.6.2")
-    for changed, version in [(c.tools, "9.0"), ({**c.tools, "place_equity_order": {}}, "1.6.2")]:
+    c.check_current(c.tools, c.manifest["server_version"])
+    for changed, version in [
+        (c.tools, "9.0"),
+        ({**c.tools, "place_equity_order": {}}, c.manifest["server_version"]),
+    ]:
         with pytest.raises(Halt, match="drift"):
             c.check_current(changed, version)
     with pytest.raises(Halt, match="inputSchema"):

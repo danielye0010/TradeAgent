@@ -143,7 +143,11 @@ def test_unknown_instrument_is_not_rescued_by_no_reported_actions():
 def authorized_bridge(path):
     b = CodexBridge(path, allow_equity_review=True)
     b.tools = copy.deepcopy(Contracts().tools)
-    b.inventory = {"data": [{"name": SERVER, "serverInfo": {"version": "1.6.2"}}]}
+    b.inventory = {
+        "data": [
+            {"name": SERVER, "serverInfo": {"version": Contracts().manifest["server_version"]}}
+        ]
+    }
     b.thread_id = "synthetic-local"
     return b
 

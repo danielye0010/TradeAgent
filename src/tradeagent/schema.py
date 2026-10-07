@@ -19,7 +19,7 @@ def structural(value):
 class Contracts:
     def __init__(self):
         self.manifest = json.loads(
-            files("tradeagent").joinpath("contracts/official-1.6.2.json").read_text()
+            files("tradeagent").joinpath("contracts/official-1.7.0.json").read_text()
         )
         self.tools = self.manifest["tools"]
         self.hash = digest(self.tools)

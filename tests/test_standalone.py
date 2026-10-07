@@ -452,7 +452,10 @@ def test_direct_json_and_sse_catalog_initialization_without_codex(monkeypatch):
             if m["method"] == "initialize":
                 result = {
                     "protocolVersion": "2025-11-25",
-                    "serverInfo": {"name": "robinhood-trading", "version": "1.6.2"},
+                    "serverInfo": {
+                        "name": "robinhood-trading",
+                        "version": pins.manifest["server_version"],
+                    },
                 }
             elif m["method"] == "tools/list":
                 result = {"tools": [{"name": k, **v} for k, v in pins.tools.items()]}
@@ -544,7 +547,7 @@ def test_new_execution_boundary_with_actual_synthetic_signature_no_network(
         class SyntheticWire:
             contracts = sim.contracts
             tools = contracts.tools
-            server_info = {"version": "1.6.2"}
+            server_info = {"version": contracts.manifest["server_version"]}
 
             def _call(self, name, args, before_send):
                 if expire_at_wire and name == "place_equity_order":
