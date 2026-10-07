@@ -1,3 +1,63 @@
+# MCP 1.7.0 canary repair handoff — 2026-10-07
+
+**NOT READY FOR USER-CONFIRMED CANARY.** The version blocker is repaired;
+the normal production gate stops at `AUTONOMOUS release closed: pinned production
+key/phase required`. This branch's `AUTONOMOUS_PUBLIC_KEY_SHA256` remains unset.
+No key enrollment, grant creation/signing, policy change, or execution occurred.
+
+- Repair commit on `rsi-v0.2`: `27ac443d45de1322aa6809bf8aab56b5b8fe8a1d`. No push or draft PR merge.
+  The independent commissioning commit was preserved.
+- Official origin: https://agent.robinhood.com/mcp/trading.
+  Old pin **1.6.2** → live/reviewed pin **1.7.0**; server name
+  `robinhood-trading`; protocol **2025-11-25**; complete inventory **84 tools**.
+  A fresh normal authenticated metadata handshake passed after the repair.
+- **Exact structural differences: none across all 18 required tools.** Input and
+  output schemas and pinned annotations/readOnlyHint are unchanged; equity
+  review/place/cancel contracts and option execution contracts match. Descriptions
+  are ignored exactly as before. Exact version and structural rejection remain.
+  No new tools or permissions were enabled. The old snapshot is retained.
+- Files changed: `src/tradeagent/schema.py`, new
+  `src/tradeagent/contracts/official-1.7.0.json`, `tests/test_contract_pins.py`,
+  pin fixtures in `tests/test_execution_lifecycle.py`, `tests/test_canary_execution.py`,
+  `tests/test_standalone.py`, `docs/deployment_manifest.json`,
+  `docs/MCP_CONTRACT_1_7_0_REVIEW.md`, and this handoff.
+  Strategy/RSI/selection/risk/execution/grants/budgets/sizing bytes were not edited.
+- Validation on the final branch base: **491 passed in 38.15s**; Ruff lint/format,
+  compileall, pip check, isolated build, Twine, project/privacy/provenance checks,
+  exact wheel/source comparison, deployment manifest and fresh synthetic demo passed.
+  Focused checks: 201 passed. Contract-only earlier-base isolation: 474 passed.
+  An initial shared-scratch full run had one synthetic SQLite readonly failure;
+  isolated single-test and full reruns passed. Concurrent scratch/source activity
+  was observed; the initial failure's causal mechanism was not proven. No execution
+  source fix was made for it. Validation evidence is retained externally.
+- **Actual broker reads/review/place/cancel for this task: 0/0/0/0**, including both
+  metadata handshakes, repair/validation and the stopped preflight. Diagnostics
+  hard-blocked every tools/call before network. Synthetic tests are not broker calls.
+- Operational SQLite integrity: **ok**. Existing state/lease databases, JSONL and
+  process-lock file hashes are byte-for-byte unchanged: **3 runs, 25 events,
+  0 intents**, no side budgets consumed, empty lease; process lock obtainable and
+  released. No real SHADOW cycle, submission or cancellation.
+- Candidate/proposed parameters/review: **NOT REACHED**, not NO_TRADE. Config/risk,
+  manifest, authentication and live schema checks passed. Account identity,
+  NAV/cash/deposits/capital, positions/orders, startup reconciliation, classification,
+  candidate selection, quote/book/session/history/liquidity/risk and signed-grant/
+  review gates were **not run** after the production-key gate failed.
+- Human boundary: separately resolve the existing production-key enrollment and
+  owner-signed CANARY authorization for the exact reviewed deployment/account/context,
+  then repeat fresh gated preparation/review. This task does not authorize signing,
+  enrollment, placement or bypass. Any securities purchase requires the user's
+  separate personal Robinhood action. No expired or unreviewed plan is actionable.
+- The older operator checkout was not repaired or redeployed; it was read only for
+  the explicitly requested integrity proof. Its production context is not this branch.
+
+Evidence: [contract comparison](docs/MCP_CONTRACT_1_7_0_REVIEW.md) and owner-only
+`$HOME/.local/state/robinhood-agent/mcp-contract-repair-20261007/`:
+`metadata.json`, `comparison.json`, `validation-summary.json`, `final-checks.json`,
+`final-source-files.json`, `preflight-result.json`, `state-before.json`,
+`state-after.json`, `commit-result.json`.
+
+---
+
 # TradeAgent v0.2 RSI handoff
 
 ## Git and preserved state
