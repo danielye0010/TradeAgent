@@ -117,7 +117,22 @@ seven versions and zero predictions/outcomes/learning/challengers/promotions.
 Next eligible target: **2026-10-08 09:33 EDT / 08:33 America/Chicago / 13:33 UTC**.
 This is conditional on credentials and fresh available market data.
 
-Git/CI publishing remains pending the final validation/push. Detailed completion evidence belongs in
+Implementation commit: `b59ee13ac196dc3c3ffe51c98ebfa3d520139cc8`,
+pushed to existing branch `rsi-v0.2` through the configured origin. GitHub redirects
+the existing remote to [TradeAgent](https://github.com/danielye0010/TradeAgent).
+No remote identity, visibility or unrelated user work was changed.
+
+Both exact-commit CI runs passed: [push CI](https://github.com/danielye0010/TradeAgent/actions/runs/37683827091)
+and [draft-PR CI](https://github.com/danielye0010/TradeAgent/actions/runs/37683827280).
+Python 3.12, 3.13 and 3.14 tests/demos, quality and package jobs all succeeded.
+Existing [PR #1](https://github.com/danielye0010/TradeAgent/pull/1) remains draft,
+open and unmerged. The implementation checkout was clean after push.
+
+This handoff completion is a separate documentation commit; the exact final HEAD,
+verified remote equality, final working-tree state and its CI result are recorded
+in `work/runtime-cleanup/completion.json`. It changes no runtime source.
+Current systemd MainPID is zero while encrypted credential loading is blocked;
+the cold status report is a readiness receipt, not proof of an active worker. Detailed completion evidence belongs in
 `work/runtime-cleanup/validation.json`, `supervision.json` and `completion.json`.
 Runtime databases, credentials, private receipts and test logs remain Git-ignored.
 The execution validation receipt explicitly calls its scheduler field
