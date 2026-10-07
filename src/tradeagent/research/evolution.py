@@ -23,8 +23,8 @@ PLAN = {
 
 
 def propose(store, now, proposal=None, kind="prospective"):
-    if kind not in {"prospective", "synthetic"}:
-        raise ValueError("challengers require a prospective or synthetic experiment pool")
+    if kind not in {"prospective", "synthetic", "replay"}:
+        raise ValueError("unknown challenger evidence pool")
     week = datetime.fromtimestamp(now, timezone.utc).strftime("%G-W%V")
     parents = store.db.execute(
         "SELECT v.* FROM strategies s JOIN strategy_versions v "

@@ -1,0 +1,869 @@
+{
+  "status": "REVIEW",
+  "reasons": [
+    "limited completed sessions or source gaps",
+    "vendor bar availability/revisions are assumed, not point-in-time certified",
+    "synthetic fixture is implementation validation only"
+  ],
+  "configuration": {
+    "sessions": 6,
+    "symbols": [
+      "QQQ",
+      "IWM"
+    ],
+    "benchmark": "SPY",
+    "as_of": "2026-01-12",
+    "decision_time": "09:32 America/New_York (commissioning default; no canonical schedule)",
+    "horizon_seconds": 3600,
+    "cold_start": true,
+    "evidence_kind": "replay",
+    "strategy_implementation": "e8b7ee7dbf6eb6e2ad6b8e46198e437d9036255210cbc748b77db7cc082ca80e",
+    "pipeline_implementation": "38b017c7484e01f6fdd8a9e5da99fb1283a52bad5e1017a14e5810e36e26e00e",
+    "data_digest": "f896dda690c7638ee7573832509bdba82e012a4ade21c264579512d603544df8",
+    "cache": "cache/14c96ac33e3a27e86f0b1f6d1524d12f4417ffb86b6c89825056dbe7a48d1afa.json"
+  },
+  "data": {
+    "source": "fixture-commissioning-minute-v1",
+    "frequency": "1Min",
+    "adjustment": "raw",
+    "symbols": [
+      "QQQ",
+      "IWM",
+      "SPY"
+    ],
+    "retrieval_start": "2025-12-31T20:59:00+00:00",
+    "retrieval_end": "2026-01-09T21:00:00+00:00",
+    "availability": "synthetic_fixture",
+    "retrieved_at": "2026-01-12T00:00:00Z"
+  },
+  "session_range": [
+    "2026-01-02",
+    "2026-01-09"
+  ],
+  "integrity": {
+    "requested_sessions": 6,
+    "completed_sessions": 6,
+    "skipped_sessions": [],
+    "predictions_generated": 134,
+    "predictions_resolved": 134,
+    "unresolved_predictions": 0,
+    "attributions": 134,
+    "learner_updates": 6,
+    "challengers": 5,
+    "evolution_evaluations": 10,
+    "promotions": 0,
+    "timestamp_leakage_violations": 0,
+    "idempotency_failures": 0,
+    "database": "ok",
+    "foreign_key_violations": 0
+  },
+  "selector_comparison": {
+    "learned": {
+      "mean_daily_score": -0.0026167794270155875,
+      "daily_clusters": 6,
+      "days": [
+        {
+          "day": "2026-01-02",
+          "score": -0.0007345586228153502,
+          "predictions": 6
+        },
+        {
+          "day": "2026-01-05",
+          "score": 0.0006348900470888697,
+          "predictions": 6
+        },
+        {
+          "day": "2026-01-06",
+          "score": -0.00042021550588352093,
+          "predictions": 6
+        },
+        {
+          "day": "2026-01-07",
+          "score": -0.006763223861712686,
+          "predictions": 6
+        },
+        {
+          "day": "2026-01-08",
+          "score": -0.004565186803135872,
+          "predictions": 6
+        },
+        {
+          "day": "2026-01-09",
+          "score": -0.003852381815634964,
+          "predictions": 6
+        }
+      ]
+    },
+    "raw": {
+      "mean_daily_score": -0.001976421220158622,
+      "daily_clusters": 6,
+      "days": [
+        {
+          "day": "2026-01-02",
+          "score": -0.0007345586228153502,
+          "predictions": 6
+        },
+        {
+          "day": "2026-01-05",
+          "score": 0.0006348900470888697,
+          "predictions": 6
+        },
+        {
+          "day": "2026-01-06",
+          "score": -0.00042021550588352093,
+          "predictions": 6
+        },
+        {
+          "day": "2026-01-07",
+          "score": -0.0029210746205708955,
+          "predictions": 6
+        },
+        {
+          "day": "2026-01-08",
+          "score": -0.004565186803135872,
+          "predictions": 6
+        },
+        {
+          "day": "2026-01-09",
+          "score": -0.003852381815634964,
+          "predictions": 6
+        }
+      ]
+    },
+    "null": {
+      "mean_daily_score": 0.0,
+      "daily_clusters": 6,
+      "days": [
+        {
+          "day": "2026-01-02",
+          "score": 0.0,
+          "predictions": 2
+        },
+        {
+          "day": "2026-01-05",
+          "score": 0.0,
+          "predictions": 2
+        },
+        {
+          "day": "2026-01-06",
+          "score": 0.0,
+          "predictions": 2
+        },
+        {
+          "day": "2026-01-07",
+          "score": 0.0,
+          "predictions": 2
+        },
+        {
+          "day": "2026-01-08",
+          "score": 0.0,
+          "predictions": 2
+        },
+        {
+          "day": "2026-01-09",
+          "score": 0.0,
+          "predictions": 2
+        }
+      ]
+    },
+    "random": {
+      "mean_daily_score": 0.002409258677604489,
+      "daily_clusters": 6,
+      "days": [
+        {
+          "day": "2026-01-02",
+          "score": 0.0028007534121099473,
+          "predictions": 2
+        },
+        {
+          "day": "2026-01-05",
+          "score": 0.0039046701412666094,
+          "predictions": 2
+        },
+        {
+          "day": "2026-01-06",
+          "score": -0.0027393534823494372,
+          "predictions": 2
+        },
+        {
+          "day": "2026-01-07",
+          "score": -0.006763223861712686,
+          "predictions": 2
+        },
+        {
+          "day": "2026-01-08",
+          "score": 0.009695560409407611,
+          "predictions": 2
+        },
+        {
+          "day": "2026-01-09",
+          "score": 0.007557145446904889,
+          "predictions": 2
+        }
+      ]
+    }
+  },
+  "coverage": {
+    "learned": {
+      "selected_predictions": 36,
+      "selected_snapshot_opportunities": 12,
+      "snapshot_opportunities": 12,
+      "selection_coverage": 1.0,
+      "active_champion_predictions": 48,
+      "active_prediction_coverage": 0.8
+    },
+    "raw": {
+      "selected_predictions": 36,
+      "selected_snapshot_opportunities": 12,
+      "snapshot_opportunities": 12,
+      "selection_coverage": 1.0,
+      "active_champion_predictions": 48,
+      "active_prediction_coverage": 0.8
+    }
+  },
+  "weight_behavior": [
+    {
+      "strategy": "gap_continuation",
+      "version": "v1",
+      "updates": 6,
+      "initial": 0.9440744456462002,
+      "final": 0.5067039685437534,
+      "min": 0.5067039685437534,
+      "max": 0.9739949364928396,
+      "max_step": 0.17310534717125348,
+      "bound_fraction": 0.0,
+      "large_step_reversals": 0,
+      "changed": true
+    },
+    {
+      "strategy": "mean_reversion",
+      "version": "v1",
+      "updates": 6,
+      "initial": 0.9477744026448149,
+      "final": 0.8559637673475291,
+      "min": 0.8559637673475291,
+      "max": 0.9477744026448149,
+      "max_step": 0.033336048522249584,
+      "bound_fraction": 0.0,
+      "large_step_reversals": 0,
+      "changed": true
+    },
+    {
+      "strategy": "null_control",
+      "version": "v1",
+      "updates": 6,
+      "initial": 0.9477744026448149,
+      "final": 0.8559637673475291,
+      "min": 0.8559637673475291,
+      "max": 0.9477744026448149,
+      "max_step": 0.033336048522249584,
+      "bound_fraction": 0.0,
+      "large_step_reversals": 0,
+      "changed": true
+    },
+    {
+      "strategy": "opening_momentum",
+      "version": "v1",
+      "updates": 6,
+      "initial": 0.9440744456462002,
+      "final": 0.5067039685437534,
+      "min": 0.5067039685437534,
+      "max": 0.9739949364928396,
+      "max_step": 0.17310534717125348,
+      "bound_fraction": 0.0,
+      "large_step_reversals": 0,
+      "changed": true
+    },
+    {
+      "strategy": "opening_reversal",
+      "version": "v1",
+      "updates": 6,
+      "initial": 0.9151425445212589,
+      "final": 0.9980586240975522,
+      "min": 0.7327193427955524,
+      "max": 0.9980586240975522,
+      "max_step": 0.1280032159063096,
+      "bound_fraction": 0.0,
+      "large_step_reversals": 0,
+      "changed": true
+    },
+    {
+      "strategy": "random_control",
+      "version": "v1",
+      "updates": 6,
+      "initial": 0.9986526302305989,
+      "final": 1.0109504044814253,
+      "min": 0.8233591153327859,
+      "max": 1.0229468024892163,
+      "max_step": 0.12210076844927631,
+      "bound_fraction": 0.0,
+      "large_step_reversals": 0,
+      "changed": true
+    },
+    {
+      "strategy": "relative_strength",
+      "version": "v1",
+      "updates": 6,
+      "initial": 0.9440744456462002,
+      "final": 0.5067039685437534,
+      "min": 0.5067039685437534,
+      "max": 0.9739949364928396,
+      "max_step": 0.17310534717125348,
+      "bound_fraction": 0.0,
+      "large_step_reversals": 0,
+      "changed": true
+    },
+    {
+      "strategy": "gap_continuation",
+      "version": "challenger-5baa9793e5a5",
+      "updates": 5,
+      "initial": 1.0187062794875945,
+      "final": 0.5377733361764598,
+      "min": 0.5377733361764598,
+      "max": 1.0187062794875945,
+      "max_step": 0.18707204323109172,
+      "bound_fraction": 0.0,
+      "large_step_reversals": 0,
+      "changed": true
+    },
+    {
+      "strategy": "mean_reversion",
+      "version": "challenger-5d6ee71854f4",
+      "updates": 5,
+      "initial": 0.9477744026448149,
+      "final": 0.8627189728863766,
+      "min": 0.8627189728863766,
+      "max": 0.9477744026448149,
+      "max_step": 0.03479870226381909,
+      "bound_fraction": 0.0,
+      "large_step_reversals": 0,
+      "changed": true
+    },
+    {
+      "strategy": "opening_momentum",
+      "version": "challenger-838f1f5f38a3",
+      "updates": 5,
+      "initial": 1.0187062794875945,
+      "final": 0.5377733361764598,
+      "min": 0.5377733361764598,
+      "max": 1.0187062794875945,
+      "max_step": 0.18707204323109172,
+      "bound_fraction": 0.0,
+      "large_step_reversals": 0,
+      "changed": true
+    },
+    {
+      "strategy": "opening_reversal",
+      "version": "challenger-38b3e9c370c4",
+      "updates": 5,
+      "initial": 0.8405107106798644,
+      "final": 1.0242806656677632,
+      "min": 0.770181995986438,
+      "max": 1.0242806656677632,
+      "max_step": 0.11795687289629087,
+      "bound_fraction": 0.0,
+      "large_step_reversals": 0,
+      "changed": true
+    },
+    {
+      "strategy": "relative_strength",
+      "version": "challenger-2c287ebee805",
+      "updates": 5,
+      "initial": 0.9477744026448149,
+      "final": 0.8627189728863766,
+      "min": 0.8627189728863766,
+      "max": 0.9477744026448149,
+      "max_step": 0.03479870226381909,
+      "bound_fraction": 0.0,
+      "large_step_reversals": 0,
+      "changed": true
+    }
+  ],
+  "weights_over_time": [
+    {
+      "strategy_id": "gap_continuation",
+      "version": "v1",
+      "weight": 0.9440744456462002,
+      "n": 1,
+      "asof": 1767367921.0
+    },
+    {
+      "strategy_id": "mean_reversion",
+      "version": "v1",
+      "weight": 0.9477744026448149,
+      "n": 1,
+      "asof": 1767367921.0
+    },
+    {
+      "strategy_id": "null_control",
+      "version": "v1",
+      "weight": 0.9477744026448149,
+      "n": 1,
+      "asof": 1767367921.0
+    },
+    {
+      "strategy_id": "opening_momentum",
+      "version": "v1",
+      "weight": 0.9440744456462002,
+      "n": 1,
+      "asof": 1767367921.0
+    },
+    {
+      "strategy_id": "opening_reversal",
+      "version": "v1",
+      "weight": 0.9151425445212589,
+      "n": 1,
+      "asof": 1767367921.0
+    },
+    {
+      "strategy_id": "random_control",
+      "version": "v1",
+      "weight": 0.9986526302305989,
+      "n": 1,
+      "asof": 1767367921.0
+    },
+    {
+      "strategy_id": "relative_strength",
+      "version": "v1",
+      "weight": 0.9440744456462002,
+      "n": 1,
+      "asof": 1767367921.0
+    },
+    {
+      "strategy_id": "gap_continuation",
+      "version": "challenger-5baa9793e5a5",
+      "weight": 1.0187062794875945,
+      "n": 1,
+      "asof": 1767627121.0
+    },
+    {
+      "strategy_id": "gap_continuation",
+      "version": "v1",
+      "weight": 0.9739949364928396,
+      "n": 2,
+      "asof": 1767627121.0
+    },
+    {
+      "strategy_id": "mean_reversion",
+      "version": "challenger-5d6ee71854f4",
+      "weight": 0.9477744026448149,
+      "n": 1,
+      "asof": 1767627121.0
+    },
+    {
+      "strategy_id": "mean_reversion",
+      "version": "v1",
+      "weight": 0.9144383541225654,
+      "n": 2,
+      "asof": 1767627121.0
+    },
+    {
+      "strategy_id": "null_control",
+      "version": "v1",
+      "weight": 0.9144383541225654,
+      "n": 2,
+      "asof": 1767627121.0
+    },
+    {
+      "strategy_id": "opening_momentum",
+      "version": "challenger-838f1f5f38a3",
+      "weight": 1.0187062794875945,
+      "n": 1,
+      "asof": 1767627121.0
+    },
+    {
+      "strategy_id": "opening_momentum",
+      "version": "v1",
+      "weight": 0.9739949364928396,
+      "n": 2,
+      "asof": 1767627121.0
+    },
+    {
+      "strategy_id": "opening_reversal",
+      "version": "challenger-38b3e9c370c4",
+      "weight": 0.8405107106798644,
+      "n": 1,
+      "asof": 1767627121.0
+    },
+    {
+      "strategy_id": "opening_reversal",
+      "version": "v1",
+      "weight": 0.7871393286149493,
+      "n": 2,
+      "asof": 1767627121.0
+    },
+    {
+      "strategy_id": "random_control",
+      "version": "v1",
+      "weight": 1.0229468024892163,
+      "n": 2,
+      "asof": 1767627121.0
+    },
+    {
+      "strategy_id": "relative_strength",
+      "version": "challenger-2c287ebee805",
+      "weight": 0.9477744026448149,
+      "n": 1,
+      "asof": 1767627121.0
+    },
+    {
+      "strategy_id": "relative_strength",
+      "version": "v1",
+      "weight": 0.9739949364928396,
+      "n": 2,
+      "asof": 1767627121.0
+    },
+    {
+      "strategy_id": "gap_continuation",
+      "version": "challenger-5baa9793e5a5",
+      "weight": 0.9887583595532053,
+      "n": 2,
+      "asof": 1767713521.0
+    },
+    {
+      "strategy_id": "gap_continuation",
+      "version": "v1",
+      "weight": 0.9563542149017943,
+      "n": 3,
+      "asof": 1767713521.0
+    },
+    {
+      "strategy_id": "mean_reversion",
+      "version": "challenger-5d6ee71854f4",
+      "weight": 0.9129757003809958,
+      "n": 2,
+      "asof": 1767713521.0
+    },
+    {
+      "strategy_id": "mean_reversion",
+      "version": "v1",
+      "weight": 0.8905380522646469,
+      "n": 3,
+      "asof": 1767713521.0
+    },
+    {
+      "strategy_id": "null_control",
+      "version": "v1",
+      "weight": 0.8905380522646469,
+      "n": 3,
+      "asof": 1767713521.0
+    },
+    {
+      "strategy_id": "opening_momentum",
+      "version": "challenger-838f1f5f38a3",
+      "weight": 0.9887583595532053,
+      "n": 2,
+      "asof": 1767713521.0
+    },
+    {
+      "strategy_id": "opening_momentum",
+      "version": "v1",
+      "weight": 0.9563542149017943,
+      "n": 3,
+      "asof": 1767713521.0
+    },
+    {
+      "strategy_id": "opening_reversal",
+      "version": "challenger-38b3e9c370c4",
+      "weight": 0.770181995986438,
+      "n": 2,
+      "asof": 1767713521.0
+    },
+    {
+      "strategy_id": "opening_reversal",
+      "version": "v1",
+      "weight": 0.7327193427955524,
+      "n": 3,
+      "asof": 1767713521.0
+    },
+    {
+      "strategy_id": "random_control",
+      "version": "v1",
+      "weight": 0.9454598837820622,
+      "n": 3,
+      "asof": 1767713521.0
+    },
+    {
+      "strategy_id": "relative_strength",
+      "version": "challenger-2c287ebee805",
+      "weight": 0.9129757003809958,
+      "n": 2,
+      "asof": 1767713521.0
+    },
+    {
+      "strategy_id": "relative_strength",
+      "version": "v1",
+      "weight": 0.9563542149017943,
+      "n": 3,
+      "asof": 1767713521.0
+    },
+    {
+      "strategy_id": "gap_continuation",
+      "version": "challenger-5baa9793e5a5",
+      "weight": 0.8505263572983415,
+      "n": 3,
+      "asof": 1767799921.0
+    },
+    {
+      "strategy_id": "gap_continuation",
+      "version": "v1",
+      "weight": 0.8345778284536359,
+      "n": 4,
+      "asof": 1767799921.0
+    },
+    {
+      "strategy_id": "mean_reversion",
+      "version": "challenger-5d6ee71854f4",
+      "weight": 0.8894736867462834,
+      "n": 3,
+      "asof": 1767799921.0
+    },
+    {
+      "strategy_id": "mean_reversion",
+      "version": "v1",
+      "weight": 0.8743021947987116,
+      "n": 4,
+      "asof": 1767799921.0
+    },
+    {
+      "strategy_id": "null_control",
+      "version": "v1",
+      "weight": 0.8743021947987116,
+      "n": 4,
+      "asof": 1767799921.0
+    },
+    {
+      "strategy_id": "opening_momentum",
+      "version": "challenger-838f1f5f38a3",
+      "weight": 0.8505263572983415,
+      "n": 3,
+      "asof": 1767799921.0
+    },
+    {
+      "strategy_id": "opening_momentum",
+      "version": "v1",
+      "weight": 0.8345778284536359,
+      "n": 4,
+      "asof": 1767799921.0
+    },
+    {
+      "strategy_id": "opening_reversal",
+      "version": "challenger-38b3e9c370c4",
+      "weight": 0.8276479318253309,
+      "n": 3,
+      "asof": 1767799921.0
+    },
+    {
+      "strategy_id": "opening_reversal",
+      "version": "v1",
+      "weight": 0.7921864748185843,
+      "n": 4,
+      "asof": 1767799921.0
+    },
+    {
+      "strategy_id": "random_control",
+      "version": "v1",
+      "weight": 0.8233591153327859,
+      "n": 4,
+      "asof": 1767799921.0
+    },
+    {
+      "strategy_id": "relative_strength",
+      "version": "challenger-2c287ebee805",
+      "weight": 0.8894736867462834,
+      "n": 3,
+      "asof": 1767799921.0
+    },
+    {
+      "strategy_id": "relative_strength",
+      "version": "v1",
+      "weight": 0.8345778284536359,
+      "n": 4,
+      "asof": 1767799921.0
+    },
+    {
+      "strategy_id": "gap_continuation",
+      "version": "challenger-5baa9793e5a5",
+      "weight": 0.6634543140672498,
+      "n": 4,
+      "asof": 1767886321.0
+    },
+    {
+      "strategy_id": "gap_continuation",
+      "version": "v1",
+      "weight": 0.6614724812823825,
+      "n": 5,
+      "asof": 1767886321.0
+    },
+    {
+      "strategy_id": "mean_reversion",
+      "version": "challenger-5d6ee71854f4",
+      "weight": 0.8735159124460318,
+      "n": 4,
+      "asof": 1767886321.0
+    },
+    {
+      "strategy_id": "mean_reversion",
+      "version": "v1",
+      "weight": 0.8633063181079228,
+      "n": 5,
+      "asof": 1767886321.0
+    },
+    {
+      "strategy_id": "null_control",
+      "version": "v1",
+      "weight": 0.8633063181079228,
+      "n": 5,
+      "asof": 1767886321.0
+    },
+    {
+      "strategy_id": "opening_momentum",
+      "version": "challenger-838f1f5f38a3",
+      "weight": 0.6634543140672498,
+      "n": 4,
+      "asof": 1767886321.0
+    },
+    {
+      "strategy_id": "opening_momentum",
+      "version": "v1",
+      "weight": 0.6614724812823825,
+      "n": 5,
+      "asof": 1767886321.0
+    },
+    {
+      "strategy_id": "opening_reversal",
+      "version": "challenger-38b3e9c370c4",
+      "weight": 0.9456048047216218,
+      "n": 4,
+      "asof": 1767886321.0
+    },
+    {
+      "strategy_id": "opening_reversal",
+      "version": "v1",
+      "weight": 0.904783885343505,
+      "n": 5,
+      "asof": 1767886321.0
+    },
+    {
+      "strategy_id": "random_control",
+      "version": "v1",
+      "weight": 0.9415422355373748,
+      "n": 5,
+      "asof": 1767886321.0
+    },
+    {
+      "strategy_id": "relative_strength",
+      "version": "challenger-2c287ebee805",
+      "weight": 0.8735159124460318,
+      "n": 4,
+      "asof": 1767886321.0
+    },
+    {
+      "strategy_id": "relative_strength",
+      "version": "v1",
+      "weight": 0.6614724812823825,
+      "n": 5,
+      "asof": 1767886321.0
+    },
+    {
+      "strategy_id": "gap_continuation",
+      "version": "challenger-5baa9793e5a5",
+      "weight": 0.5377733361764598,
+      "n": 5,
+      "asof": 1767972721.0
+    },
+    {
+      "strategy_id": "gap_continuation",
+      "version": "v1",
+      "weight": 0.5067039685437534,
+      "n": 6,
+      "asof": 1767972721.0
+    },
+    {
+      "strategy_id": "mean_reversion",
+      "version": "challenger-5d6ee71854f4",
+      "weight": 0.8627189728863766,
+      "n": 5,
+      "asof": 1767972721.0
+    },
+    {
+      "strategy_id": "mean_reversion",
+      "version": "v1",
+      "weight": 0.8559637673475291,
+      "n": 6,
+      "asof": 1767972721.0
+    },
+    {
+      "strategy_id": "null_control",
+      "version": "v1",
+      "weight": 0.8559637673475291,
+      "n": 6,
+      "asof": 1767972721.0
+    },
+    {
+      "strategy_id": "opening_momentum",
+      "version": "challenger-838f1f5f38a3",
+      "weight": 0.5377733361764598,
+      "n": 5,
+      "asof": 1767972721.0
+    },
+    {
+      "strategy_id": "opening_momentum",
+      "version": "v1",
+      "weight": 0.5067039685437534,
+      "n": 6,
+      "asof": 1767972721.0
+    },
+    {
+      "strategy_id": "opening_reversal",
+      "version": "challenger-38b3e9c370c4",
+      "weight": 1.0242806656677632,
+      "n": 5,
+      "asof": 1767972721.0
+    },
+    {
+      "strategy_id": "opening_reversal",
+      "version": "v1",
+      "weight": 0.9980586240975522,
+      "n": 6,
+      "asof": 1767972721.0
+    },
+    {
+      "strategy_id": "random_control",
+      "version": "v1",
+      "weight": 1.0109504044814253,
+      "n": 6,
+      "asof": 1767972721.0
+    },
+    {
+      "strategy_id": "relative_strength",
+      "version": "challenger-2c287ebee805",
+      "weight": 0.8627189728863766,
+      "n": 5,
+      "asof": 1767972721.0
+    },
+    {
+      "strategy_id": "relative_strength",
+      "version": "v1",
+      "weight": 0.5067039685437534,
+      "n": 6,
+      "asof": 1767972721.0
+    }
+  ],
+  "gate_diagnostics": {
+    "minimum_sessions": 30,
+    "coverage_ratio_floor": 0.5,
+    "degradation_minimum_days": 20,
+    "material_daily_gap": 0.002,
+    "degraded_day_fraction": 0.75,
+    "weight_jump": 0.5,
+    "oscillation_reversals": 6,
+    "saturation_fraction": 0.8
+  },
+  "real_broker_calls": 0,
+  "options_enabled": false,
+  "metric": "existing frozen clipped directional residual minus 10bp; daily mean; not PnL",
+  "score_denominator": "resolved UTC daily clusters; no selection on a resolved day scores zero",
+  "quote_proxy": "decision bar close for required bid/ask; no executable-price claim",
+  "historical_evidence_is_promotion_evidence": false
+}

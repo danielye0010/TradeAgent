@@ -207,8 +207,8 @@ def retire_lesson(store, lesson_id, now, reason):
 
 
 def learn_daily(store, now, kind="prospective"):
-    if kind not in {"prospective", "synthetic"}:
-        raise ValueError("replay cannot update prospective selector state")
+    if kind not in {"prospective", "synthetic", "replay"}:
+        raise ValueError("unknown learning evidence pool")
     attribute(store, now)
     rows = evidence(store, now, kind)
     digest = identity([ALGORITHM, CONFIG, kind, [r["prediction_id"] for r in rows]])

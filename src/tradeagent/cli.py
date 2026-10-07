@@ -39,6 +39,7 @@ def main(argv=None):
             "retire",
             "retire-lesson",
             "import-execution",
+            "replay-history",
         ],
     )
     parser.add_argument("--state-dir", type=Path, default=Path("data/research"))
@@ -53,10 +54,27 @@ def main(argv=None):
     parser.add_argument("--version")
     parser.add_argument("--reason")
     parser.add_argument("--lesson-id")
+    parser.add_argument("--sessions", type=int, default=60)
+    parser.add_argument("--symbols", default="QQQ,IWM")
+    parser.add_argument("--benchmark", default="SPY")
+    parser.add_argument("--horizon", choices=["60m"], default="60m")
+    parser.add_argument("--output", type=Path, default=Path("work/commissioning"))
+    parser.add_argument("--as-of", help="run date in New York; excludes this session")
     args = parser.parse_args(supplied)
     store = None
     try:
-        if args.command == "demo":
+        if args.command == "replay-history":
+            from .research.replay import run_history
+
+            result = run_history(
+                args.output,
+                args.sessions,
+                args.symbols.split(","),
+                args.benchmark,
+                args.as_of,
+                args.input,
+            )
+        elif args.command == "demo":
             from .research.demo import run_demo
 
             result = run_demo(args.demo_dir)

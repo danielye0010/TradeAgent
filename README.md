@@ -64,6 +64,18 @@ never overwrites parents, and fixes evaluation rules before prospective evidence
 Agent hypotheses can be supplied as constrained JSON; numerical truth and promotion
 rules remain deterministic. There is no automatic LLM or daily source-code rewriting.
 
+## Historical commissioning
+
+```bash
+tradeagent replay-history
+```
+
+The isolated replay uses QQQ/IWM versus SPY, the latest 60 completed sessions,
+09:32 New York decisions and the frozen 60-minute residual score. Data credentials
+are optional for development; a cached-input fixture requires no external access.
+See [configuration, data assumptions and commissioning outputs](docs/commissioning.md).
+Historical evidence cannot promote challengers.
+
 ## Execution and options
 
 The existing official Robinhood Trading MCP clients, quote/chain access, durable

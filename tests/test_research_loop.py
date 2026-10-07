@@ -276,7 +276,7 @@ def test_evaluation_reads_do_not_reuse_oos_evidence_as_new(store):
         store.db.execute("UPDATE mutations SET evaluation_plan='{}'")
 
 
-@pytest.mark.parametrize("direction", ["promote", "reject", "synthetic"])
+@pytest.mark.parametrize("direction", ["promote", "reject", "synthetic", "replay"])
 def test_fixed_prospective_test_and_durable_losing_history(tmp_path, direction):
     db = Experience(tmp_path / direction)
     try:
@@ -295,7 +295,7 @@ def test_fixed_prospective_test_and_durable_losing_history(tmp_path, direction):
             "hypothesis": "frozen test hypothesis",
             "params": {**DEFAULT_PARAMS, "threshold": child_threshold},
         }
-        kind = "synthetic" if direction == "synthetic" else "prospective"
+        kind = direction if direction in {"synthetic", "replay"} else "prospective"
         mutation_id = propose(db, START - 1, proposal, kind)[0]
         for day in range(60):
             decision = START + day * 86400
