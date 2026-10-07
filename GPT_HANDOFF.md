@@ -1,3 +1,68 @@
+# Review-only RSI CANARY handoff — 2026-10-07
+
+**NOT READY FOR USER-CONFIRMED MANUAL CANARY.** Exactly one live attempt HALTed at
+`insufficient completed RSI bars`; it was not NO_TRADE. No signal, selected
+candidate, proposed quantity/limit/notional, or official review was produced.
+There was no second live attempt after the local collector correction.
+
+- Branch: `rsi-v0.2`. Implementation: `f88fe1c68be4e7724266a22fc2d3acaeafc2c3b7`.
+  Final collector correction: `35d372fb6dfcc81e5ff076e6cf8c94dabc578763`. No push or PR merge.
+- New isolated action: `tradeagent canary-review`; normal RSI scan/ranking and
+  underlying proposal, then unchanged one-share selector and risk gates.
+  It uses the existing `review_equity_once` boundary at most once.
+  Metadata-only direct MCP provides the full inventory; authenticated Codex MCP
+  exposes only existing READ tools plus review. Execution transport is not
+  constructed, and execution/RPC/send layers reject all placement/cancel/write
+  calls before network. Review allowance is consumed before I/O; no retry.
+- Production verification key remains unset. No enrollment, grant, signing,
+  execution release or budget consumption. Execution-capable paths retain their
+  production-key requirement. RSI/strategy/ranking/risk/execution/policy/config
+  source bytes were preserved.
+- Files: `src/tradeagent/canary_review.py`, `src/tradeagent/canary_review_cli.py`,
+  isolated routing in `src/tradeagent/cli.py`, `tests/test_canary_review.py`,
+  `docs/canary-review.md`, regenerated `docs/deployment_manifest.json`, this handoff.
+- Exact official MCP 1.7.0 origin/schema/version checks passed. Preflight manifest,
+  regular XNYS session, dedicated account/accounting and startup reconciliation
+  passed; RSI snapshot gate failed. Classification, daily-history/candidate gates,
+  order-specific risk gates and review were NOT_RUN. Complete per-gate results
+  and private account evidence are outside Git.
+- Actual broker reads/review/place/cancel: **9/0/0/0**. One live launch; no broker
+  calls after halt. New audit journal: 1 HALT run, 4 matching SQLite/JSONL events,
+  0 intents, no side-budget use; integrity ok, empty lease and released lock.
+  Separate RSI store: 7 unchanged default versions registered at actual time,
+  0 snapshots/predictions/selections/plans; integrity ok. Existing operator
+  databases/logs/lock were byte-for-byte unchanged (3 historical runs, 0 intents).
+- Validation: pre-live **514 passed in 39.79s**; final correction **515 passed in
+  38.92s**, focused 24 passed. Ruff lint/format, compileall, pip check, build/Twine,
+  exact wheel/source match, project/privacy/provenance/manifest checks, CLI
+  validation and fresh synthetic demo passed. Tests cover unset production key,
+  independent write denials, one-use timeout/replay, schema/version drift,
+  frozen RSI/selector parity and unchanged risk decisions.
+- Collector correction: optional `interpolated` now excludes only explicit true,
+  matching the existing reader; removed the new collector's extra five-bar
+  minimum in favor of the frozen nonempty requirement. Raw history/count/end
+  evidence is now retained before snapshot validation. The spent attempt did
+  not retain raw historical bars, so its exact provider count/cause is unresolved.
+  The correction has local regression coverage, not a subsequent live result.
+- **Independent remaining timing blocker:** the new adapter uses latest completed
+  bar end as decision, but actual quote/history receipts occur later. Frozen
+  `MarketSnapshot` requires quote/bar availability <= decision and final bar end
+  == decision. This receipt-based adapter cannot satisfy that alignment; it fails
+  closed. No timestamps were backdated and no frozen rule was relaxed.
+  Next step is separately scoped review of truthful live snapshot timing, followed
+  by a separately authorized fresh single review attempt. Do not claim this
+  path can currently reach live review or reuse today's stale evidence.
+- Durable owner-only evidence:
+  `$HOME/.local/state/robinhood-agent/canary-review-20261007/`
+  (`GPT_HANDOFF.md`, `validation-summary.json`, `inspection.json`,
+  `live_attempt_claim.json`, `run/result.json`, SQLite and JSONL).
+  No reviewed transaction is actionable; any eventual purchase requires personal
+  user confirmation and Robinhood action.
+
+---
+
+## Historical handoffs (superseded status; retained for provenance)
+
 # MCP 1.7.0 canary repair handoff — 2026-10-07
 
 **NOT READY FOR USER-CONFIRMED CANARY.** The version blocker is repaired;
