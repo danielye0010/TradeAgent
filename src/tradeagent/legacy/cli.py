@@ -31,7 +31,7 @@ def main(argv=None):
                         "valid": True,
                         "mode": config.mode,
                         "production_broker": "read-only",
-                        "scheduler": "absent",
+                        "execution_scheduler": "absent",
                     }
                 )
             )

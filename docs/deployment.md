@@ -5,9 +5,10 @@ The default v0.2 operations are `init`, `scan`, `resolve`, `learn-daily`,
 experience state without broker placement. No signing keys, deployment manifest,
 broker account, funded account or live canary is needed for the RSI loop.
 
-Scheduling and production market collection remain external. No production schedule,
-daemon or automatic source-editing agent is installed. Prospective input collection
-must preserve actual information availability times.
+The prospective SHADOW collector is supervised by one systemd user service and a
+WSL lifetime-only Windows task. See [Prospective shadow](prospective-shadow.md).
+It has no order client or LIVE bridge. Input-file research remains available;
+automatic source editing is absent. Actual information availability times are preserved.
 
 ## Preserved v0.1 substrate
 

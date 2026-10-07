@@ -12,12 +12,9 @@ from ..calendar import session_bounds
 from ..research.domain import Bar, MarketSnapshot, canonical, timestamp
 
 SYMBOLS = ("QQQ", "IWM", "SPY")
-SOURCE = "alpaca-sip-prospective-minute-v1"
+SOURCE = "alpaca-sip-prospective-minute-v2"
 URL = "https://data.alpaca.markets/v2/stocks/snapshots?symbols=QQQ%2CIWM%2CSPY&feed=sip"
-CUTOFF_BLOCKER = (
-    "Alpaca minute bars arrive after minute end; frozen 09:32 snapshot requires "
-    "the bar ending 09:32 to have actually arrived by 09:32"
-)
+CUTOFF_BLOCKER = "insufficient fresh completed bars/quotes actually received by the decision"
 
 
 class NoRedirect(HTTPRedirectHandler):
@@ -153,12 +150,21 @@ class Collection:
             "SELECT * FROM refs WHERE symbol=? AND received_at<=? ORDER BY received_at DESC LIMIT 1",
             (symbol, decision),
         ).fetchone()
-        if len(bars) != 2 or len(benchmark) != 2 or not quote or not ref:
+        if len(bars) < 2 or len(benchmark) < 2 or not quote or not ref:
             raise ValueError(CUTOFF_BLOCKER)
         own = tuple(Bar.from_dict(json.loads(b[0])) for b in bars)
         bench = tuple(Bar.from_dict(json.loads(b[0])) for b in benchmark)
-        if own[0].start != bounds[0] or bench[0].start != bounds[0]:
-            raise ValueError("missing opening minute")
+        if (
+            own[0].start != bounds[0]
+            or bench[0].start != bounds[0]
+            or own[-1].end != bench[-1].end
+            or any(
+                a.end != b.start
+                for history in (own, bench)
+                for a, b in zip(history, history[1:], strict=False)
+            )
+        ):
+            raise ValueError("missing or unaligned opening minute history")
         return MarketSnapshot(
             symbol,
             decision,
@@ -197,8 +203,13 @@ class Collection:
         with self.db:
             self.db.execute("INSERT INTO failures(recorded_at,reason) VALUES(?,?)", (now, reason))
 
-    def dataset(self):
+    def dataset(self, start=0):
         return {
             "source": SOURCE,
-            "bars": [json.loads(r[0]) for r in self.db.execute("SELECT payload FROM bars")],
+            "bars": [
+                json.loads(r[0])
+                for r in self.db.execute(
+                    "SELECT payload FROM bars WHERE start>=? ORDER BY start,symbol", (start,)
+                )
+            ],
         }

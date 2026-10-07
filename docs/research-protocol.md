@@ -6,7 +6,9 @@ These rules implement an evidence machine, not a profitability claim.
 
 Initialize versions before their decision time. `scan` accepts a single symbol and
 benchmark snapshot, within 120 seconds of its decision, and persists every enabled
-version. Intraday input bars end exactly at the decision. Explicit daily signal snapshots
+version. Intraday input bars must be complete and actually available at decision time;
+their final end may precede the decision by at most 120 seconds, with symbol and
+benchmark ends aligned. Explicit daily signal snapshots
 instead retain the provider bar identity and mapped XNYS session close, with
 completion <= actual history availability <= current decision. Today's unfinished
 daily bar is excluded; canonical completed-bar identity suppresses repeated daily
@@ -20,7 +22,13 @@ decision to the exact endpoint. Missing data stays unresolved; no interpolation 
 nearest-close fallback exists. Corrections conflicting with frozen observations halt.
 Repeated identical imports and resolutions are idempotent.
 
-Raw return = endpoint close / decision close - 1. Residual = raw - benchmark return.
+Raw return = endpoint close / decision entry price - 1. When the final intraday
+signal bar ends before the decision, entry price is the first decision-minute bar's
+open, observed later during resolution; this prevents counting predecision moves.
+The benchmark uses the same entry model. An exactly aligned signal keeps its
+existing close-based entry; daily signal snapshots retain their separate existing
+contract. Entry model/prices and signal bar end persist in outcome metadata.
+Residual = raw - benchmark return.
 Excursions use path high/low, oriented to prediction direction and bounded by zero;
 abstention retains long-oriented diagnostics. Realized volatility is the population
 standard deviation of observed log-bar returns, without annualization. Sector

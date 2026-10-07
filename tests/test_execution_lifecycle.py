@@ -836,3 +836,60 @@ def test_held_long_closing_sell_reconciles_without_shorting(tmp_path, asset):
         assert not sim.snapshot().positions and not sim.snapshot().options
         assert sim.db.execute("SELECT COUNT(*) FROM simulated_orders").fetchone()[0] == 2
         assert dec(result["cash"]) == (dec("24999.90") if asset == "equity" else dec("24998.00"))
+
+
+@pytest.mark.parametrize("fault", ["duplicate_id", "wrong_ref", "id_ref_split", "unowned_pending"])
+def test_startup_recovery_rejects_divergent_broker_identity(tmp_path, fault):
+    with harness(tmp_path, "accepted") as (engine, sim, state, clock):
+        intent = equity()
+        plan = engine.prepare(intent, "identity-bar")
+        engine.execute(plan["key"], intent, approval(plan))
+        snapshot = sim.snapshot()
+        order = snapshot.orders[0]
+        if fault == "duplicate_id":
+            snapshot.orders.append(copy.deepcopy(order))
+        elif fault == "wrong_ref":
+            order["ref_id"] = "unrelated-reference"
+        elif fault == "id_ref_split":
+            snapshot.orders.append({**order, "id": "other-order", "ref_id": order["ref_id"]})
+            order["ref_id"] = "unrelated-reference"
+        else:
+            snapshot.orders = [{**order, "id": "unowned", "ref_id": "unowned"}]
+            # No local submission can explain this observed active order.
+            state.db.execute("UPDATE intents SET status='abandoned'")
+            state.db.commit()
+        with pytest.raises(Halt):
+            state.recover(engine.run, snapshot)
+        assert sim.db.execute("SELECT COUNT(*) FROM simulated_orders").fetchone()[0] == 1
+
+
+def test_crash_before_submit_never_replays_intent_on_restart(tmp_path):
+    with harness(tmp_path) as (engine, sim, state, clock):
+        intent = equity()
+        plan = engine.prepare(intent, "before-submit")
+
+        def crash(*args):
+            raise SystemExit("crash before send")
+
+        engine.broker.submit = crash
+        with pytest.raises(SystemExit):
+            engine.execute(plan["key"], intent, approval(plan))
+        assert state.db.execute("SELECT status FROM intents").fetchone()[0] == "submitting"
+        assert sim.db.execute("SELECT COUNT(*) FROM simulated_orders").fetchone()[0] == 0
+    with harness(tmp_path) as (engine, sim, state, clock):
+        with pytest.raises(Halt, match="ambiguous"):
+            state.recover(engine.run, sim.snapshot())
+        assert engine.prepare(intent, "before-submit")["status"] == "duplicate_suppressed"
+        assert not sim.calls
+
+
+def test_terminal_divergence_after_restart_is_not_ignored(tmp_path):
+    with harness(tmp_path) as (engine, sim, state, clock):
+        intent = equity()
+        plan = engine.prepare(intent, "terminal-divergence")
+        engine.execute(plan["key"], intent, approval(plan))
+        snapshot = sim.snapshot()
+        snapshot.orders[0]["state"] = "canceled"
+        with pytest.raises(Halt, match="terminal local and broker"):
+            state.recover(engine.run, snapshot)
+        assert state.db.execute("SELECT status FROM intents").fetchone()[0] == "filled"

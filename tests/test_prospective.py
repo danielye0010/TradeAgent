@@ -65,27 +65,29 @@ def test_cold_state_no_october7_prediction(shadow):
     assert shadow.store.inspect()["counts"]["strategy_versions"] == 7
     assert decision_for(date(2026, 10, 7)) is None
     report = shadow.status(OPEN - 30)
-    assert report["status"] == "NOT ARMED — " + CUTOFF_BLOCKER
-    assert report["next_decision_new_york"] == "2026-10-08T09:32:00-04:00"
+    assert report["mode"] == report["status"] == "SHADOW"
+    assert report["health"] == "ok" and report["blocks"] == []
+    assert report["next_decision_new_york"] == "2026-10-08T09:33:00-04:00"
     assert report["broker_counts"] == dict(reads=0, reviews=0, placements=0, cancellations=0)
 
 
-def test_actual_receipt_after_boundary_rejects_frozen_snapshot(shadow):
+def test_actual_receipt_after_bar_end_before_decision_is_usable(shadow):
     for start in (OPEN, OPEN + 60):
         shadow.collection.ingest(
             payload(start), start + 60, start + 60.3, session_bounds(DAY), OPEN - 30
         )
-    assert shadow.collection.dataset()["bars"][-1]["available_at"] == DECISION + 0.3
-    with pytest.raises(ValueError, match="frozen 09:32"):
-        shadow.collection.snapshot("QQQ", DECISION, session_bounds(DAY))
-    shadow.tick(DECISION)
-    assert shadow.store.inspect()["counts"]["predictions"] == 0
+    assert shadow.collection.dataset()["bars"][-1]["available_at"] == DECISION - 60 + 0.3
+    snapshot = shadow.collection.snapshot("QQQ", DECISION, session_bounds(DAY))
+    assert snapshot.bars[-1].end == DECISION - 60
+    assert snapshot.bars[-1].available_at < snapshot.decision_time
+    shadow.tick(DECISION + 0.001)
+    assert shadow.store.inspect()["counts"]["predictions"] == 14
     assert shadow.collection.done(DAY.isoformat(), "scan")
 
 
 def test_late_decision_fails_even_when_exact_fixture_is_present(shadow):
     exact_fixture(shadow)
-    shadow.tick(DECISION + 0.001)
+    shadow.tick(DECISION + CONFIG["capture_window_seconds"] + 0.001)
     assert shadow.store.inspect()["counts"]["predictions"] == 0
     row = shadow.collection.db.execute("SELECT * FROM steps").fetchone()
     assert row["status"] == "skipped"
@@ -221,8 +223,8 @@ def test_exchange_holidays_weekend_early_close_and_dst():
     assert decision_for(date(2026, 12, 25)) is None
     assert decision_for(date(2026, 10, 10)) is None
     november = decision_for(date(2026, 11, 2))
-    assert iso(november) == "2026-11-02T14:32:00+00:00"
-    assert iso(DECISION) == "2026-10-08T13:32:00+00:00"
+    assert iso(november) == "2026-11-02T14:33:00+00:00"
+    assert iso(DECISION) == "2026-10-08T13:33:00+00:00"
     assert decision_for(date(2026, 11, 27)) + 3600 < session_bounds(date(2026, 11, 27))[1]
     assert next_decision(decision_for(date(2026, 12, 24)) + 1) == decision_for(date(2026, 12, 28))
 
@@ -395,3 +397,207 @@ def test_journal_credential_leak_detected_without_emission(tmp_path, monkeypatch
     assert not result["service_journal_clean"]
     assert all(value not in json.dumps(result) for value in values)
     assert capsys.readouterr() == ("", "")
+
+
+def test_data_received_after_decision_cannot_leak_into_snapshot(shadow):
+    shadow.collection.ingest(payload(OPEN), OPEN + 60, OPEN + 60.3, session_bounds(DAY), OPEN - 30)
+    shadow.collection.ingest(
+        payload(OPEN + 60, DECISION + 0.1),
+        DECISION,
+        DECISION + 0.3,
+        session_bounds(DAY),
+        OPEN - 30,
+    )
+    with pytest.raises(ValueError, match=CUTOFF_BLOCKER):
+        shadow.collection.snapshot("QQQ", DECISION, session_bounds(DAY))
+    shadow.tick(DECISION + 0.3)
+    assert shadow.store.db.execute("SELECT COUNT(*) FROM predictions").fetchone()[0] == 0
+
+
+def test_fractional_poll_duplicate_and_restart_are_idempotent(shadow):
+    exact_fixture(shadow)
+    shadow.tick(DECISION + 2.3)
+    original = [tuple(r) for r in shadow.store.db.execute("SELECT * FROM predictions")]
+    shadow.tick(DECISION + 3.9)
+    directory = shadow.directory
+    shadow.status(DECISION + 3.9)
+    shadow.close()
+    resumed = Shadow(directory, DECISION + 10)
+    try:
+        resumed.initialize()
+        resumed.tick(DECISION + 10)
+        assert [tuple(r) for r in resumed.store.db.execute("SELECT * FROM predictions")] == original
+        assert len(original) == 14
+        assert resumed.collection.db.execute("SELECT COUNT(*) FROM steps").fetchone()[0] == 1
+    finally:
+        resumed.close()
+
+
+def test_lifetime_owner_lock_precedes_writes_and_covers_cli(shadow):
+    from tradeagent.research.store import Experience
+
+    marker = (shadow.directory / "deployment.json").read_bytes()
+    with pytest.raises(BlockingIOError):
+        Shadow(shadow.directory, DECISION)
+    assert (shadow.directory / "deployment.json").read_bytes() == marker
+    other = Experience(shadow.directory)
+    try:
+        with pytest.raises(ValueError, match="holds the lock"):
+            with other.lock():
+                pytest.fail("second runtime admitted")
+    finally:
+        other.close()
+    directory = shadow.directory
+    shadow.close()
+    resumed = Shadow(directory, DECISION)
+    resumed.close()  # Kernel releases the lock; stale lock files do not block restart.
+
+
+def test_two_symbols_commit_together_and_crash_retries_without_duplicates(shadow, monkeypatch):
+    import tradeagent.prospective.service as service
+
+    exact_fixture(shadow)
+    original = service.scan
+    calls = []
+
+    def crash(store, snapshot, now):
+        calls.append(snapshot.symbol)
+        if snapshot.symbol == "IWM":
+            raise SystemExit("simulated process crash")
+        return original(store, snapshot, now)
+
+    monkeypatch.setattr(service, "scan", crash)
+    with pytest.raises(SystemExit):
+        shadow.tick(DECISION + 1)
+    assert calls == ["QQQ", "IWM"]
+    assert shadow.store.db.execute("SELECT COUNT(*) FROM predictions").fetchone()[0] == 0
+    monkeypatch.setattr(service, "scan", original)
+    shadow.tick(DECISION + 2)
+    assert shadow.store.db.execute("SELECT COUNT(*) FROM predictions").fetchone()[0] == 14
+
+
+def test_delayed_signal_outcomes_exclude_predecision_move_and_learner_report_fail_soft(
+    shadow, monkeypatch
+):
+    import tradeagent.prospective.service as service
+
+    exact_fixture(shadow)
+    shadow.tick(DECISION + 1)
+    for minute in range(60):
+        start = DECISION + minute * 60
+        value = payload(start)
+        for item in value.values():
+            item["minuteBar"].update(o=120, h=122, l=119, c=121)
+        shadow.collection.ingest(
+            value,
+            start + 60,
+            start + 60.2,
+            session_bounds(DAY),
+            OPEN - 30,
+        )
+
+    def fail(*args, **kwargs):
+        raise RuntimeError("optional research failure")
+
+    champions = [
+        tuple(r)
+        for r in shadow.store.db.execute(
+            "SELECT strategy_id,champion_version FROM strategies ORDER BY strategy_id"
+        )
+    ]
+    monkeypatch.setattr(service, "learn_daily", fail)
+    shadow.tick(DECISION + 3600.3)
+    outcomes = shadow.store.db.execute("SELECT * FROM outcomes").fetchall()
+    assert len(outcomes) == 14
+    for row in outcomes:
+        assert row["raw_return"] == pytest.approx(121 / 120 - 1)
+        assert row["residual_return"] == 0
+        metadata = json.loads(row["metadata"])
+        assert metadata["entry_price_model"] == "decision-minute open"
+        assert metadata["signal_bar_end"] == DECISION - 60
+    before = shadow.store.inspect()["counts"]
+    shadow.tick(DECISION + 3601)
+    assert shadow.store.inspect()["counts"] == before
+    assert before["learning_runs"] == before["mutations"] == before["promotions"] == 0
+    assert champions == [
+        tuple(r)
+        for r in shadow.store.db.execute(
+            "SELECT strategy_id,champion_version FROM strategies ORDER BY strategy_id"
+        )
+    ]
+
+    def bad_report(*args, **kwargs):
+        raise OSError("optional report failure")
+
+    monkeypatch.setattr(shadow, "status", bad_report)
+    assert shadow.report(DECISION + 3601) is None
+    shadow.tick(DECISION + 3602)
+    assert shadow.store.inspect()["counts"] == before
+    assert (
+        shadow.collection.db.execute(
+            "SELECT reason FROM failures ORDER BY id DESC LIMIT 1"
+        ).fetchone()[0]
+        == "optional status report failure"
+    )
+
+
+def test_service_missing_credential_persists_block_and_releases_owner(tmp_path, monkeypatch):
+    import sys
+
+    import tradeagent.prospective.service as service
+
+    directory = tmp_path / "cold"
+    monkeypatch.setattr(sys, "argv", ["shadow", "--state-dir", str(directory)])
+    monkeypatch.setattr(service.time, "time", lambda: OPEN - 30)
+    monkeypatch.delenv("CREDENTIALS_DIRECTORY", raising=False)
+    monkeypatch.setattr(service.signal, "signal", lambda *args: None)
+    with pytest.raises(ValueError, match="systemd"):
+        service.main()
+    report = json.loads((directory / "status.json").read_text())
+    assert report["mode"] == "SHADOW" and report["health"] == "blocked"
+    assert report["blocks"] == ["market-data credential unavailable"]
+    assert report["predictions"] == report["resolved"] == 0
+    resumed = Shadow(directory, OPEN - 29)
+    resumed.close()
+
+
+def test_resolved_history_is_not_reprocessed_on_every_poll(shadow, monkeypatch):
+    import tradeagent.prospective.service as service
+
+    exact_fixture(shadow)
+    shadow.tick(DECISION + 1)
+    for minute in range(60):
+        start = DECISION + minute * 60
+        shadow.collection.ingest(
+            payload(start), start + 60, start + 60.2, session_bounds(DAY), OPEN - 30
+        )
+    shadow.tick(DECISION + 3600.3)
+    assert shadow.store.db.execute("SELECT COUNT(*) FROM outcomes").fetchone()[0] == 14
+    monkeypatch.setattr(
+        service, "resolve", lambda *a, **k: pytest.fail("resolved history repeated")
+    )
+    shadow.tick(DECISION + 3602)
+
+
+def test_optional_selector_failure_preserves_predictions_with_no_trade_plans(shadow, monkeypatch):
+    import tradeagent.research.lab as lab
+
+    exact_fixture(shadow)
+    original = lab.rank
+
+    def unavailable(*args, **kwargs):
+        if kwargs.get("use_learning", True):
+            raise RuntimeError("optional learned selector unavailable")
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(lab, "rank", unavailable)
+    shadow.tick(DECISION + 1.1)
+    assert shadow.store.db.execute("SELECT COUNT(*) FROM predictions").fetchone()[0] == 14
+    assert [r[0] for r in shadow.store.db.execute("SELECT DISTINCT kind FROM trade_plans")] == [
+        "NO_TRADE"
+    ]
+    assert not any(r[0] for r in shadow.store.db.execute("SELECT selected FROM selections"))
+    assert all(
+        json.loads(r[0])["selection_unavailable"] == "RuntimeError"
+        for r in shadow.store.db.execute("SELECT rationale FROM selections")
+    )

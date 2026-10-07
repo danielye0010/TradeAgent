@@ -1,6 +1,7 @@
 """Durable zero-money shadow collection; strict decision cutoff, no broker boundary."""
 
 import argparse
+import fcntl
 import json
 import os
 import signal
@@ -11,7 +12,6 @@ from zoneinfo import ZoneInfo
 
 from ..calendar import session_bounds
 from ..research.domain import canonical, iso
-from ..research.evolution import evolve_weekly
 from ..research.lab import scan, seed
 from ..research.learning import learn_daily
 from ..research.outcomes import resolve
@@ -27,7 +27,8 @@ CONFIG = {
     "source": SOURCE,
     "feed": "sip",
     "bar_seconds": 60,
-    "decision": "09:32 America/New_York",
+    "decision": "09:33 America/New_York",
+    "capture_window_seconds": 30,
     "horizon_seconds": 3600,
     "evidence_kind": "prospective",
     "options": False,
@@ -39,7 +40,7 @@ CONFIG = {
 def decision_for(day):
     if day < FIRST_SESSION or session_bounds(day) is None:
         return None
-    return datetime(day.year, day.month, day.day, 9, 32, tzinfo=NY).timestamp()
+    return datetime(day.year, day.month, day.day, 9, 33, tzinfo=NY).timestamp()
 
 
 def next_decision(now):
@@ -78,6 +79,20 @@ class Shadow:
     def __init__(self, directory, now):
         self.directory = directory.resolve()
         self.directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+        # Acquire the same lifetime lock as one-shot research commands before state writes.
+        self._owner = (self.directory / "experience.lock").open("a+b")
+        try:
+            fcntl.flock(self._owner, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            self._open(now)
+        except BaseException:
+            if hasattr(self, "collection"):
+                self.collection.db.close()
+            if hasattr(self, "store"):
+                self.store.close()
+            self._owner.close()
+            raise
+
+    def _open(self, now):
         marker = self.directory / "deployment.json"
         if marker.exists():
             self.deployment = json.loads(marker.read_text())
@@ -109,9 +124,9 @@ class Shadow:
             target = decision_for(day)
             label = day.isoformat()
             if target is not None and target <= now and not self.collection.done(label, "scan"):
-                if now != target:
+                if now - target > CONFIG["capture_window_seconds"]:
                     reason = (
-                        "decision cutoff passed; no late or backfilled scan permitted; "
+                        "capture window passed; no late or backfilled scan permitted; "
                         + CUTOFF_BLOCKER
                     )
                     self.collection.step(label, "scan", now, "skipped", reason)
@@ -122,29 +137,44 @@ class Shadow:
                             for s in SYMBOLS[:2]
                         ]
                         # Validate both before creating any prediction. Core scan is immutable.
-                        for snapshot in snapshots:
-                            scan(self.store, snapshot, now)
+                        with self.store.db:
+                            self.store.db.execute("BEGIN IMMEDIATE")
+                            for snapshot in snapshots:
+                                scan(self.store, snapshot, now)
                         self.collection.step(label, "scan", now, "completed")
                     except ValueError:
+                        # Data arriving after the fixed decision cannot repair this snapshot.
                         self.collection.step(label, "scan", now, "skipped", CUTOFF_BLOCKER)
             day += timedelta(days=1)
 
     def outcomes(self, now):
-        if not self.store.db.execute(
-            "SELECT 1 FROM predictions WHERE decision_time+horizon<=? LIMIT 1", (now,)
-        ).fetchone():
+        earliest = self.store.db.execute(
+            "SELECT MIN(p.decision_time) FROM predictions p "
+            "LEFT JOIN outcomes o USING(prediction_id) "
+            "WHERE o.prediction_id IS NULL AND p.decision_time+p.horizon<=?",
+            (now,),
+        ).fetchone()[0]
+        if earliest is None:
             return
-        # Only first-observed, forward-collected bars enter the exact-horizon resolver.
-        resolve(self.store, self.collection.dataset(), now)
+        # Resolve only pending forecasts; do not reimport the entire growing history per tick.
+        resolve(self.store, self.collection.dataset(start=earliest), now)
         if self.store.db.execute("SELECT 1 FROM outcomes LIMIT 1").fetchone():
-            result = learn_daily(self.store, now, kind="prospective")
-            label = datetime.fromtimestamp(now, NY).date().isoformat()
-            self.collection.step(label, "learn", now, result["status"])
-            # Existing UTC ISO-week identity and challenger rules are unchanged.
-            week = datetime.fromtimestamp(now, ZoneInfo("UTC")).strftime("%G-W%V")
-            if not self.collection.done(week, "evolve"):
-                evolve_weekly(self.store, now, kind="prospective")
-                self.collection.step(week, "evolve", now, "completed")
+            # Research runs after durable outcomes. Failure does not undo the core path.
+            label = (
+                datetime.fromtimestamp(now, NY).date().isoformat()
+                + ":"
+                + str(self.store.db.execute("SELECT COUNT(*) FROM outcomes").fetchone()[0])
+            )
+            if not self.collection.done(label, "learn"):
+                try:
+                    result = learn_daily(self.store, now, kind="prospective")
+                    if result["status"] != "unchanged":
+                        self.collection.step(label, "learn", now, result["status"])
+                except (ValueError, RuntimeError, ArithmeticError, OSError):
+                    self.store.db.rollback()
+                    self.collection.step(label, "learn", now, "failed", "optional learner failure")
+            # Challenger creation/evaluation remains an explicit research command.
+            # The unattended collector never promotes or changes champion pointers.
 
     def tick(self, now):
         prospective_only(self.store)
@@ -154,7 +184,7 @@ class Shadow:
         self.outcomes(now)
         self.last_tick = now
 
-    def status(self, now, credential_audit=None, service="running"):
+    def status(self, now, credential_audit=None, service="running", block=None):
         db = self.store.db
 
         def count(table):
@@ -180,7 +210,12 @@ class Shadow:
             "SELECT MAX(received_at) FROM receipts"
         ).fetchone()[0]
         data = {
-            "status": "NOT ARMED — " + CUTOFF_BLOCKER,
+            "mode": "SHADOW",
+            "status": "SHADOW",
+            "health": "blocked" if block else "degraded" if failures else "ok",
+            "blocks": [block] if block else [],
+            "latest_failure": failures[0]["reason"] if failures else None,
+            "information_cutoff": "scheduled decision; actual receipt must be at or before cutoff",
             "configuration": CONFIG,
             "service": service,
             "pid": os.getpid(),
@@ -221,11 +256,12 @@ class Shadow:
         lines = [
             "# Prospective shadow status",
             "",
-            data["status"],
+            data["status"] + "; health: " + data["health"],
+            *data["blocks"],
             "",
             f"Service: {service}; PID {os.getpid()}; heartbeat {iso(now)}.",
             f"Next eligible decision target: {data['next_decision_new_york']} ({data['next_decision']}).",
-            "This is a target, not an armed prediction promise. October 7 collection is health only.",
+            "Decisions use prior receipts only; capture is permitted for 30 seconds after target.",
             f"Last successful collection: {iso(last_collection) if last_collection else 'none'}.",
             f"Predictions/resolved/unresolved: {data['predictions']}/{data['resolved']}/{data['unresolved']}.",
             f"Last prediction/resolution/learner: {data['last_prediction']}/{data['last_resolution']}/{data['last_learner_update']}.",
@@ -237,9 +273,17 @@ class Shadow:
         atomic(self.directory / "STATUS.md", "\n".join(lines) + "\n")
         return data
 
+    def report(self, now, service="running"):
+        try:
+            return self.status(now, service=service)
+        except OSError:
+            self.collection.failure(now, "optional status report failure")
+            return None
+
     def close(self):
         self.collection.db.close()
         self.store.close()
+        self._owner.close()
 
 
 def main():
@@ -247,8 +291,6 @@ def main():
     parser.add_argument("--state-dir", type=Path, required=True)
     args = parser.parse_args()
     os.umask(0o077)
-    values = access.load()
-    source = Alpaca(values)
     shadow = Shadow(args.state_dir, time.time())
     running = True
 
@@ -258,32 +300,34 @@ def main():
 
     signal.signal(signal.SIGTERM, stop)
     signal.signal(signal.SIGINT, stop)
-    audit_at, checked = 0, None
+    report_at = 0
     try:
-        with shadow.store.lock():
-            shadow.initialize()
-            while running:
-                now = time.time()
-                bounds = session_bounds(datetime.fromtimestamp(now, NY).date())
-                # Pre-decision collection begins at the open; two complete minutes required.
-                if bounds and bounds[0] <= now <= bounds[1] + 120:
-                    try:
-                        payload, started, received = source.fetch()
-                        shadow.collection.ingest(
-                            payload, started, received, bounds, shadow.deployment["started_at"]
-                        )
-                    except ValueError as error:
-                        # Only our fixed, credential-free messages cross this boundary.
-                        shadow.collection.failure(time.time(), str(error))
-                shadow.tick(time.time())
-                if now - audit_at >= 300:
-                    checked = access.audit(Path.cwd(), shadow.directory, values)
-                    if not all(checked.values()):
-                        raise ValueError("credential isolation check failed; shadow stopped")
-                    audit_at = now
-                shadow.status(time.time(), checked)
-                time.sleep(2 if bounds and bounds[0] <= now <= bounds[1] + 120 else 10)
-            shadow.status(time.time(), checked, service="stopped")
+        shadow.initialize()
+        try:
+            values = access.load()
+        except (ValueError, OSError):
+            shadow.status(
+                time.time(), service="blocked", block="market-data credential unavailable"
+            )
+            raise
+        source = Alpaca(values)
+        while running:
+            now = time.time()
+            bounds = session_bounds(datetime.fromtimestamp(now, NY).date())
+            if bounds and bounds[0] <= now <= bounds[1] + 120:
+                try:
+                    payload, started, received = source.fetch()
+                    shadow.collection.ingest(
+                        payload, started, received, bounds, shadow.deployment["started_at"]
+                    )
+                except ValueError as error:
+                    shadow.collection.failure(time.time(), str(error))
+            shadow.tick(time.time())
+            if now - report_at >= 30:
+                shadow.report(time.time())
+                report_at = now
+            time.sleep(2 if bounds and bounds[0] <= now <= bounds[1] + 120 else 10)
+        shadow.report(time.time(), service="stopped")
     finally:
         shadow.close()
 

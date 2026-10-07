@@ -84,12 +84,23 @@ def resolve(store, dataset, now):
             if bars is None:
                 continue
             f = json.loads(p["features"])
-            entry = f["entry_close"]
+            snapshot = json.loads(
+                store.db.execute(
+                    "SELECT payload FROM market_snapshots WHERE snapshot_id=?", (p["snapshot_id"],)
+                ).fetchone()[0]
+            )
+            delayed = (
+                snapshot.get("signal_bar_begins_at") is None
+                and snapshot["bars"][-1]["end"] < p["decision_time"]
+            )
+            # A delayed signal close is a feature, not a decision-time entry price.
+            entry = bars[0]["open"] if delayed else f["entry_close"]
             raw = bars[-1]["close"] / entry - 1
             benchmark_path = path(store, p["benchmark"], p["decision_time"], end, p["source"])
             if benchmark_path is None:
                 continue
-            benchmark = benchmark_path[-1]["close"] / f["benchmark_close"] - 1
+            benchmark_entry = benchmark_path[0]["open"] if delayed else f["benchmark_close"]
+            benchmark = benchmark_path[-1]["close"] / benchmark_entry - 1
             direction = p["direction"]
             up = max(b["high"] for b in bars) / entry - 1
             down = min(b["low"] for b in bars) / entry - 1
@@ -104,6 +115,10 @@ def resolve(store, dataset, now):
                 "observation_ids": [b["observation_id"] for b in bars],
                 "benchmark_observation_ids": [b["observation_id"] for b in benchmark_path or []],
                 "exit_close": bars[-1]["close"],
+                "entry_price": entry,
+                "benchmark_entry_price": benchmark_entry,
+                "entry_price_model": "decision-minute open" if delayed else "signal close",
+                "signal_bar_end": snapshot["bars"][-1]["end"],
                 "bar_count": len(bars),
                 "volatility_definition": "population stddev of observed bar log returns, not annualized",
                 "sector_adjustment": "unavailable",

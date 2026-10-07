@@ -218,8 +218,10 @@ class MarketSnapshot:
             if any(a.end > b.start for a, b in zip(bars, bars[1:], strict=False)):
                 raise ValueError("unordered or overlapping decision bars")
             if self.signal_bar_begins_at is None:
-                if bars[-1].end != self.decision_time:
-                    raise ValueError("decision requires completed bars aligned with current quote")
+                if not 0 <= self.decision_time - bars[-1].end <= 120:
+                    raise ValueError("decision requires fresh completed bars")
+                if bars[-1].end != self.bars[-1].end:
+                    raise ValueError("symbol and benchmark completed bars must align")
             else:
                 from ..calendar import daily_session_bounds
 

@@ -1,7 +1,8 @@
 # Current-user WSL lifetime anchor only. Research runs in the separate Linux unit.
+# flock survives a wrapper crash with the child; later triggers cannot orphan another anchor.
 $ErrorActionPreference = 'Stop'
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent().Name
-$anchorCommand = '$child=Start-Process -FilePath wsl.exe -ArgumentList @(''-d'',''Ubuntu'',''-u'',''danielye'',''--exec'',''/usr/bin/sleep'',''infinity'') -WindowStyle Hidden -PassThru; $child.WaitForExit(); exit $child.ExitCode'
+$anchorCommand = '$child=Start-Process -FilePath wsl.exe -ArgumentList @(''-d'',''Ubuntu'',''-u'',''danielye'',''--exec'',''/usr/bin/flock'',''--nonblock'',''/tmp/tradeagent-prospective-wsl.lock'',''/usr/bin/sleep'',''infinity'') -WindowStyle Hidden -PassThru; $child.WaitForExit(); exit $child.ExitCode'
 $action = New-ScheduledTaskAction -Execute "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -Argument ('-NoProfile -NonInteractive -WindowStyle Hidden -Command "' + $anchorCommand + '"')
 $logon = New-ScheduledTaskTrigger -AtLogOn -User $identity
 $retry = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 5)

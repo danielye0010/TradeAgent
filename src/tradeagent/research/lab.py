@@ -1,6 +1,7 @@
 """One-shot scan: every enabled version predicts; only champions are selected."""
 
 import json
+from contextlib import nullcontext
 from dataclasses import asdict
 
 from ..strategy import DEFAULT_FAMILIES, DEFAULT_PARAMS, BaselineStrategy, implementation_hash
@@ -23,6 +24,8 @@ def seed(store, registered_at):
 
 
 def scan(store, snapshot, now, max_selected=3):
+    if type(max_selected) is not int or not 0 <= max_selected <= 3:
+        raise ValueError("selection is bounded to 0-3 candidates")
     if snapshot.decision_time > now or now - snapshot.decision_time > 120:
         raise ValueError("scan must capture contemporaneous information within 120 seconds")
     if store.db.execute(
@@ -44,9 +47,17 @@ def scan(store, snapshot, now, max_selected=3):
     current_hash = implementation_hash()
     reviewed_hashes = {current_hash}
     # Exact reviewed timing-only transition; numerical strategy files are unchanged.
-    # Any further source drift invalidates this compatibility pair.
-    if current_hash == "99785eabe9fb0f055e0b4154c5fc1c8a13821814584f3c8adddc60d43e1dc444":
-        reviewed_hashes.add("e8b7ee7dbf6eb6e2ad6b8e46198e437d9036255210cbc748b77db7cc082ca80e")
+    # Further source drift still fails closed; existing version records are never rewritten.
+    if current_hash in {
+        "99785eabe9fb0f055e0b4154c5fc1c8a13821814584f3c8adddc60d43e1dc444",
+        "bd50e765693e242d71b1bdfc1466699395660dda6d27a0514a1ef942ff26664b",
+    }:
+        reviewed_hashes.update(
+            {
+                "e8b7ee7dbf6eb6e2ad6b8e46198e437d9036255210cbc748b77db7cc082ca80e",
+                "99785eabe9fb0f055e0b4154c5fc1c8a13821814584f3c8adddc60d43e1dc444",
+            }
+        )
     if any(v["implementation_hash"] not in reviewed_hashes for v in versions):
         raise ValueError("strategy implementation changed without a new durable version")
     if snapshot.signal_bar_id is not None:
@@ -97,9 +108,16 @@ def scan(store, snapshot, now, max_selected=3):
         ).predict(snapshot, now)
         for v in versions
     ]
-    ranking = rank(store, predictions, snapshot, max_selected)
+    try:
+        ranking = rank(store, predictions, snapshot, max_selected)
+    except (ValueError, TypeError, ArithmeticError, RuntimeError) as error:
+        # Optional learned ranking cannot discard otherwise valid shadow predictions.
+        # No trade is selected when the learned selection is unavailable.
+        ranking = rank(store, predictions, snapshot, 0, use_learning=False)
+        for row in ranking:
+            row["rationale"]["selection_unavailable"] = type(error).__name__
     plans = []
-    with store.db:
+    with nullcontext() if store.db.in_transaction else store.db:
         store.insert(
             "market_snapshots",
             {

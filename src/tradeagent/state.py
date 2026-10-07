@@ -150,6 +150,8 @@ class State:
     def recover(self, run_id, snapshot):
         # Never replay submissions. Reconcile an exact broker ID or unique ref_id.
         by_id = {o["id"]: o for o in snapshot.orders}
+        if len(by_id) != len(snapshot.orders) or any(not key for key in by_id):
+            raise Halt("duplicate/missing broker order identity")
         by_ref = {}
         for order in snapshot.orders:
             if order.get("ref_id"):
@@ -161,7 +163,19 @@ class State:
         ).fetchall()
         unresolved = []
         for row in rows:
-            order = by_id.get(row["broker_id"]) or by_ref.get(row["ref_id"])
+            by_broker_id = by_id.get(row["broker_id"])
+            by_client_ref = by_ref.get(row["ref_id"])
+            if (
+                (by_broker_id and by_client_ref and by_broker_id["id"] != by_client_ref["id"])
+                or (
+                    by_broker_id
+                    and by_broker_id.get("ref_id")
+                    and by_broker_id["ref_id"] != row["ref_id"]
+                )
+                or (row["broker_id"] and by_client_ref and by_client_ref["id"] != row["broker_id"])
+            ):
+                raise Halt("broker ID and client reference disagree")
+            order = by_broker_id or by_client_ref
             if order is None:
                 unresolved.append(row["key"])
                 continue
@@ -186,6 +200,22 @@ class State:
                 unresolved.append(row["key"])
         if unresolved:
             raise Halt("ambiguous/pending prior submission: operator reconciliation required")
+        for row in self.db.execute(
+            "SELECT * FROM intents WHERE status IN (" + ",".join("?" for _ in TERMINAL) + ")",
+            tuple(TERMINAL),
+        ):
+            order = by_id.get(row["broker_id"]) or by_ref.get(row["ref_id"])
+            if (
+                order
+                and order["state"] != row["status"]
+                and not ({order["state"], row["status"]} <= {"cancelled", "canceled"})
+            ):
+                raise Halt("terminal local and broker state diverged")
+        for order in snapshot.orders:
+            if order["state"] not in TERMINAL:
+                raise Halt(
+                    "broker order missing locally or divergent: operator reconciliation required"
+                )
         with self.db:
             self.db.execute(
                 "UPDATE intents SET status='abandoned' WHERE status IN ('prepared','reviewed') AND run_id != ?",
