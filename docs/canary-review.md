@@ -42,15 +42,41 @@ Experience store. Existing strategy versions and prior prospective scores are re
 only an empty store receives the unchanged defaults registered at the actual current
 time, never retroactively. No learning, evolution or promotion runs here.
 
-Official five-minute bars plus SPY benchmark and executable quotes feed the frozen
-MarketSnapshot/scan checks. Availability is the observed response receipt. Completed
-bar ends are derived from the advertised interval, never relabeled as receipt time;
-quotes/bars are never backdated. The frozen RSI requires completed bars ending at the
-exact decision and availability no later than that decision. If this API cannot
-supply that contemporaneous alignment, the action HALTs; it does not substitute
-legacy EMA, historical replay, synthetic data, a shortened bar or a forced proposal.
-Unavailable session reference fields cause the existing strategy families to abstain.
-The existing classification/reference reader is reused without weakening its rules.
+Official completed regular-session daily bars plus SPY benchmark and current
+executable quotes feed the unchanged research strategy formulas/scan/ranking.
+RSI here names the research loop, not a technical RSI oscillator; no oscillator,
+period or new strategy was added. The live adapter's frequency is now daily as
+specified for this timestamp repair. Strategy parameters and numerical feature
+formulas are unchanged.
+
+The provider's original daily `begins_at` is retained in raw history evidence and
+as the final signal label. Its normalized start identifies the same bar; end is
+the mapped XNYS session's official close, including early closes. Supported labels
+are midnight UTC (a date label), New York midnight or exact regular-session open.
+Unknown times and non-session dates fail closed; no neighbouring session is guessed.
+Today's bar is excluded before official close, even when labelled midnight UTC.
+After close it can be used only if the provider actually supplies it. Future,
+duplicate, unordered and explicitly interpolated history is rejected or excluded.
+No wall-clock timestamp replaces a provider label or bar completion time.
+
+Daily signal snapshots carry `signal_bar_begins_at`. Bar completion <= actual
+history receipt <= actual observation/decision time. Current quote receipt/time
+and all broker quote/book freshness gates remain independent of historical-bar age.
+The old exact-end-at-decision rule remains for existing intraday snapshots.
+Daily signal-bar identity uses source/pool/symbol/benchmark and canonical final
+bar starts/session close. The existing experience payload is queried before
+prediction, so later observations of the same signal bar suppress duplicates.
+No database schema, old evidence or immutable version record is rewritten.
+
+Changing snapshot validation changes the existing composite strategy hash. The scan
+accepts precisely the reviewed old-to-new timing-only hash pair; no arbitrary old
+or future implementation hash is accepted. Numerical strategy/feature sources,
+parameters, ranking and prior state are unchanged. A further domain/strategy/feature
+edit invalidates the compatibility pair. This is no execution authorization.
+
+Unavailable session reference fields still cause the existing strategy families
+to abstain. The existing classification/reference reader and canary/risk gates
+are reused without weakening their rules.
 
 After at most one review there are no further broker calls. The report preserves
 observed market data, RSI evidence, unchanged selector decisions, gates and warnings.

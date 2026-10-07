@@ -165,6 +165,23 @@ class MarketSnapshot:
     options: tuple[OptionBook, ...] = ()
     session_open_time: float | None = None
     previous_close_time: float | None = None
+    signal_bar_begins_at: str | None = None
+
+    @property
+    def signal_bar_id(self):
+        if self.signal_bar_begins_at is None:
+            return None
+        return identity(
+            [
+                self.source,
+                self.evidence_kind,
+                self.symbol,
+                self.benchmark,
+                self.bars[-1].start,
+                self.bars[-1].end,
+                self.benchmark_bars[-1].start,
+            ]
+        )
 
     def __post_init__(self):
         for key in ("bars", "benchmark_bars", "options"):
@@ -200,8 +217,25 @@ class MarketSnapshot:
                 raise ValueError("future/unknown information in decision snapshot")
             if any(a.end > b.start for a, b in zip(bars, bars[1:], strict=False)):
                 raise ValueError("unordered or overlapping decision bars")
-            if bars[-1].end != self.decision_time:
-                raise ValueError("decision requires completed bars aligned with current quote")
+            if self.signal_bar_begins_at is None:
+                if bars[-1].end != self.decision_time:
+                    raise ValueError("decision requires completed bars aligned with current quote")
+            else:
+                from ..calendar import daily_session_bounds
+
+                for bar in bars:
+                    _, close = daily_session_bounds(
+                        datetime.fromtimestamp(bar.start, timezone.utc).isoformat()
+                    )
+                    if bar.end != close or close > self.decision_time:
+                        raise ValueError("daily bar is unfinished or has invalid session close")
+        if self.signal_bar_begins_at is not None:
+            if (
+                not isinstance(self.signal_bar_begins_at, str)
+                or timestamp(self.signal_bar_begins_at) != self.bars[-1].start
+                or self.bars[-1].end != self.benchmark_bars[-1].end
+            ):
+                raise ValueError("daily signal/benchmark identity disagreement")
         if len({q.contract_id for q in self.options}) != len(self.options):
             raise ValueError("duplicate option quote")
         if any(

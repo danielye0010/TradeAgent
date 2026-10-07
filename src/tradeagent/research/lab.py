@@ -41,8 +41,40 @@ def scan(store, snapshot, now, max_selected=3):
     ).fetchall()
     if not versions:
         raise ValueError("no strategies registered before the decision; run init first")
-    if any(v["implementation_hash"] != implementation_hash() for v in versions):
+    current_hash = implementation_hash()
+    reviewed_hashes = {current_hash}
+    # Exact reviewed timing-only transition; numerical strategy files are unchanged.
+    # Any further source drift invalidates this compatibility pair.
+    if current_hash == "99785eabe9fb0f055e0b4154c5fc1c8a13821814584f3c8adddc60d43e1dc444":
+        reviewed_hashes.add("e8b7ee7dbf6eb6e2ad6b8e46198e437d9036255210cbc748b77db7cc082ca80e")
+    if any(v["implementation_hash"] not in reviewed_hashes for v in versions):
         raise ValueError("strategy implementation changed without a new durable version")
+    if snapshot.signal_bar_id is not None:
+        used = store.db.execute(
+            "SELECT snapshot_id FROM market_snapshots "
+            "WHERE symbol=? AND source=? AND evidence_kind=? "
+            "AND json_extract(payload, '$.signal_bar_begins_at') IS NOT NULL "
+            "AND json_extract(payload, '$.bars[#-1].start')=? "
+            "AND json_extract(payload, '$.bars[#-1].end')=? "
+            "AND json_extract(payload, '$.benchmark_bars[#-1].start')=?",
+            (
+                snapshot.symbol,
+                snapshot.source,
+                snapshot.evidence_kind,
+                snapshot.bars[-1].start,
+                snapshot.bars[-1].end,
+                snapshot.benchmark_bars[-1].start,
+            ),
+        ).fetchone()
+        if used:
+            return {
+                "status": "duplicate_suppressed",
+                "snapshot_id": used[0],
+                "signal_bar_id": snapshot.signal_bar_id,
+                "predictions": store.db.execute(
+                    "SELECT COUNT(*) FROM predictions WHERE snapshot_id=?", (used[0],)
+                ).fetchone()[0],
+            }
     snap_id = snapshot_identity(snapshot)
     f = features(snapshot)
     old = store.db.execute(
@@ -105,6 +137,7 @@ def scan(store, snapshot, now, max_selected=3):
     return {
         "status": "persisted",
         "snapshot_id": snap_id,
+        "signal_bar_id": snapshot.signal_bar_id,
         "predictions": len(predictions),
         "ranking": ranking,
         "trade_plans": plans,

@@ -6,7 +6,11 @@ These rules implement an evidence machine, not a profitability claim.
 
 Initialize versions before their decision time. `scan` accepts a single symbol and
 benchmark snapshot, within 120 seconds of its decision, and persists every enabled
-version. Input bars end exactly at the decision. Quotes must be at most 120 seconds
+version. Intraday input bars end exactly at the decision. Explicit daily signal snapshots
+instead retain the provider bar identity and mapped XNYS session close, with
+completion <= actual history availability <= current decision. Today's unfinished
+daily bar is excluded; canonical completed-bar identity suppresses repeated daily
+signals independently of observation time. Quotes must be at most 120 seconds
 old. Session open and previous close references require prior timestamps. Opening
 and gap families abstain outside their first 90 minutes; absent fields cause abstention.
 

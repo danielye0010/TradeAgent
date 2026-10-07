@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 
 from .accounting import Accounting
 from .broker import data, rows, unique, utc_time
-from .calendar import regular_session
+from .calendar import daily_session_bounds, regular_session
 from .codex_bridge import ENDPOINT, READ_TOOLS, SERVER, CodexBridge
 from .legacy.canary import CanarySelector
 from .legacy.policy import deployment_hash
@@ -151,10 +151,10 @@ def live_rsi_snapshots(bridge, symbols, clock=time.time, recorder=lambda value: 
             {
                 "symbols": universe,
                 "start_time": (
-                    datetime.fromtimestamp(started, timezone.utc) - timedelta(days=3)
+                    datetime.fromtimestamp(started, timezone.utc) - timedelta(days=730)
                 ).isoformat(),
                 "end_time": datetime.fromtimestamp(started, timezone.utc).isoformat(),
-                "interval": "5minute",
+                "interval": "day",
                 "bounds": "regular",
                 "adjustment_type": "split",
             },
@@ -175,33 +175,52 @@ def live_rsi_snapshots(bridge, symbols, clock=time.time, recorder=lambda value: 
         "usable_bar_counts": {},
     }
     for symbol, result in history.items():
-        if result.get("interval") != "5minute" or result.get("bounds") != "regular":
+        if result.get("interval") != "day" or result.get("bounds") != "regular":
             raise Halt("unexpected RSI bar interval/session")
-        bars[symbol] = tuple(
-            Bar(
-                symbol,
-                utc_time(b["begins_at"]),
-                utc_time(b["begins_at"]) + 300,
-                received,
-                *[
-                    float(dec(b[k]))
-                    for k in ("open_price", "high_price", "low_price", "close_price")
-                ],
-                float(dec(b["volume"])),
+        completed, previous, raw_signal = [], -1, None
+        local_day = datetime.fromtimestamp(received, ZoneInfo("America/New_York")).date()
+        for item in rows(result.get("bars"), "RSI history"):
+            beginning = utc_time(item["begins_at"])
+            opening, close = daily_session_bounds(item["begins_at"])
+            session_day = datetime.fromtimestamp(opening, ZoneInfo("America/New_York")).date()
+            if beginning <= previous or session_day > local_day:
+                raise Halt("out-of-order, duplicate or future daily RSI bar")
+            previous = beginning
+            if close > received:
+                if session_day != local_day:
+                    raise Halt("future completed daily RSI bar")
+                continue  # Today's unfinished candle, even when labelled midnight UTC.
+            if item.get("session") not in {None, "", "reg"}:
+                raise Halt("unexpected daily RSI bar session")
+            if item.get("interpolated") is True:
+                continue
+            completed.append(
+                Bar(
+                    symbol,
+                    beginning,
+                    close,
+                    received,
+                    *[
+                        float(dec(item[k]))
+                        for k in ("open_price", "high_price", "low_price", "close_price")
+                    ],
+                    float(dec(item["volume"])),
+                )
             )
-            for b in rows(result.get("bars"), "RSI history")
-            if b.get("interpolated") is not True and utc_time(b["begins_at"]) + 300 <= started
-        )
-        observation["usable_bar_counts"][symbol] = len(bars[symbol])
-        if not bars[symbol]:
+            raw_signal = item["begins_at"]
+        bars[symbol] = tuple(completed)
+        observation["usable_bar_counts"][symbol] = len(completed)
+        if not completed:
             recorder(observation)
             raise Halt(f"no usable completed RSI bars for {symbol}")
-        observation["latest_completed_ends"][symbol] = bars[symbol][-1].end
+        observation["latest_completed_ends"][symbol] = completed[-1].end
+        observation.setdefault("signal_bar_begins_at", {})[symbol] = raw_signal
+    decision = clock()
+    observation["decision_time"] = decision
     recorder(observation)
     snapshots = {}
     for symbol in symbols:
         q = quotes[symbol]
-        decision = bars[symbol][-1].end
         snapshots[symbol] = MarketSnapshot(
             symbol,
             decision,
@@ -214,6 +233,7 @@ def live_rsi_snapshots(bridge, symbols, clock=time.time, recorder=lambda value: 
             float(dec(q["ask_price"])),
             max(utc_time(q[k]) for k in ("venue_bid_time", "venue_ask_time")),
             quote_receipt,
+            signal_bar_begins_at=observation["signal_bar_begins_at"][symbol],
         )
     return snapshots
 
