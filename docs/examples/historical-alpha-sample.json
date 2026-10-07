@@ -1,0 +1,997 @@
+{
+  "protocol": {
+    "schema": "historical-alpha-v1",
+    "start": "2026-09-22",
+    "validation_start": "2026-09-28",
+    "test_start": "2026-10-01",
+    "end_exclusive": "2026-10-07",
+    "symbols": [
+      "QQQ",
+      "IWM"
+    ],
+    "benchmark": "SPY",
+    "families": [
+      "opening_momentum",
+      "opening_reversal",
+      "gap_continuation",
+      "relative_strength",
+      "mean_reversion"
+    ],
+    "params": {
+      "threshold": 0.001,
+      "scale": 0.5,
+      "horizon": 3600,
+      "max_expected": 0.03
+    },
+    "costs_per_side_bps": {
+      "low": {
+        "half_spread_bps": 0.5,
+        "slippage_bps": 0.5,
+        "fee_bps": 0.0
+      },
+      "base": {
+        "half_spread_bps": 1.0,
+        "slippage_bps": 1.0,
+        "fee_bps": 0.1
+      },
+      "stress": {
+        "half_spread_bps": 2.0,
+        "slippage_bps": 3.0,
+        "fee_bps": 0.2
+      }
+    },
+    "strategy_implementation": "bd50e765693e242d71b1bdfc1466699395660dda6d27a0514a1ef942ff26664b",
+    "research_implementation": "b7ef9c91dd244d5839ddae098e885203b1b5876a2b3cf2e0fc7f52edd35f3b9d",
+    "source": "firstrate-sample",
+    "evidence_pool": "historical_only",
+    "selection": "maximum validation base-cost total portfolio return; cash if <=0; alphabetical tie",
+    "capital": "equal fixed sleeves; idle sleeves stay cash; no leverage or shorts; no interest",
+    "timing": "09:33 NY decision; entry 09:34 open; exit 10:34 open; 60 minutes",
+    "test_policy": "all five frozen comparisons descriptive; winner frozen before test; no tuning",
+    "hypotheses": 5,
+    "parameter_configurations_per_family": 1,
+    "cost_scenarios": 3
+  },
+  "attempt": 2,
+  "cumulative_hypotheses": 10,
+  "evidence_kind": "historical_market",
+  "data": [
+    {
+      "digest": "4cabf17ae80dbd1b15f9cbbeeb3c47b72cb8d17fd7c730c9d01e9fc809c4b05d",
+      "metadata": {
+        "source": "firstrate-public-sample",
+        "frequency": "1Min",
+        "adjustment": "split",
+        "evidence_kind": "historical_market",
+        "symbols": [
+          "IWM",
+          "QQQ",
+          "SPY"
+        ],
+        "archives": [
+          {
+            "symbol": "IWM",
+            "url": "https://frd001.s3.us-east-2.amazonaws.com/frd_sample_etf_IWM.zip",
+            "sha256": "83fbe8a08a1737e03f38013f8c2e2c0a18ae09b9edce9c57bc7e1f7a0f9072cd"
+          },
+          {
+            "symbol": "QQQ",
+            "url": "https://frd001.s3.us-east-2.amazonaws.com/frd_sample_etf_QQQ.zip",
+            "sha256": "50d5d04ae52c64aced8e03c3e3571db5eec632ac48cfd44f9da7ed805dea8642"
+          },
+          {
+            "symbol": "SPY",
+            "url": "https://frd001.s3.us-east-2.amazonaws.com/frd_sample_etf_SPY.zip",
+            "sha256": "4e5ae7f7885ee94edb26679d6e73674b2959c502ae3ae3657f1108df8a6561d8"
+          }
+        ],
+        "availability": "bar_end_assumed_not_point_in_time_archive",
+        "timestamp_convention": "US Eastern minute start; end=start+60 seconds",
+        "retrieved_at": "2026-10-07T17:26:53.624913-05:00",
+        "limitations": "vendor-selected two-week sample; omitted zero-volume minutes; revised data"
+      },
+      "bars": 31106,
+      "first_start": 1789977600.0,
+      "last_end": 1791331200.0
+    }
+  ],
+  "selected": "opening_reversal",
+  "assessment": "No credible net trading edge established.",
+  "periods": {
+    "train": {
+      "requested_sessions": 4,
+      "complete_sessions": 4,
+      "benchmarks": {
+        "cash": {
+          "sessions": 4,
+          "total_return": 0.0,
+          "annualized_return": null,
+          "max_drawdown": 0.0,
+          "annualized_volatility": 0.0,
+          "sharpe": null,
+          "mean_daily_return": 0.0
+        },
+        "passive_targets": {
+          "sessions": 4,
+          "total_return": -0.004692626518125742,
+          "annualized_return": null,
+          "max_drawdown": -0.013940098889500097,
+          "annualized_volatility": 0.11918495759766462,
+          "sharpe": -2.4249653644817655,
+          "mean_daily_return": -0.0011469023577046211
+        },
+        "passive_market": {
+          "sessions": 4,
+          "total_return": -0.0032887035702026113,
+          "annualized_return": null,
+          "max_drawdown": -0.008314056096001443,
+          "annualized_volatility": 0.06930932399466624,
+          "sharpe": -2.9583193363276767,
+          "mean_daily_return": -0.0008136472752429402
+        },
+        "window_targets": {
+          "sessions": 4,
+          "total_return": -0.008624805048518924,
+          "annualized_return": null,
+          "max_drawdown": -0.010544936433364294,
+          "annualized_volatility": 0.058098978852493606,
+          "sharpe": -9.353630613667914,
+          "mean_daily_return": -0.002156493600069559
+        },
+        "window_market": {
+          "sessions": 4,
+          "total_return": -0.008058083488445167,
+          "annualized_return": null,
+          "max_drawdown": -0.008058083488445167,
+          "annualized_volatility": 0.03286067621167343,
+          "sharpe": -15.479278721008056,
+          "mean_daily_return": -0.0020184903414336985
+        }
+      },
+      "strategies": {
+        "opening_momentum": {
+          "trades": 2,
+          "gross": {
+            "sessions": 4,
+            "total_return": 0.0016077863894943256,
+            "annualized_return": null,
+            "max_drawdown": -0.0006043370067542186,
+            "annualized_volatility": 0.017055518860713416,
+            "sharpe": 5.9438130837116905,
+            "mean_daily_return": 0.0004022810164833329
+          },
+          "low": {
+            "sessions": 4,
+            "total_return": 0.0014073342636833353,
+            "annualized_return": null,
+            "max_drawdown": -0.0007042061524384913,
+            "annualized_volatility": 0.016771100850202635,
+            "sharpe": 5.292187071357576,
+            "mean_daily_return": 0.0003522055678249064
+          },
+          "base": {
+            "sessions": 4,
+            "total_return": 0.0011869063821818848,
+            "annualized_return": null,
+            "max_drawdown": -0.0008140391477621245,
+            "annualized_volatility": 0.01649691811456904,
+            "sharpe": 4.5388964522786335,
+            "mean_daily_return": 0.0002971341393005894
+          },
+          "stress": {
+            "sessions": 4,
+            "total_return": 0.0005660917473131466,
+            "annualized_return": null,
+            "max_drawdown": -0.001123438563457868,
+            "annualized_volatility": 0.015958416478489727,
+            "sharpe": 2.2422960248490336,
+            "mean_daily_return": 0.00014199799139921754
+          },
+          "mean_market_time_exposure": 0.038461538461538464,
+          "exposure_matched_window": {
+            "sessions": 4,
+            "total_return": -0.0021564231492380292,
+            "annualized_return": null,
+            "max_drawdown": -0.002640290924009303,
+            "annualized_volatility": 0.014524744713123401,
+            "sharpe": -9.353630613667914,
+            "mean_daily_return": -0.0005391234000173897
+          }
+        },
+        "opening_reversal": {
+          "trades": 4,
+          "gross": {
+            "sessions": 4,
+            "total_return": -0.009151198835236185,
+            "annualized_return": null,
+            "max_drawdown": -0.009297859607003578,
+            "annualized_volatility": 0.045574730376647186,
+            "sharpe": -12.670883872343326,
+            "mean_daily_return": -0.0022915560163327547
+          },
+          "low": {
+            "sessions": 4,
+            "total_return": -0.009547229780728972,
+            "annualized_return": null,
+            "max_drawdown": -0.009594786657543652,
+            "annualized_volatility": 0.046530753729868146,
+            "sharpe": -12.949588502068542,
+            "mean_daily_return": -0.0023910877519558865
+          },
+          "base": {
+            "sessions": 4,
+            "total_return": -0.009982658139477185,
+            "annualized_return": null,
+            "max_drawdown": -0.009982658139477185,
+            "annualized_volatility": 0.04759012506770966,
+            "sharpe": -13.240951079371683,
+            "mean_daily_return": -0.002500549674137792
+          },
+          "stress": {
+            "sessions": 4,
+            "total_return": -0.011208616199276267,
+            "annualized_return": null,
+            "max_drawdown": -0.011208616199276267,
+            "annualized_volatility": 0.05061478284627968,
+            "sharpe": -13.984921243548305,
+            "mean_daily_return": -0.0028089037772401626
+          },
+          "mean_market_time_exposure": 0.07692307692307693,
+          "exposure_matched_window": {
+            "sessions": 4,
+            "total_return": -0.004312701886135528,
+            "annualized_return": null,
+            "max_drawdown": -0.005277878191565444,
+            "annualized_volatility": 0.029049489426246803,
+            "sharpe": -9.353630613667914,
+            "mean_daily_return": -0.0010782468000347795
+          }
+        },
+        "gap_continuation": {
+          "trades": 3,
+          "gross": {
+            "sessions": 4,
+            "total_return": -0.0031457112645707497,
+            "annualized_return": null,
+            "max_drawdown": -0.003293260940317122,
+            "annualized_volatility": 0.022996643148250635,
+            "sharpe": -8.616435638335627,
+            "mean_daily_return": -0.0007863059348598156
+          },
+          "low": {
+            "sessions": 4,
+            "total_return": -0.003444732465995637,
+            "annualized_return": null,
+            "max_drawdown": -0.0034925823559874836,
+            "annualized_volatility": 0.024119564219468186,
+            "sharpe": -8.997160062368119,
+            "mean_daily_return": -0.0008611411901473104
+          },
+          "base": {
+            "sessions": 4,
+            "total_return": -0.003773540690626964,
+            "annualized_return": null,
+            "max_drawdown": -0.003773540690626964,
+            "annualized_volatility": 0.02537550052959641,
+            "sharpe": -9.369177053681542,
+            "mean_daily_return": -0.0009434426876491209
+          },
+          "stress": {
+            "sessions": 4,
+            "total_return": -0.004699533794746635,
+            "annualized_return": null,
+            "max_drawdown": -0.004699533794746635,
+            "annualized_volatility": 0.029007265693483466,
+            "sharpe": -10.210271168586816,
+            "mean_daily_return": -0.0011752859071020305
+          },
+          "mean_market_time_exposure": 0.057692307692307696,
+          "exposure_matched_window": {
+            "sessions": 4,
+            "total_return": -0.003234580898415773,
+            "annualized_return": null,
+            "max_drawdown": -0.003959422598030948,
+            "annualized_volatility": 0.0217871170696851,
+            "sharpe": -9.353630613667914,
+            "mean_daily_return": -0.0008086851000260846
+          }
+        },
+        "relative_strength": {
+          "trades": 0,
+          "gross": {
+            "sessions": 4,
+            "total_return": 0.0,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.0,
+            "sharpe": null,
+            "mean_daily_return": 0.0
+          },
+          "low": {
+            "sessions": 4,
+            "total_return": 0.0,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.0,
+            "sharpe": null,
+            "mean_daily_return": 0.0
+          },
+          "base": {
+            "sessions": 4,
+            "total_return": 0.0,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.0,
+            "sharpe": null,
+            "mean_daily_return": 0.0
+          },
+          "stress": {
+            "sessions": 4,
+            "total_return": 0.0,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.0,
+            "sharpe": null,
+            "mean_daily_return": 0.0
+          },
+          "mean_market_time_exposure": 0.0,
+          "exposure_matched_window": {
+            "sessions": 4,
+            "total_return": 0.0,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.0,
+            "sharpe": null,
+            "mean_daily_return": 0.0
+          }
+        },
+        "mean_reversion": {
+          "trades": 0,
+          "gross": {
+            "sessions": 4,
+            "total_return": 0.0,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.0,
+            "sharpe": null,
+            "mean_daily_return": 0.0
+          },
+          "low": {
+            "sessions": 4,
+            "total_return": 0.0,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.0,
+            "sharpe": null,
+            "mean_daily_return": 0.0
+          },
+          "base": {
+            "sessions": 4,
+            "total_return": 0.0,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.0,
+            "sharpe": null,
+            "mean_daily_return": 0.0
+          },
+          "stress": {
+            "sessions": 4,
+            "total_return": 0.0,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.0,
+            "sharpe": null,
+            "mean_daily_return": 0.0
+          },
+          "mean_market_time_exposure": 0.0,
+          "exposure_matched_window": {
+            "sessions": 4,
+            "total_return": 0.0,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.0,
+            "sharpe": null,
+            "mean_daily_return": 0.0
+          }
+        }
+      }
+    },
+    "validation": {
+      "requested_sessions": 3,
+      "complete_sessions": 3,
+      "benchmarks": {
+        "cash": {
+          "sessions": 3,
+          "total_return": 0.0,
+          "annualized_return": null,
+          "max_drawdown": 0.0,
+          "annualized_volatility": 0.0,
+          "sharpe": null,
+          "mean_daily_return": 0.0
+        },
+        "passive_targets": {
+          "sessions": 3,
+          "total_return": -0.0106053348792714,
+          "annualized_return": null,
+          "max_drawdown": -0.0106053348792714,
+          "annualized_volatility": 0.06053227128001091,
+          "sharpe": -14.738818352317383,
+          "mean_daily_return": -0.003540373614481266
+        },
+        "passive_market": {
+          "sessions": 3,
+          "total_return": -0.011876268592178607,
+          "annualized_return": null,
+          "max_drawdown": -0.011876268592178607,
+          "annualized_volatility": 0.04161475559529044,
+          "sharpe": -24.04704145577258,
+          "mean_daily_return": -0.003971078384808702
+        },
+        "window_targets": {
+          "sessions": 3,
+          "total_return": -0.0029114309432333174,
+          "annualized_return": null,
+          "max_drawdown": -0.0029114309432333174,
+          "annualized_volatility": 0.00605210219876648,
+          "sharpe": -40.44538275598857,
+          "mean_daily_return": -0.0009713475789978979
+        },
+        "window_market": {
+          "sessions": 3,
+          "total_return": -0.0005570849080409612,
+          "annualized_return": null,
+          "max_drawdown": -0.001556750380000138,
+          "annualized_volatility": 0.014465560863615399,
+          "sharpe": -3.2283017264272287,
+          "mean_daily_return": -0.00018531426630852277
+        }
+      },
+      "strategies": {
+        "opening_momentum": {
+          "trades": 1,
+          "gross": {
+            "sessions": 3,
+            "total_return": 0.0008630803878468818,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.006458702217133176,
+            "sharpe": 11.224972160321826,
+            "mean_daily_return": 0.00028769346261559026
+          },
+          "low": {
+            "sessions": 3,
+            "total_return": 0.0007629177880290605,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.005709153954160341,
+            "sharpe": 11.224972160321824,
+            "mean_daily_return": 0.00025430592934302015
+          },
+          "base": {
+            "sessions": 3,
+            "total_return": 0.0006527620609324547,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.004884823974187402,
+            "sharpe": 11.224972160321826,
+            "mean_daily_return": 0.00021758735364415158
+          },
+          "stress": {
+            "sessions": 3,
+            "total_return": 0.0003424535102198867,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.002562687412280978,
+            "sharpe": 11.224972160321824,
+            "mean_daily_return": 0.00011415117007325855
+          },
+          "mean_market_time_exposure": 0.025641025641025644,
+          "exposure_matched_window": {
+            "sessions": 3,
+            "total_return": -0.0007283474128662037,
+            "annualized_return": null,
+            "max_drawdown": -0.0007283474128662037,
+            "annualized_volatility": 0.00151302554969162,
+            "sharpe": -40.44538275598857,
+            "mean_daily_return": -0.00024283689474947448
+          }
+        },
+        "opening_reversal": {
+          "trades": 3,
+          "gross": {
+            "sessions": 3,
+            "total_return": 0.001750850835091633,
+            "annualized_return": null,
+            "max_drawdown": -0.0010276665713468969,
+            "annualized_volatility": 0.018351641550589822,
+            "sharpe": 8.018579323207591,
+            "mean_daily_return": 0.0005839448154145906
+          },
+          "low": {
+            "sessions": 3,
+            "total_return": 0.0014502107408218556,
+            "annualized_return": null,
+            "max_drawdown": -0.0011274510595837839,
+            "annualized_volatility": 0.018347971589276417,
+            "sharpe": 6.6452678304697645,
+            "mean_daily_return": 0.0004838380371293323
+          },
+          "base": {
+            "sessions": 3,
+            "total_return": 0.0011196455292517005,
+            "annualized_return": null,
+            "max_drawdown": -0.0012371909512670642,
+            "annualized_volatility": 0.018343935479412817,
+            "sharpe": 5.134307886870176,
+            "mean_daily_return": 0.00037374370082613834
+          },
+          "stress": {
+            "sessions": 3,
+            "total_return": 0.00018883482872000812,
+            "annualized_return": null,
+            "max_drawdown": -0.001546328094120697,
+            "annualized_volatility": 0.01833256576278674,
+            "sharpe": 0.8743586882179981,
+            "mean_daily_return": 6.360808790484285e-05
+          },
+          "mean_market_time_exposure": 0.07692307692307693,
+          "exposure_matched_window": {
+            "sessions": 3,
+            "total_return": -0.0014563683286644702,
+            "annualized_return": null,
+            "max_drawdown": -0.0014563683286644702,
+            "annualized_volatility": 0.00302605109938324,
+            "sharpe": -40.44538275598857,
+            "mean_daily_return": -0.00048567378949894896
+          }
+        },
+        "gap_continuation": {
+          "trades": 3,
+          "gross": {
+            "sessions": 3,
+            "total_return": 0.0009868765527498713,
+            "annualized_return": null,
+            "max_drawdown": -0.0001645861835001261,
+            "annualized_volatility": 0.009295402525975197,
+            "sharpe": 8.919845274889683,
+            "mean_daily_return": 0.00032902203293459314
+          },
+          "low": {
+            "sessions": 3,
+            "total_return": 0.0006865154203861135,
+            "annualized_return": null,
+            "max_drawdown": -0.00036453327155472337,
+            "annualized_volatility": 0.00952962936241737,
+            "sharpe": 6.054746601449161,
+            "mean_daily_return": 0.00022896623410780434
+          },
+          "base": {
+            "sessions": 3,
+            "total_return": 0.00035623381836491497,
+            "annualized_return": null,
+            "max_drawdown": -0.0005844288903346095,
+            "annualized_volatility": 0.009977003145554714,
+            "sharpe": 3.003892686858553,
+            "mean_daily_return": 0.00011892796343530392
+          },
+          "stress": {
+            "sessions": 3,
+            "total_return": -0.000573908452349503,
+            "annualized_return": null,
+            "max_drawdown": -0.0012038745839010323,
+            "annualized_volatility": 0.01208142393892209,
+            "sharpe": -3.9850044031836767,
+            "mean_daily_return": -0.00019104971267195717
+          },
+          "mean_market_time_exposure": 0.07692307692307693,
+          "exposure_matched_window": {
+            "sessions": 3,
+            "total_return": -0.001092398678614992,
+            "annualized_return": null,
+            "max_drawdown": -0.001092398678614992,
+            "annualized_volatility": 0.00226953832453743,
+            "sharpe": -40.44538275598857,
+            "mean_daily_return": -0.00036425534212421173
+          }
+        },
+        "relative_strength": {
+          "trades": 0,
+          "gross": {
+            "sessions": 3,
+            "total_return": 0.0,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.0,
+            "sharpe": null,
+            "mean_daily_return": 0.0
+          },
+          "low": {
+            "sessions": 3,
+            "total_return": 0.0,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.0,
+            "sharpe": null,
+            "mean_daily_return": 0.0
+          },
+          "base": {
+            "sessions": 3,
+            "total_return": 0.0,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.0,
+            "sharpe": null,
+            "mean_daily_return": 0.0
+          },
+          "stress": {
+            "sessions": 3,
+            "total_return": 0.0,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.0,
+            "sharpe": null,
+            "mean_daily_return": 0.0
+          },
+          "mean_market_time_exposure": 0.0,
+          "exposure_matched_window": {
+            "sessions": 3,
+            "total_return": 0.0,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.0,
+            "sharpe": null,
+            "mean_daily_return": 0.0
+          }
+        },
+        "mean_reversion": {
+          "trades": 0,
+          "gross": {
+            "sessions": 3,
+            "total_return": 0.0,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.0,
+            "sharpe": null,
+            "mean_daily_return": 0.0
+          },
+          "low": {
+            "sessions": 3,
+            "total_return": 0.0,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.0,
+            "sharpe": null,
+            "mean_daily_return": 0.0
+          },
+          "base": {
+            "sessions": 3,
+            "total_return": 0.0,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.0,
+            "sharpe": null,
+            "mean_daily_return": 0.0
+          },
+          "stress": {
+            "sessions": 3,
+            "total_return": 0.0,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.0,
+            "sharpe": null,
+            "mean_daily_return": 0.0
+          },
+          "mean_market_time_exposure": 0.0,
+          "exposure_matched_window": {
+            "sessions": 3,
+            "total_return": 0.0,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.0,
+            "sharpe": null,
+            "mean_daily_return": 0.0
+          }
+        }
+      }
+    },
+    "test": {
+      "requested_sessions": 4,
+      "complete_sessions": 4,
+      "benchmarks": {
+        "cash": {
+          "sessions": 4,
+          "total_return": 0.0,
+          "annualized_return": null,
+          "max_drawdown": 0.0,
+          "annualized_volatility": 0.0,
+          "sharpe": null,
+          "mean_daily_return": 0.0
+        },
+        "passive_targets": {
+          "sessions": 4,
+          "total_return": 0.0189412266372182,
+          "annualized_return": null,
+          "max_drawdown": -0.0016593355693202971,
+          "annualized_volatility": 0.06862859487249913,
+          "sharpe": 17.299790438835785,
+          "mean_daily_return": 0.004711350434150774
+        },
+        "passive_market": {
+          "sessions": 4,
+          "total_return": 0.021447459415208092,
+          "annualized_return": null,
+          "max_drawdown": 0.0,
+          "annualized_volatility": 0.034094413092197955,
+          "sharpe": 39.3329941300774,
+          "mean_daily_return": 0.005321568849301017
+        },
+        "window_targets": {
+          "sessions": 4,
+          "total_return": -0.007032992697568186,
+          "annualized_return": null,
+          "max_drawdown": -0.007032992697568186,
+          "annualized_volatility": 0.061540929611174286,
+          "sharpe": -7.187977414518668,
+          "mean_daily_return": -0.001755376238546047
+        },
+        "window_market": {
+          "sessions": 4,
+          "total_return": -0.0022453094685890296,
+          "annualized_return": null,
+          "max_drawdown": -0.005425130594973515,
+          "annualized_volatility": 0.04523505275578018,
+          "sharpe": -3.107059833685639,
+          "mean_daily_return": -0.0005577302202068868
+        }
+      },
+      "strategies": {
+        "opening_momentum": {
+          "trades": 2,
+          "gross": {
+            "sessions": 4,
+            "total_return": -0.0026092974910140176,
+            "annualized_return": null,
+            "max_drawdown": -0.0034315486884657354,
+            "annualized_volatility": 0.02603355290300599,
+            "sharpe": -6.307528210434297,
+            "mean_daily_return": -0.0006516165450537459
+          },
+          "low": {
+            "sessions": 4,
+            "total_return": -0.0028084845531667346,
+            "annualized_return": null,
+            "max_drawdown": -0.003530852448352051,
+            "annualized_volatility": 0.026353757192638695,
+            "sharpe": -6.7077066088645525,
+            "mean_daily_return": -0.0007014812352756916
+          },
+          "base": {
+            "sessions": 4,
+            "total_return": -0.0030275213516094412,
+            "annualized_return": null,
+            "max_drawdown": -0.003640063649874792,
+            "annualized_volatility": 0.026728557261152794,
+            "sharpe": -7.130682716725645,
+            "mean_daily_return": -0.0007563208781948966
+          },
+          "stress": {
+            "sessions": 4,
+            "total_return": -0.0036444184042115912,
+            "annualized_return": null,
+            "max_drawdown": -0.003947711473181625,
+            "annualized_volatility": 0.02790358166785463,
+            "sharpe": -8.225561595858737,
+            "mean_daily_return": -0.000910804086325448
+          },
+          "mean_market_time_exposure": 0.038461538461538464,
+          "exposure_matched_window": {
+            "sessions": 4,
+            "total_return": -0.001756098067742462,
+            "annualized_return": null,
+            "max_drawdown": -0.001756098067742462,
+            "annualized_volatility": 0.015385232402793571,
+            "sharpe": -7.187977414518668,
+            "mean_daily_return": -0.00043884405963651174
+          }
+        },
+        "opening_reversal": {
+          "trades": 2,
+          "gross": {
+            "sessions": 4,
+            "total_return": 0.0031507693433239226,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.01569291334824102,
+            "sharpe": 12.641842018779593,
+            "mean_daily_return": 0.000787251314931986
+          },
+          "low": {
+            "sessions": 4,
+            "total_return": 0.002949854089682402,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.01506539523387468,
+            "sharpe": 12.329508443315893,
+            "mean_daily_return": 0.0007370988799124956
+          },
+          "base": {
+            "sessions": 4,
+            "total_return": 0.0027289169459197016,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.014394540035796072,
+            "sharpe": 11.938525384192957,
+            "mean_daily_return": 0.0006819427841711634
+          },
+          "stress": {
+            "sessions": 4,
+            "total_return": 0.002106668121929278,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.012640122725992475,
+            "sharpe": 10.497933551712384,
+            "mean_daily_return": 0.0005265681288212642
+          },
+          "mean_market_time_exposure": 0.038461538461538464,
+          "exposure_matched_window": {
+            "sessions": 4,
+            "total_return": -0.003513634669892296,
+            "annualized_return": null,
+            "max_drawdown": -0.003513634669892296,
+            "annualized_volatility": 0.030770464805587143,
+            "sharpe": -7.187977414518668,
+            "mean_daily_return": -0.0008776881192730235
+          }
+        },
+        "gap_continuation": {
+          "trades": 6,
+          "gross": {
+            "sessions": 4,
+            "total_return": -0.002751495611878041,
+            "annualized_return": null,
+            "max_drawdown": -0.004086275032580411,
+            "annualized_volatility": 0.04586932794095061,
+            "sharpe": -3.760051596102213,
+            "mean_daily_return": -0.0006844088878432825
+          },
+          "low": {
+            "sessions": 4,
+            "total_return": -0.0033494603011757773,
+            "annualized_return": null,
+            "max_drawdown": -0.004285437861290986,
+            "annualized_volatility": 0.045787336700841924,
+            "sharpe": -4.591504649619062,
+            "mean_daily_return": -0.0008342570212523381
+          },
+          "base": {
+            "sessions": 4,
+            "total_return": -0.004006784351288983,
+            "annualized_return": null,
+            "max_drawdown": -0.004504470975918551,
+            "annualized_volatility": 0.04571294675579664,
+            "sharpe": -5.507453985704295,
+            "mean_daily_return": -0.000999055360351192
+          },
+          "stress": {
+            "sessions": 4,
+            "total_return": -0.00585678230120612,
+            "annualized_return": null,
+            "max_drawdown": -0.00585678230120612,
+            "annualized_volatility": 0.04559287950344475,
+            "sharpe": -8.087877076800563,
+            "mean_daily_return": -0.0014632920833382579
+          },
+          "mean_market_time_exposure": 0.11538461538461539,
+          "exposure_matched_window": {
+            "sessions": 4,
+            "total_return": -0.0026346870326006133,
+            "annualized_return": null,
+            "max_drawdown": -0.0026346870326006133,
+            "annualized_volatility": 0.023077848604190355,
+            "sharpe": -7.187977414518668,
+            "mean_daily_return": -0.0006582660894547676
+          }
+        },
+        "relative_strength": {
+          "trades": 0,
+          "gross": {
+            "sessions": 4,
+            "total_return": 0.0,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.0,
+            "sharpe": null,
+            "mean_daily_return": 0.0
+          },
+          "low": {
+            "sessions": 4,
+            "total_return": 0.0,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.0,
+            "sharpe": null,
+            "mean_daily_return": 0.0
+          },
+          "base": {
+            "sessions": 4,
+            "total_return": 0.0,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.0,
+            "sharpe": null,
+            "mean_daily_return": 0.0
+          },
+          "stress": {
+            "sessions": 4,
+            "total_return": 0.0,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.0,
+            "sharpe": null,
+            "mean_daily_return": 0.0
+          },
+          "mean_market_time_exposure": 0.0,
+          "exposure_matched_window": {
+            "sessions": 4,
+            "total_return": 0.0,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.0,
+            "sharpe": null,
+            "mean_daily_return": 0.0
+          }
+        },
+        "mean_reversion": {
+          "trades": 1,
+          "gross": {
+            "sessions": 4,
+            "total_return": 0.0007289407246737767,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.005010639071929556,
+            "sharpe": 9.16515138991168,
+            "mean_daily_return": 0.00018223518116841642
+          },
+          "low": {
+            "sessions": 4,
+            "total_return": 0.0006288049501061987,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.004322319421836879,
+            "sharpe": 9.165151389911681,
+            "mean_daily_return": 0.00015720123752654969
+          },
+          "base": {
+            "sessions": 4,
+            "total_return": 0.0005186787245894386,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.00356532677519062,
+            "sharpe": 9.165151389911681,
+            "mean_daily_return": 0.0001296696811473319
+          },
+          "stress": {
+            "sessions": 4,
+            "total_return": 0.0002084532797914651,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.001432879400259296,
+            "sharpe": 9.165151389911681,
+            "mean_daily_return": 5.211331994786628e-05
+          },
+          "mean_market_time_exposure": 0.019230769230769232,
+          "exposure_matched_window": {
+            "sessions": 4,
+            "total_return": 0.0,
+            "annualized_return": null,
+            "max_drawdown": 0.0,
+            "annualized_volatility": 0.0,
+            "sharpe": null,
+            "mean_daily_return": 0.0
+          }
+        }
+      }
+    }
+  },
+  "note": "Selected small public-sample research output; no raw data or private account information. Four-session test, no credible edge established."
+}
