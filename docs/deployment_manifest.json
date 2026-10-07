@@ -17,7 +17,9 @@
     "src/tradeagent/accounting.py": "901e8f4d4682817402b54f5c2cc3d8c8fbf7ca514d3c207737a269b723450615",
     "src/tradeagent/broker.py": "ba852cf9947a298d347122475b2bcdf09b4ca4f0a29f16fea4de3d66082eed09",
     "src/tradeagent/calendar.py": "27634fee89fb4a091e37a65667a8ac836b0bd233032343d1ce0054f06aaa956e",
-    "src/tradeagent/cli.py": "a7191897fee2bd9d0096bc4737f247d5b984dfedfa70c45032ec04735668343c",
+    "src/tradeagent/canary_review.py": "6147dd3ac09c644a598ae20788e7ed6dbd22ab3d18a53de283ca4a81f9998291",
+    "src/tradeagent/canary_review_cli.py": "44eda2c1d64f0eb1482681ba219172ab44bc37084c4877c9cacb2ade5f7bc77f",
+    "src/tradeagent/cli.py": "ee006767a6ab4bcb2c8cf1ddcb761c76569f5a331044fe8b2ea91006006d8f5e",
     "src/tradeagent/codex_bridge.py": "851b287ce6e9ba1879e226789b81b907c72c71d50c5ade686e3970b0e333413d",
     "src/tradeagent/contracts/official-1.6.2.json": "836d6c9340b472470e12a7294aa9df9d8059e1a18df1f389fc2ac61b8a3fd89a",
     "src/tradeagent/contracts/official-1.7.0.json": "fce9254bc0bafe91cca3526c2d2533e1ee609a451e89916f8343e684435a61e8",
@@ -73,6 +75,7 @@
     "tests/test_broker_contract.py": "368ca3853831bb7327351d52d6b5eac589ad1b36f7d5029fb01a2de618428115",
     "tests/test_canary_execution.py": "f521c4089a9aeb92388f7b6f049e315366bb780f5de076c86f11c3495097bac7",
     "tests/test_canary_reference.py": "d1cc61aea7954f39a51e8f6dfcec0c1a36d7fd9d1e473c8125c3996699685442",
+    "tests/test_canary_review.py": "0d850a7d0d48b4e0d16942ce730d11f7c10b35e89bb83492da732bd04fdc9f64",
     "tests/test_commissioning.py": "83b54169dd739c0f8653d4a1d63a28cb184892cf6038277ef8a4a4e6c0d922da",
     "tests/test_contract_pins.py": "099c3be87dc2b96cdbc54ed9ccd7bd64ea139d700e9ec6a7c64e8ca498860b84",
     "tests/test_execution_lifecycle.py": "c8594a21bc1f0e1668774bb94a5512ab69dcd487ef71bc99184fa9990d4a5508",
@@ -85,5 +88,5 @@
     "tests/test_standalone.py": "aff198185b7235300e5acd61575a9f1b214bcbd44d02b92ec25c2715839447d0",
     "tests/test_supervised_contract.py": "60bf5ed95f5fe2143faa634b9dd80c7198521f05cdca3a95abdc1e5af5e9aa3c"
   },
-  "framework_sha256": "c5365b9aa23fb2da1559c849d80ca11d01b54b1659a5b82eb428b40f07c5c092"
+  "framework_sha256": "97d2521d8e9da2bb7685fa9065a3dd269a72467348cdce85f2389a845d631917"
 }

@@ -18,6 +18,10 @@ from .research.store import Experience
 
 def main(argv=None):
     supplied = list(sys.argv[1:] if argv is None else argv)
+    if supplied and supplied[0] == "canary-review":
+        from .canary_review_cli import main as review_main
+
+        return review_main(supplied[1:])
     if supplied and (
         supplied[0] in {"validate", "tools", "shadow", "simulate", "execution"}
         or (supplied[0] == "inspect" and "--config" in supplied)
