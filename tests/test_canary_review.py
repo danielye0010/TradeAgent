@@ -325,7 +325,8 @@ def test_changed_prepared_payload_never_reaches_review(tmp_path, monkeypatch):
     assert not sent and not b.wire_calls
 
 
-def test_live_collector_never_backdates_receipt_to_a_completed_bar():
+@pytest.mark.parametrize("bar_count", [2, 5])
+def test_live_collector_never_backdates_receipt_to_a_completed_bar(bar_count):
     from datetime import datetime, timezone
 
     from tradeagent.canary_review import live_rsi_snapshots
@@ -373,9 +374,8 @@ def test_live_collector_never_backdates_receipt_to_a_completed_bar():
                                     "low_price": "2.3",
                                     "close_price": "2.3",
                                     "volume": 100,
-                                    "interpolated": False,
                                 }
-                                for i in range(5)
+                                for i in range(5 - bar_count, 5)
                             ],
                         }
                         for s in ["TINY", "SPY"]
@@ -388,6 +388,8 @@ def test_live_collector_never_backdates_receipt_to_a_completed_bar():
         live_rsi_snapshots(Reads(), ["TINY"], lambda: next(times), captured.append)
     assert captured[0]["history_receipt"] > captured[0]["latest_completed_ends"]["TINY"]
     assert captured[0]["quote_receipt"] == c() + 0.1
+    assert captured[0]["usable_bar_counts"]["TINY"] == bar_count
+    assert "interpolated" not in captured[0]["raw_histories"]["TINY"]["bars"][0]
 
 
 def test_new_cli_route_is_separate_from_placement_cli(monkeypatch):

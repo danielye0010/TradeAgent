@@ -165,6 +165,15 @@ def live_rsi_snapshots(bridge, symbols, clock=time.time, recorder=lambda value: 
     if set(history) != set(universe) or set(quotes) != set(universe):
         raise Halt("incomplete RSI symbol/benchmark coverage")
     bars = {}
+    observation = {
+        "request_start": started,
+        "quote_receipt": quote_receipt,
+        "history_receipt": received,
+        "quotes": quotes,
+        "raw_histories": history,
+        "latest_completed_ends": {},
+        "usable_bar_counts": {},
+    }
     for symbol, result in history.items():
         if result.get("interval") != "5minute" or result.get("bounds") != "regular":
             raise Halt("unexpected RSI bar interval/session")
@@ -181,19 +190,14 @@ def live_rsi_snapshots(bridge, symbols, clock=time.time, recorder=lambda value: 
                 float(dec(b["volume"])),
             )
             for b in rows(result.get("bars"), "RSI history")
-            if b.get("interpolated") is False and utc_time(b["begins_at"]) + 300 <= started
+            if b.get("interpolated") is not True and utc_time(b["begins_at"]) + 300 <= started
         )
-        if len(bars[symbol]) < 5:
-            raise Halt("insufficient completed RSI bars")
-    recorder(
-        {
-            "request_start": started,
-            "quote_receipt": quote_receipt,
-            "history_receipt": received,
-            "latest_completed_ends": {s: bs[-1].end for s, bs in bars.items()},
-            "quotes": quotes,
-        }
-    )
+        observation["usable_bar_counts"][symbol] = len(bars[symbol])
+        if not bars[symbol]:
+            recorder(observation)
+            raise Halt(f"no usable completed RSI bars for {symbol}")
+        observation["latest_completed_ends"][symbol] = bars[symbol][-1].end
+    recorder(observation)
     snapshots = {}
     for symbol in symbols:
         q = quotes[symbol]
