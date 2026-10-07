@@ -63,6 +63,11 @@ It was not NO_TRADE. No canary order was constructed or reviewed.
   lock released, integrity ok. RSI store retains 7 original version records and now
   has 1 snapshot, 7 predictions, 7 selections and 7 research plans. Existing
   execution SQLite/log/lock bytes unchanged. No grant, key enrollment or write.
+- Finalization scope note: unrelated untracked `scripts/install_shadow.py` and
+  `src/tradeagent/prospective/` appeared after the validated/committed repair.
+  They were left untouched and unstaged. The final working tree is not clean;
+  the combined executable inventory is not covered by this task's freeze/
+  validation. Do not deploy that combined tree as the tested source snapshot.
 - Next prerequisite: separately resolve official classification search failure and
   the incomplete CLI failure report. Today's completed-bar signal is already
   captured; do not reset/delete evidence or force another same-bar preparation.
