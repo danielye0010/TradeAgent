@@ -7,7 +7,7 @@ import time
 from pathlib import Path
 
 from .broker import Broker
-from .execution_policy import check_run_state, load_live_config
+from .execution_policy import active_settings, check_run_state, load_live_config
 from .model import Config, Halt, Risk, digest
 from .oneshot import atomic_json, choose_entry, new_live_run, reconcile_live, run_live, run_paper
 from .risk import check_state
@@ -43,6 +43,7 @@ def live_check(oauth_helper=None, root=None, timeout=10, settings=None):
         if settings:
             settings.validate()
             check_run_state(settings)
+            settings = active_settings(settings)
             oauth_helper, timeout = settings.oauth_helper, settings.timeout
             root = Path(__file__).parent
         tokens = ExternalOAuthToken(oauth_helper, root or Path.cwd())
@@ -99,7 +100,7 @@ def live_check(oauth_helper=None, root=None, timeout=10, settings=None):
             account_digest = digest(config_broker.account["account_number"])
             if settings and settings.account_sha256 and settings.account_sha256 != account_digest:
                 raise Halt("authenticated account differs from configured account pin")
-            if settings and settings.receipt.exists():
+            if settings and (settings.directory / "live-run.json").exists():
                 artifact = json.loads((settings.directory / "live-run.json").read_text())
                 if artifact["policy"]["account_digest"] != account_digest:
                     raise Halt("authenticated account differs from existing owner run")
@@ -132,7 +133,11 @@ def live_check(oauth_helper=None, root=None, timeout=10, settings=None):
                     "session_buffer_seconds", 600
                 ) - max(60, settings.options["polls"] * 2):
                     result["blockers"].append("Insufficient regular-session exit window")
-                result["will_resume_existing_run"] = settings.receipt.exists()
+                result["will_resume_existing_run"] = (settings.directory / "live-run.json").exists()
+                if result["will_resume_existing_run"]:
+                    result["blockers"].append(
+                        "Existing lifecycle: inspect tradeagent status --config; use recover for unfinished exposure or new-run after verified closure"
+                    )
                 if not snapshot.regular_session:
                     result["blockers"].append("Regular trading session is closed")
                 intent, reasons = choose_entry(
@@ -178,6 +183,36 @@ def live_check(oauth_helper=None, root=None, timeout=10, settings=None):
     return result
 
 
+def progress(kind, payload):
+    """Only observed durable transitions; human-readable stderr, JSON result on stdout."""
+    import sys
+    from datetime import datetime, timezone
+
+    stage = {
+        "broker_connected": "BROKER_CONNECTED",
+        "broker_review": "REVIEWED",
+        "exit_due": "EXIT_DUE",
+    }.get(kind)
+    if kind == "broker_acknowledgment":
+        stage = "SUBMITTED" if payload.get("side") == "buy" else "EXIT_SUBMITTED"
+    elif kind == "fill_reconciliation" and payload.get("filled") != "0":
+        order = payload.get("order", {})
+        if payload.get("state") == "filled":
+            stage = "ENTRY_FILLED" if order.get("side") == "buy" else "EXIT_FILLED"
+        elif payload.get("state") in {"partially_filled", "partially_filled_rest_cancelled"}:
+            stage = "ENTRY_PARTIAL" if order.get("side") == "buy" else "EXIT_PARTIAL"
+    elif kind == "one_shot_final":
+        stage = (
+            "RECONCILED"
+            if payload.get("cash_reconciled") and payload.get("flat_bot_position")
+            else "HALTED"
+            if payload.get("status") == "HALTED"
+            else None
+        )
+    if stage:
+        print(datetime.now(timezone.utc).isoformat() + " " + stage, file=sys.stderr, flush=True)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
@@ -194,6 +229,14 @@ def main(argv=None):
         "reconcile-once", help="read-only reconciliation of an existing owner run; never orders"
     )
     reconcile.add_argument("--config", type=Path, required=True)
+    status = commands.add_parser(
+        "status", help="read-only selected-account execution and reconciliation status"
+    )
+    status.add_argument("--config", type=Path, required=True)
+    recover = commands.add_parser(
+        "recover", help="owner-operated existing lifecycle recovery; never a new entry"
+    )
+    recover.add_argument("--config", type=Path, required=True)
     once = commands.add_parser("run-once", help="one owner-launched entry and automatic exit")
     modes = once.add_mutually_exclusive_group(required=True)
     modes.add_argument("--paper", action="store_true")
@@ -221,6 +264,21 @@ def main(argv=None):
                 args.output.parent.mkdir(parents=True, exist_ok=True)
                 atomic_json(args.output, result)
             code = 0 if result["live_ready"] else 2
+        elif args.command == "status":
+            result = reconcile_live(load_live_config(args.config), persist=False)
+            code = (
+                0
+                if result["reconciliation_status"] in {"RECONCILED", "OPEN_ORDERS", "NO_LIFECYCLE"}
+                else 2
+            )
+        elif args.command == "recover":
+            result = run_live(load_live_config(args.config), recover=True, observer=progress)
+            code = (
+                0
+                if result["status"] in {"COMPLETED", "CLOSED_PARTIAL", "NO_TRADE"}
+                or not result.get("outstanding_incident", True)
+                else 2
+            )
         elif args.command == "reconcile-once":
             result = reconcile_live(load_live_config(args.config))
             code = 0 if result["reconciliation_status"] == "RECONCILED" else 2
@@ -243,24 +301,8 @@ def main(argv=None):
                 )
             ):
                 raise Halt("LIVE policy comes only from TOML; paper overrides are not permitted")
-            result = run_live(load_live_config(args.config))
-            result = {
-                k: result[k]
-                for k in (
-                    "mode",
-                    "status",
-                    "reason",
-                    "outstanding_incident",
-                    "cash_reconciled",
-                    "flat_bot_position",
-                    "reconciliation_blocker",
-                    "submission_status",
-                    "reconciliation_status",
-                    "broker_order_count",
-                )
-                if k in result
-            }
-            code = 0 if result["status"] in {"COMPLETED", "NO_TRADE"} else 2
+            result = run_live(load_live_config(args.config), observer=progress)
+            code = 0 if result["status"] in {"COMPLETED", "CLOSED_PARTIAL", "NO_TRADE"} else 2
         else:
             if args.config:
                 raise Halt("owner LIVE TOML is not a paper configuration")

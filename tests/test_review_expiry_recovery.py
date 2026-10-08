@@ -169,7 +169,6 @@ def test_corrected_wheel_read_only_reconciliation_preserves_failed_evidence(tmp_
         assert invoke()["submission_status"] == "NOT_SUBMITTED"
         paths = [
             config,
-            config.with_name(config.name + ".run.json"),
             target / "live-run.json",
             target / "report.json",
             target / "agent/state.sqlite3",
@@ -179,8 +178,9 @@ def test_corrected_wheel_read_only_reconciliation_preserves_failed_evidence(tmp_
         monkeypatch.setattr(
             "tradeagent.execution_policy.package_hash", lambda: "CORRECTED_TEST_WHEEL"
         )
-        with pytest.raises(Halt, match="changed; never replay"):
-            invoke()
+        from tradeagent.execution_policy import check_run_state
+
+        assert check_run_state(load_live_config(config)) is not None
         result = reconcile_live(load_live_config(config))
         assert result["status"] == "HALTED" and result["submission_status"] == "NOT_SUBMITTED"
         assert result["reconciliation_status"] == "RECONCILED"

@@ -1,139 +1,163 @@
 # TradeAgent
 
-TradeAgent is a Python trading system with timestamped market snapshots,
-account-free strategies, durable shadow predictions, deterministic risk controls,
-and recoverable broker execution.
+An open-source trading agent for US equities. It collects market data, runs a set of
+strategies on a schedule, records every prediction and its outcome, and executes
+trades through the official [Robinhood Trading MCP](https://robinhood.com/us/en/support/articles/agentic-trading-overview/).
 
-**Default:** Robinhood market data + Robinhood execution.
+[![CI](https://github.com/danielye0010/TradeAgent/actions/workflows/ci.yml/badge.svg)](https://github.com/danielye0010/TradeAgent/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.12%E2%80%933.14-blue)
+![License](https://img.shields.io/badge/license-Apache--2.0-green)
 
-**Optional:** Alpaca market data + Robinhood execution.
+> **Status: alpha.** Live trading is driven by explicit one-shot commands, and none
+> of the bundled strategies has a proven edge yet. Start with paper mode and small
+> amounts.
 
-The unattended runtime is **SHADOW**: it records QQQ/IWM predictions against SPY
-and resolves one-hour outcomes. It cannot review, place, or cancel orders. Robinhood
-execution and reconciliation remain a separate, explicitly authorized substrate;
-there is no automatic research-to-live bridge or established profitability record.
+## Features
 
-## Run locally
+- **Shadow trading.** A background service makes predictions at the open each
+  trading day, then scores them against what the market actually did.
+- **Strategy research loop.** Every strategy version predicts on the same snapshots.
+  Daily learning re-weights strategies from their track record, and challengers
+  compete against the current champion before they can replace it.
+- **Live execution.** One-shot entry and exit through Robinhood, with dollar-based
+  or fractional orders, position and exposure limits, and a kill switch.
+- **Crash recovery.** Orders are journaled before they are sent. After a restart,
+  the agent reconciles with the broker instead of resubmitting.
+- **Historical replay.** Run the same strategy code over past minute bars.
+- **Pluggable market data.** Robinhood by default, Alpaca SIP as an option.
 
-Use Python 3.12–3.14 on Linux or Ubuntu/WSL2. Keep SQLite on persistent local Linux storage.
+## Quickstart
 
-~~~bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -e ".[dev]"
-tradeagent demo --demo-dir data/fresh-demo
-tradeagent inspect --state-dir data/fresh-demo
-tradeagent execution simulate --demo-dir data/fresh-execution-demo
-~~~
+TradeAgent needs Python 3.12 or newer on Linux (or WSL2 on Windows).
 
-These demonstrations use synthetic state and require no credentials. Choose fresh
-directories; demonstration results do not establish prospective performance.
+```bash
+git clone https://github.com/danielye0010/TradeAgent.git
+cd TradeAgent
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+```
 
-## One-shot execution validation
+Try it without a brokerage account:
 
-Install the wheel in a separate Linux environment, then run
-`tradeagent run-once --paper --state-dir work/fresh-one-shot` for a complete
-synthetic entry, bounded exit and reconciliation. Reusing that directory recovers
-its original run without another entry. `tradeagent live-check --config tradeagent.toml` verifies read-only account, market,
-contract and broker-permission readiness. The owner explicitly launches
-`tradeagent run-once --live --config tradeagent.toml` using a private local TOML
-configuration; no signing keys, signed grants or enrollment commands are required.
-See [One-shot operation](docs/one-shot.md) for the exact wheel installation,
-configuration, startup and recovery commands.
-Real broker execution remains uncommissioned. No research strategy is enabled for trading.
+```bash
+tradeagent demo --demo-dir data/demo                  # research loop on synthetic data
+tradeagent inspect --state-dir data/demo              # strategy scores and selections
+tradeagent run-once --paper --state-dir data/paper    # full entry/exit against a simulated broker
+```
 
-## Robinhood deployment
+## How it works
 
-Configure an external OAuth helper for the official
-[Robinhood Trading MCP](https://robinhood.com/us/en/support/articles/agentic-trading-overview/).
-Authentication stays outside this repository. The helper must be an owner-only
-local executable returning a resource-bound token; see
-[Prospective operation](docs/prospective-shadow.md) for its contract.
+```text
+market data ──► snapshot ──► strategies ──► predictions ──► outcomes ──► learning
+ (Robinhood                    (all versions                (1-hour        (weights,
+  or Alpaca)                    in parallel)                 horizon)       challengers)
+                                     │
+                                     ▼
+                       trade plan ──► risk checks ──► Robinhood order ──► reconcile
+```
 
-~~~bash
-.venv/bin/python scripts/install_shadow.py --oauth-helper /absolute/external/helper
+Strategies only see market data. They never see account state, and they cannot
+place orders directly. A trade goes through the risk engine and the order lifecycle
+on its way to the broker, so strategy code can change freely without affecting
+how orders are handled.
+
+## Live trading
+
+**1. Connect Robinhood.** TradeAgent doesn't handle your login. It calls a small
+OAuth helper script you provide, which prints an access token for the Robinhood MCP
+endpoint. See [the helper contract](docs/prospective-shadow.md#robinhood-setup).
+
+**2. Configure.** Copy the example config and edit the paths:
+
+```toml
+[live]
+enabled = true
+symbols = ["QQQ", "IWM"]
+state_dir = "/abs/path/to/state"
+max_notional = "25"
+
+[broker]
+oauth_helper = "/abs/path/to/robinhood-oauth-helper"
+
+[entry]
+order_type = "market"
+dollar_amount = "5"
+
+[exit]
+order_type = "market"
+hold_seconds = 30
+```
+
+**3. Check, then trade:**
+
+```bash
+tradeagent live-check --config tradeagent.toml   # read-only: account, quotes, permissions
+tradeagent run-once --live --config tradeagent.toml
+```
+
+Each run makes one entry and one exit. To stop early, create a `KILL` file in
+`state_dir`; the agent will close its position and exit. See
+[One-shot operation](docs/one-shot.md) for all options and recovery steps.
+
+## Shadow service
+
+Install the daily prediction service as a systemd user unit:
+
+```bash
+python scripts/install_shadow.py --oauth-helper /path/to/helper
 systemctl --user status tradeagent-prospective.service
 cat work/prospective-robinhood/STATUS.md
-~~~
+```
 
-The service defaults to Robinhood and requires no Alpaca credential. One systemd
-user service owns the loop. The Windows lifetime task keeps WSL available.
-Unavailable authentication or market data fails safely without switching providers.
+To use Alpaca for market data instead, run `python -m tradeagent.prospective.access`
+to store your keys, then add `--market-data-provider alpaca` to the install command.
 
-A decision consumes only data available by **09:33 America/New_York**.
-Completed one-minute bars, fresh bid/ask, and aligned benchmark history pass through
-one provider-independent strategy path. A missed decision is skipped; historical
-data never backfills predictions. Outcomes require the exact 60-minute path.
+## Commands
 
-## Optional Alpaca market data
+| Command | Purpose |
+|---|---|
+| `demo`, `inspect` | Run the research loop on synthetic data; inspect a state directory |
+| `init`, `scan`, `resolve` | Register strategies, record predictions from a snapshot, score outcomes |
+| `learn-daily`, `evolve-weekly` | Update strategy weights; create and evaluate challengers |
+| `retire`, `retire-lesson` | Remove a strategy version or a learned lesson |
+| `replay-history` | Replay recent sessions from historical minute bars |
+| `live-check` | Read-only readiness check against your account |
+| `run-once --paper / --live` | One entry and exit, simulated or real |
+| `reconcile-once`, `new-run` | Inspect a finished run; start a new one |
 
-Alpaca retains its completed-minute SIP snapshot adapter and encrypted credential
-setup. Select it explicitly:
+## Documentation
 
-~~~bash
-.venv/bin/python -m tradeagent.prospective.access
-.venv/bin/python scripts/install_shadow.py --market-data-provider alpaca
-cat work/prospective-alpaca/STATUS.md
-~~~
+- [Architecture](docs/architecture.md)
+- [Getting started](docs/getting-started.md)
+- [Research protocol](docs/research-protocol.md)
+- [Frozen alpha research and TradePlans](docs/tradeplan-engine.md)
+- [Market data providers](docs/market-data.md)
+- [Shadow service](docs/prospective-shadow.md)
+- [One-shot live trading](docs/one-shot.md)
 
-The installer reconfigures the same service and uses a separate cold state directory.
-There is no silent fallback or mixing of provider evidence. Alpaca SIP entitlement
-and live collection must be verified independently. The separate historical
-commissioning command remains an optional Alpaca/input-file experiment.
+## Roadmap
 
-## Research and execution
+- Connect the research loop's trade plans to live execution
+- Scheduled live trading, with alerts
+- Agent-generated strategy proposals
+- Larger universe and longer horizons
 
-~~~text
-Robinhood (default) / Alpaca (optional)
-    -> MarketSnapshot -> Strategy.predict -> Prediction / TradePlan
-    -> durable shadow recording -> exact-horizon outcomes
+## Contributing
 
-separate execution: Intent -> deterministic risk -> durable submission
-    -> official Robinhood broker -> reconciliation -> execution journal
-~~~
+Pull requests are welcome. Before you submit, run:
 
-All enabled versions predict in shadow. Daily learning appends statistical state
-without rewriting strategies. Challenger proposals and promotion require explicit
-research commands; learner and selector failures cannot create broker orders.
-Strategies, thresholds, risk bounds, and execution recovery rules remain frozen.
-
-For explicit input-file research:
-
-~~~bash
-tradeagent init --state-dir data/research
-tradeagent scan --state-dir data/research --input decision-snapshot.json
-tradeagent resolve --state-dir data/research --input future-observations.json
-tradeagent learn-daily --state-dir data/research
-tradeagent evolve-weekly --state-dir data/research
-~~~
-
-Broker submissions persist identity before network I/O, reconcile observed fills,
-fees, cash, and positions, and never blindly retry ambiguous submissions.
-Options counterfactuals require recorded executable quotes. Automatic option
-allocation and the research-to-live bridge remain deferred.
-
-[Architecture](docs/architecture.md) · [Provider capabilities](docs/market-data.md) ·
-[Research protocol](docs/research-protocol.md) · [Alpha research and TradePlans](docs/tradeplan-engine.md) ·
-[Getting started](docs/getting-started.md) ·
-[Execution boundary](docs/deployment.md)
-
-## Development
-
-~~~bash
-python -m pytest -q
+```bash
+pytest -q
 ruff check src tests scripts
 ruff format --check src tests scripts
-python -m compileall -q src
-python -m build
-python -m twine check dist/*
-python scripts/check_project.py
-~~~
+```
 
-Tests use fresh synthetic state and mocked brokers. Internal handoffs, validation
-transcripts, runtime databases, and authentication artifacts belong in ignored
-local work directories.
+Tests use synthetic data and mocked brokers, so no credentials are needed. See
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-Original code: [Apache-2.0](LICENSE). Reused components retain their
-[MIT notices](THIRD_PARTY.md). TradeAgent is independent of Robinhood Markets, Inc.
+Apache-2.0. Some vendored components are MIT-licensed; see [THIRD_PARTY.md](THIRD_PARTY.md).
+
+TradeAgent is not affiliated with Robinhood Markets, Inc. Trading involves risk of
+loss. Nothing in this repository is investment advice.

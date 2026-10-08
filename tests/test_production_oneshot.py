@@ -29,7 +29,7 @@ def owner_mock_runtime(
     target, trust = tmp_path / "live-state", tmp_path / "tradeagent.toml"
     trust.write_text(f'''[live]
 enabled = true
-symbols = ["QQQ", "IWM"]
+symbols = ["IWM", "QQQ"]
 state_dir = "{target}"
 max_notional = "25"
 [broker]
@@ -193,9 +193,12 @@ def test_local_configuration_and_broker_approval_not_bypassed(tmp_path, monkeypa
         )
         trust.write_text(trust.read_text().replace('max_notional = "25"', 'max_notional = "1000"'))
         before = len(calls)
-        with pytest.raises(Halt, match="configuration changed"):
+        with pytest.raises(Halt, match="broker trade approvals"):
             invoke()
-        assert len(calls) == before
+        assert len(calls) > before
+        assert not any(
+            m.get("params", {}).get("name", "").startswith(("review_", "place_")) for m in calls
+        )
     finally:
         sim.close()
 
@@ -336,10 +339,10 @@ def test_kill_arriving_after_review_blocks_production_submission(tmp_path, monke
         ('max_notional = "25"', 'max_notional = "0"'),
         ("hold_seconds = 0", "hold_seconds = true"),
         ("polls = 2", "polls = 0"),
-        ("[risk]", "[risk]\nmax_positions = 6"),
-        ("[risk]", '[risk]\nmin_cash_fraction = "0.10"'),
+        ("[risk]", "[risk]\nmax_positions = 0"),
+        ("[risk]", '[risk]\nmin_cash_fraction = "-0.10"'),
         ("[broker]", '[broker]\naccess_token = "DO_NOT_ACCEPT_CREDENTIALS"'),
-        ('symbols = ["QQQ", "IWM"]', 'symbols = ["qqq"]'),
+        ('symbols = ["IWM", "QQQ"]', 'symbols = ["qqq"]'),
     ],
 )
 def test_invalid_local_policy_stops_before_network(tmp_path, monkeypatch, replacement):
@@ -360,7 +363,9 @@ def test_config_changes_after_review_stop_before_submit(tmp_path, monkeypatch):
     original = StandingLifecycle.execute
 
     def edit_then_submit(engine, key, intent):
-        config_path.write_text(config_path.read_text() + "\n# owner changed configuration\n")
+        config_path.write_text(
+            config_path.read_text().replace('max_notional = "25"', 'max_notional = "24"')
+        )
         return original(engine, key, intent)
 
     monkeypatch.setattr(StandingLifecycle, "execute", edit_then_submit)

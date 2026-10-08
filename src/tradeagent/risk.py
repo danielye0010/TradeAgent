@@ -76,7 +76,13 @@ def check_state(s: Snapshot, r: Risk, now: float):
     )
     if any(dec(q) < 0 for q in s.options.values()):
         raise Halt("short option position detected")
-    valued = sum(s.positions[k] * s.prices[k] for k in s.positions) + option_value
+    if any(dec(value) < 0 for value in s.other_asset_values.values()):
+        raise Halt("negative/uncertain unrelated asset valuation")
+    valued = (
+        sum(s.positions[k] * s.prices[k] for k in s.positions)
+        + option_value
+        + sum((dec(v) for v in s.other_asset_values.values()), dec(0))
+    )
     if abs(s.nav - s.cash - valued) > s.nav * dec("0.01"):
         raise Halt("portfolio/position valuation does not reconcile")
 
@@ -90,6 +96,8 @@ def check_order(
     day_start_nav,
     cycle_exposure=0,
     cycle_turnover=0,
+    *,
+    risk_reducing=False,
 ):
     c.validate()
     check_state(s, r, now)
@@ -136,12 +144,14 @@ def check_order(
     if dec(cycle_exposure) < 0 or dec(cycle_turnover) < 0 or dec(s.daily_turnover) < 0:
         raise Halt("invalid risk accounting")
     baseline = dec(day_start_nav)
-    if baseline <= 0 or (baseline - s.nav) / baseline >= dec(r.daily_loss_halt_fraction):
+    if baseline <= 0 or (
+        not risk_reducing and (baseline - s.nav) / baseline >= dec(r.daily_loss_halt_fraction)
+    ):
         raise Halt("daily loss halt")
     notional = i.risk_notional(s, r)
     if fractional and i.side == "buy" and notional < 1:
         raise Halt("fractional entry minimum is $1")
-    if s.daily_turnover + dec(cycle_turnover) + notional > s.nav * dec(
+    if not risk_reducing and s.daily_turnover + dec(cycle_turnover) + notional > s.nav * dec(
         r.max_daily_turnover_fraction
     ):
         raise Halt("daily turnover limit")
@@ -150,6 +160,11 @@ def check_order(
         if i.quantity > min(held, s.available.get(i.symbol, dec(0))):
             raise Halt("sell would short or use reserved shares")
         return
+    invested = sum((q * s.prices[k] for k, q in s.positions.items()), dec(0)) + sum(
+        (dec(v) for v in s.other_asset_values.values()), dec(0)
+    )
+    if invested + notional > s.nav * dec(r.max_total_exposure_fraction):
+        raise Halt("total account exposure limit")
     if notional + dec(cycle_exposure) > s.nav * dec(r.max_new_exposure_fraction):
         raise Halt("new exposure limit")
     if (held * s.prices[i.symbol] + notional) > s.nav * dec(r.max_position_fraction):

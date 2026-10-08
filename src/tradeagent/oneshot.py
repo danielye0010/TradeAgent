@@ -41,12 +41,16 @@ def choose_entry(snapshot, config, risk, now, limit, entry=None):
     """Isolated execution canary, not an alpha signal or research selector."""
     check_state(snapshot, risk, now)
     reasons = []
-    for symbol in sorted(
-        config.allowed_symbols, key=lambda s: (snapshot.asks.get(s, dec("1e100")), s)
-    ):
-        if snapshot.positions.get(symbol, 0):
-            reasons.append(f"{symbol}: existing position is not bot-owned")
-            continue
+    selection = (
+        [entry["symbol"]]
+        if entry and "symbol" in entry
+        else entry.get("preferred_symbols", [config.allowed_symbols[0]])
+        if entry
+        else [config.allowed_symbols[0]]
+    )
+    for symbol in selection:
+        if symbol not in config.allowed_symbols:
+            raise Halt("explicit entry symbol is outside the configured universe")
         ask = snapshot.asks.get(symbol)
         if ask is None or ask <= 0:
             reasons.append(f"{symbol}: quote unavailable")
@@ -87,6 +91,45 @@ def choose_entry(snapshot, config, risk, now, limit, entry=None):
             continue
         return intent, reasons
     return None, reasons
+
+
+def validated_plan_entry(plan, prediction, snapshot, config, risk, now, limit, entry):
+    """Explicit library boundary; neither research nor SHADOW calls this function."""
+    from .model import timestamp_fresh
+    from .research.expressions import TradePlan
+
+    if (
+        type(plan) is not TradePlan
+        or plan.kind != "UNDERLYING"
+        or plan.prediction_id != prediction.prediction_id
+        or plan.instrument != prediction.symbol
+    ):
+        raise Halt("execution requires a matching validated underlying TradePlan and prediction")
+    if (
+        not timestamp_fresh(prediction.decision_time, now, risk.max_data_age_seconds)
+        or prediction.direction != 1
+    ):
+        raise Halt("strategy plan is stale or not a long equity decision")
+    if not prediction.strategy_id or not prediction.version or not prediction.snapshot_id:
+        raise Halt("strategy decision provenance is incomplete")
+    requested = dict(entry or {})
+    if not ("quantity" in requested or "dollar_amount" in requested):
+        raise Halt("validated plan requires explicit owner-configured entry sizing")
+    requested.pop("preferred_symbols", None)
+    requested["symbol"] = plan.instrument
+    if requested.get("order_type", "limit") == "limit" and plan.entry_limit is not None:
+        requested["limit_price"] = str(plan.entry_limit)
+    intent, reasons = choose_entry(snapshot, config, risk, now, limit, requested)
+    if intent is None:
+        raise Halt("validated plan rejected: " + "; ".join(reasons))
+    return intent, {
+        "prediction_id": prediction.prediction_id,
+        "strategy_id": prediction.strategy_id,
+        "strategy_version": prediction.version,
+        "snapshot_id": prediction.snapshot_id,
+        "decision_time": prediction.decision_time,
+        "plan": asdict(plan),
+    }
 
 
 def atomic_json(path, value):
@@ -200,9 +243,16 @@ class OneShotRun:
         self.put(intent.side + "_attempt_time", self.clock())
         plan = self.engine.prepare(
             intent,
-            f"{self.config.strategy_version}:{intent.side}",
+            f"{self.config.strategy_version}:{intent.side}"
+            + (
+                f":{sum(intent_from_row(r).side == 'sell' for r in self.rows())}"
+                if intent.side == "sell"
+                and any(intent_from_row(r).side == "sell" for r in self.rows())
+                else ""
+            ),
             {
-                "execution_canary": True,
+                "execution_canary": not bool((self.get("decision") or {}).get("provenance")),
+                "decision_provenance": (self.get("decision") or {}).get("provenance"),
                 "synthetic_fixture": self.engine.broker.is_simulation,
                 "excluded_from_strategy_performance": True,
             },
@@ -228,7 +278,7 @@ class OneShotRun:
         for _ in range(self.options["polls"]):
             if result["status"] in TERMINAL:
                 return result
-            self.advance(1)
+            self.advance(self.options.get("poll_interval_seconds", 1))
             result = self.engine.reconcile(row["key"], intent)
         row = self.state.db.execute("SELECT * FROM intents WHERE key=?", (row["key"],)).fetchone()
         if row["status"] == "pending" and row["broker_id"]:
@@ -244,10 +294,14 @@ class OneShotRun:
             raise Halt("order remains open after bounded cancellation; no repeat order")
         return result
 
-    def audit(self):
+    def audit(self, snapshot=None, *, allow_open=False):
         """Whole-round-trip cash/holdings proof from the core's normalized fills."""
         initial = self.get("initial")
-        snapshot = self.broker.snapshot()
+        snapshot = snapshot if snapshot is not None else self.broker.snapshot()
+        if initial is None:
+            raise Halt(
+                "startup has no recorded account baseline; run recover to finalize before new-run"
+            )
         orders, seen, submissions = [], set(), []
         expected_cash = dec(initial["cash"])
         positions = {s: dec(q) for s, q in initial["positions"].items()}
@@ -276,8 +330,11 @@ class OneShotRun:
                 or (row["broker_id"] and row["broker_id"] != order["id"])
                 or order.get("ref_id") != row["ref_id"]
                 or not intent.matches_order(order)
-                or row["status"] != order["state"]
-                or order["state"] not in TERMINAL
+                or (
+                    row["status"] != order["state"]
+                    and not (allow_open and row["status"] in {"submitting", "unknown", "pending"})
+                )
+                or (order["state"] not in TERMINAL and not allow_open)
             ):
                 raise Halt("order/intent identity or terminal status mismatch")
             record["submission_status"] = "BROKER_CONFIRMED"
@@ -317,7 +374,15 @@ class OneShotRun:
             raise Halt("unexplained position movement; unrelated holdings must be unchanged")
         if abs(snapshot.cash - expected_cash) > dec(".01"):
             raise Halt("confirmed fills and fees do not reconcile cash")
-        check_state(snapshot, self.risk, self.clock())
+        from dataclasses import replace
+
+        check_state(
+            replace(snapshot, orders=[o for o in snapshot.orders if o["state"] in TERMINAL])
+            if allow_open
+            else snapshot,
+            self.risk,
+            self.clock(),
+        )
         return {
             "orders": orders,
             "broker_order_count": len(orders),
@@ -327,7 +392,9 @@ class OneShotRun:
             else "BROKER_CONFIRMED"
             if orders
             else "NOT_SUBMITTED",
-            "reconciliation_status": "RECONCILED",
+            "reconciliation_status": "OPEN_ORDERS"
+            if any(o["state"] not in TERMINAL for o in orders)
+            else "RECONCILED",
             "initial_cash": initial["cash"],
             "final_cash": str(snapshot.cash),
             "expected_final_cash": str(expected_cash),
@@ -345,46 +412,66 @@ class OneShotRun:
             "cash_reconciled": True,
         }
 
-    def execute(self):
+    def execute(self, *, allow_entry=True, recover_exit=False, plan=None, prediction=None):
         saved_clock = self.get("clock")
         if saved_clock is not None and self.engine.broker.is_simulation:
             self.clock.advance(max(0, saved_clock - self.clock()))
         if self.get("initial") is None:
             self.put("initial", asdict(self.broker.snapshot()))
         rows = self.rows()
-        if (
-            len(rows) > 2
-            or sum(intent_from_row(r).side == "buy" for r in rows) > 1
-            or sum(intent_from_row(r).side == "sell" for r in rows) > 1
-        ):
-            raise Halt("one-shot side budget violated")
-        if self.get("finished"):
-            # Never interpret a stale report as proof of current broker state.
-            audit = self.audit()
-            return {"status": self.get("finished"), "duplicate_suppressed": True, **audit}
         entries = [r for r in rows if intent_from_row(r).side == "buy"]
         exits = [r for r in rows if intent_from_row(r).side == "sell"]
+        if len(entries) > 1:
+            raise Halt("lifecycle entry budget violated; inspect status before recovery")
+        if self.get("finished"):
+            audit = self.audit()
+            return {"status": self.get("finished"), "duplicate_suppressed": True, **audit}
         if not entries:
+            if not allow_entry:
+                return self.finish(
+                    "HALTED",
+                    reason="no submitted entry; use new-run after reconciliation",
+                    outstanding_incident=False,
+                )
             if self.kill_switch.exists():
                 return self.finish("NO_TRADE", reason="kill switch prevents new exposure")
             initial = self.broker.snapshot()
             bounds = session_bounds(
                 datetime.fromtimestamp(self.clock(), ZoneInfo("America/New_York")).date()
             )
-            if not bounds or self.clock() >= bounds[1] - self.options.get(
-                "session_buffer_seconds", 600
-            ) - max(60, self.options["polls"] * 2):
+            minimum_window = max(
+                60, self.options["polls"] * self.options.get("poll_interval_seconds", 1) * 2
+            )
+            if (
+                not bounds
+                or self.clock()
+                >= bounds[1] - self.options.get("session_buffer_seconds", 600) - minimum_window
+            ):
                 return self.finish("NO_TRADE", reason="insufficient regular-session exit window")
             check_state(initial, self.risk, self.clock())
             self.state.recover(self.run_id, initial)
-            intent, reasons = choose_entry(
-                initial,
-                self.config,
-                self.risk,
-                self.clock(),
-                self.options["max_notional"],
-                self.options.get("entry"),
-            )
+            provenance = None
+            if plan is not None:
+                intent, provenance = validated_plan_entry(
+                    plan,
+                    prediction,
+                    initial,
+                    self.config,
+                    self.risk,
+                    self.clock(),
+                    self.options["max_notional"],
+                    self.options.get("entry"),
+                )
+                reasons = []
+            else:
+                intent, reasons = choose_entry(
+                    initial,
+                    self.config,
+                    self.risk,
+                    self.clock(),
+                    self.options["max_notional"],
+                    self.options.get("entry"),
+                )
             if intent is None:
                 return self.finish("NO_TRADE", reason="; ".join(reasons))
             self.put(
@@ -398,9 +485,13 @@ class OneShotRun:
                     if intent.dollar_amount is not None
                     else None,
                     "order_type": intent.order_type,
-                    "source": "SYNTHETIC_EXECUTION_CANARY"
+                    "selection_reasons": reasons,
+                    "source": "VALIDATED_TRADE_PLAN"
+                    if provenance
+                    else "SYNTHETIC_EXECUTION_CANARY"
                     if self.engine.broker.is_simulation
-                    else "OWNER_EXECUTION_CANARY",
+                    else "OWNER_CONFIGURED_EXECUTION",
+                    "provenance": provenance,
                 },
             )
             self.submit(intent)
@@ -409,26 +500,37 @@ class OneShotRun:
         if entry["status"] in {"prepared", "reviewed", "abandoned", "risk_rejected"}:
             audit = self.audit()
             if audit["submission_status"] != "NOT_SUBMITTED":
-                raise Halt("entry submission is ambiguous; never replay")
+                raise Halt("entry submission is ambiguous; use recover, never a new entry")
             return self.finish(
                 "HALTED",
-                reason="entry was not submitted; reserved side cannot be replayed",
+                reason="entry was not submitted; use new-run after reconciliation",
                 outstanding_incident=False,
             )
         if not exits:
             self.settle(entry)
-            snapshot = self.broker.snapshot()
-            order = next(o for o in snapshot.orders if o.get("ref_id") == entry["ref_id"])
-            filled = dec(order["cumulative_quantity"])
-            if not filled:
-                return self.finish("NO_TRADE", reason="entry terminal without a confirmed fill")
-            symbol = intent_from_row(entry).symbol
-            if (
-                dec(self.get("initial")["positions"].get(symbol, 0)) != 0
-                or snapshot.positions.get(symbol) != filled
-            ):
-                raise Halt("position ownership cannot be distinguished safely")
-            fill_time = max(utc_time(f["timestamp"]) for f in order["executions"])
+        elif exits[-1]["status"] not in {"prepared", "reviewed", "abandoned", "risk_rejected"}:
+            self.settle(exits[-1])
+        audit = self.audit()
+        if exits and audit["flat_bot_position"]:
+            return self._closed(audit)
+        if exits and not recover_exit:
+            raise Halt(
+                "confirmed residual bot exposure; run tradeagent recover --config to manage the remaining exit"
+            )
+        snapshot = self.broker.snapshot()
+        entry_order = next(o for o in snapshot.orders if o.get("ref_id") == entry["ref_id"])
+        filled = dec(entry_order["cumulative_quantity"])
+        if not filled:
+            return self.finish("NO_TRADE", reason="entry terminal without a confirmed fill")
+        symbol = intent_from_row(entry).symbol
+        original = dec(self.get("initial")["positions"].get(symbol, 0))
+        residual = dec(audit["bot_owned_residual"])
+        if snapshot.positions.get(symbol, dec(0)) != original + residual:
+            raise Halt(
+                "bot position differs from confirmed fills; inspect status and reconcile ownership"
+            )
+        if not exits:
+            fill_time = max(utc_time(f["timestamp"]) for f in entry_order["executions"])
             bounds = session_bounds(
                 datetime.fromtimestamp(fill_time, ZoneInfo("America/New_York")).date()
             )
@@ -439,43 +541,66 @@ class OneShotRun:
                 requested_due, bounds[1] - self.options.get("session_buffer_seconds", 600)
             )
             self.put("exit_due", deadline)
-            if self.kill_switch.exists():
-                reason = "kill_switch_risk_reduction"
-            else:
-                self.advance(max(0, deadline - self.clock()))
-                reason = (
-                    "holding_period_elapsed"
-                    if deadline == requested_due
-                    else "regular_session_exit_deadline"
-                )
-            if self.kill_switch.exists():
-                reason = "kill_switch_risk_reduction"
-            self.put("exit_reason", reason)
-            if self.engine.broker.is_simulation:
-                self.broker.scenario = self.options["exit_scenario"]
-            snapshot = self.broker.snapshot()
-            exit_type = self.options.get("exit_order_type", "limit")
-            self.submit(
-                Intent(
-                    symbol,
-                    "sell",
-                    filled,
-                    snapshot.bids[symbol] if exit_type == "limit" else None,
-                    order_type=exit_type,
-                )
+            self.state.event(
+                self.run_id,
+                "exit_due",
+                {"due": deadline, "symbol": symbol, "quantity": str(residual)},
             )
-            exits = [r for r in self.rows() if intent_from_row(r).side == "sell"]
-        self.settle(exits[0])
+            if not self.kill_switch.exists():
+                self.advance(max(0, deadline - self.clock()))
+            self.put(
+                "exit_reason",
+                "kill_switch_risk_reduction"
+                if self.kill_switch.exists()
+                else "holding_period_elapsed"
+                if deadline == requested_due
+                else "regular_session_exit_deadline",
+            )
+        else:
+            self.put("exit_reason", "owner_requested_residual_recovery")
+        maximum = self.options.get("max_exit_attempts")
+        if maximum is not None and len(exits) >= maximum:
+            raise Halt(
+                "configured exit attempt limit reached; remaining exposure requires owner action"
+            )
+        if self.engine.broker.is_simulation:
+            self.broker.scenario = self.options["exit_scenario"]
+        snapshot = self.broker.snapshot()
+        sellable = max(dec(0), snapshot.available.get(symbol, dec(0)) - original)
+        quantity = min(residual, sellable)
+        if quantity <= 0:
+            raise Halt(
+                f"remaining bot exposure {residual} {symbol} is not sellable; resolve reserved broker shares then recover"
+            )
+        exit_type = self.options.get("exit_order_type", "limit")
+        self.submit(
+            Intent(
+                symbol,
+                "sell",
+                quantity,
+                snapshot.bids[symbol] if exit_type == "limit" else None,
+                order_type=exit_type,
+            )
+        )
+        exits = [r for r in self.rows() if intent_from_row(r).side == "sell"]
+        self.settle(exits[-1])
         audit = self.audit()
         if not audit["flat_bot_position"]:
-            raise Halt("exit terminal but bot-owned exposure remains; no second exit authorized")
-        entry_state = next(o["state"] for o in audit["orders"] if o["side"] == "buy")
-        exit_state = next(o["state"] for o in audit["orders"] if o["side"] == "sell")
+            raise Halt(
+                "confirmed residual bot exposure; run tradeagent recover --config to manage the remaining exit"
+            )
+        return self._closed(audit)
+
+    def _closed(self, audit):
         if dec(audit["entry_executed_notional"]) > dec(self.options["max_notional"]):
             raise Halt(
-                "actual entry exceeded configured notional; exposure closed, review required"
+                "actual entry exceeded configured order value; exposure closed, review required"
             )
-        status = "COMPLETED" if entry_state == exit_state == "filled" else "CLOSED_PARTIAL"
+        status = (
+            "COMPLETED"
+            if all(o["state"] == "filled" for o in audit["orders"])
+            else "CLOSED_PARTIAL"
+        )
         return self.finish(status, **audit)
 
     def finish(self, status, **extra):
@@ -494,14 +619,9 @@ def run_paper(
     kill_switch=None,
     initial=None,
 ):
-    if not 0 < dec(max_notional) <= 25:
-        raise Halt("one-shot entry notional must be positive and at most $25")
-    if (
-        type(hold_seconds) is not int
-        or not 0 <= hold_seconds <= 21600
-        or type(polls) is not int
-        or not 1 <= polls <= 30
-    ):
+    if not 0 < dec(max_notional):
+        raise Halt("entry notional must be positive")
+    if type(hold_seconds) is not int or hold_seconds < 0 or type(polls) is not int or polls < 1:
         raise Halt("invalid bounded holding/poll policy")
     if entry_scenario not in SCENARIOS or exit_scenario not in SCENARIOS:
         raise Halt("unknown simulation scenario")
@@ -536,7 +656,7 @@ def run_paper(
         supervised_enabled=True,
         strategy_version=IDENTITY,
         state_dir=str(directory / "agent"),
-        allowed_symbols=["QQQ", "IWM"],
+        allowed_symbols=["IWM", "QQQ"],
     )
     risk = Risk()
     state = State(directory / "agent")
@@ -642,23 +762,28 @@ def run_paper(
     return result
 
 
-def run_live(settings):
+def run_live(settings, *, recover=False, observer=None):
     from .execution_policy import owner_run_lock
 
     with owner_run_lock(settings):
-        return _run_live(settings)
+        return _run_live(settings, recover=recover, observer=observer)
 
 
-def _run_live(settings):
+def _run_live(settings, *, recover=False, observer=None):
     """Explicit owner-launched LIVE command; not called by read-only live-check."""
     import time
 
     from .broker import Broker
-    from .execution_policy import check_run_state, owner_file
+    from .execution_policy import active_settings, check_run_state
     from .standalone_mcp import ExternalOAuthToken, StandaloneExecutionTransport, StandaloneMCP
 
     settings.validate()
-    check_run_state(settings)
+    previous_artifact = check_run_state(settings)
+    if recover and previous_artifact is None:
+        raise Halt(
+            "no existing lifecycle; recover cannot initiate an entry, use run-once for a new lifecycle"
+        )
+    settings = active_settings(settings)
     selected, config, risk, options = (
         settings.directory,
         settings.config,
@@ -683,36 +808,28 @@ def _run_live(settings):
             account = digest(broker.account["account_number"])
             if settings.account_sha256 and account != settings.account_sha256:
                 raise Halt("authenticated account differs from configured account pin")
-            artifact = {
+            if observer:
+                observer("broker_connected", {"account_key": account[:16]})
+            artifact = previous_artifact or {
                 "policy": create_policy(
                     config, risk, account, options, owner_config_hash=settings.file_hash
                 ),
                 "actor": "LOCAL_OWNER",
             }
             state = State(selected / "agent")
-            with state.lock(config.lease_seconds) as fence:
+            with state.lock(config.lease_seconds, local_owner=True) as fence:
                 marker = selected / "live-run.json"
-                if settings.receipt.exists():
-                    check_run_state(settings)
-                    if json.loads(owner_file(marker).read_text()) != artifact:
-                        raise Halt("LIVE run account/code/configuration changed; never replay")
-                else:
-                    if marker.exists():
-                        raise Halt("LIVE run has no external configuration receipt; never reset")
+                if previous_artifact is None:
                     with marker.open("x") as stream:
                         stream.write(dumps(artifact))
                         stream.flush()
                         os.fsync(stream.fileno())
-                    with settings.receipt.open("x") as stream:
-                        stream.write(dumps({"marker_hash": digest(artifact)}))
-                        stream.flush()
-                        os.fsync(stream.fileno())
-                    for directory in (selected, settings.receipt.parent):
-                        descriptor = os.open(directory, os.O_DIRECTORY)
-                        try:
-                            os.fsync(descriptor)
-                        finally:
-                            os.close(descriptor)
+                    descriptor = os.open(selected, os.O_DIRECTORY)
+                    try:
+                        os.fsync(descriptor)
+                    finally:
+                        os.close(descriptor)
+                state.observer = observer
 
                 def approval_setting():
                     setting = bridge.read(
@@ -760,8 +877,10 @@ def _run_live(settings):
                     engine,
                 )
                 try:
-                    result.update(controller.execute())
-                    result["outstanding_incident"] = False
+                    result.update(controller.execute(allow_entry=not recover, recover_exit=recover))
+                    result["outstanding_incident"] = not result.get(
+                        "cash_reconciled", False
+                    ) or not result.get("flat_bot_position", False)
                 except Halt as exc:
                     result.update(status="HALTED", reason=str(exc), outstanding_incident=True)
                     try:
@@ -801,7 +920,7 @@ def _run_live(settings):
     return result
 
 
-def reconcile_live(settings):
+def reconcile_live(settings, *, persist=True):
     """Read-only diagnosis across a code update; preserve the original report and DB."""
     import hashlib
     import sqlite3
@@ -809,13 +928,33 @@ def reconcile_live(settings):
     from types import SimpleNamespace
 
     from .broker import Broker
-    from .execution_policy import check_run_state, owner_file, owner_run_lock
+    from .execution_policy import active_settings, check_run_state, owner_file, owner_run_lock
     from .standalone_mcp import ExternalOAuthToken, ReadOnlyMCP
 
     with owner_run_lock(settings):
-        check_run_state(settings, reconciliation_only=True)
-        if not settings.receipt.exists():
-            raise Halt("no existing owner run to reconcile")
+        if check_run_state(settings, reconciliation_only=True) is None:
+            with ReadOnlyMCP(
+                ExternalOAuthToken(settings.oauth_helper, Path(__file__).parent), settings.timeout
+            ) as bridge:
+                broker = Broker(bridge, settings.config, settings.risk)
+                observed = broker.snapshot()
+                return {
+                    "status": "NEW_RUN_READY",
+                    "submission_status": "NOT_SUBMITTED",
+                    "reconciliation_status": "NO_LIFECYCLE",
+                    "real_review_place_cancel_calls": 0,
+                    "execution_state_modified": False,
+                    "orders": [],
+                    "observed_orders": observed.orders,
+                    "final_positions": observed.positions,
+                    "final_cash": str(observed.cash),
+                    "buying_power": str(observed.buying_power),
+                    "other_asset_values": observed.other_asset_values,
+                    "account_key": observed.account_key,
+                    "broker_calls": bridge.calls,
+                    "recovery_instruction": "run live-check, then owner-operated run-once for a new entry",
+                }
+        settings = active_settings(settings)
         marker = json.loads(owner_file(settings.directory / "live-run.json").read_text())
         db = sqlite3.connect(f"file:{settings.directory / 'agent/state.sqlite3'}?mode=ro", uri=True)
         db.row_factory = sqlite3.Row
@@ -823,14 +962,18 @@ def reconcile_live(settings):
             audit = OneShotRun.__new__(OneShotRun)
             audit.state, audit.risk, audit.clock = SimpleNamespace(db=db), settings.risk, time.time
             original = settings.directory / "report.json"
-            previous = json.loads(original.read_text())
+            previous = (
+                json.loads(original.read_text()) if original.exists() else {"status": "INTERRUPTED"}
+            )
             result = {
                 "status": "HALTED",
                 "original_status": previous["status"],
                 "submission_status": audit.submission_status(),
                 "reconciliation_status": "BLOCKED",
                 "outstanding_incident": True,
-                "original_report_sha256": hashlib.sha256(original.read_bytes()).hexdigest(),
+                "original_report_sha256": hashlib.sha256(original.read_bytes()).hexdigest()
+                if original.exists()
+                else None,
                 "reason": previous.get("reason"),
                 "real_review_place_cancel_calls": 0,
                 "execution_state_modified": False,
@@ -839,22 +982,51 @@ def reconcile_live(settings):
                 ExternalOAuthToken(settings.oauth_helper, Path(__file__).parent), settings.timeout
             ) as bridge:
                 broker = Broker(bridge, settings.config, settings.risk)
-                broker.snapshot()
+                observed = broker.snapshot()
+                result.update(
+                    observed_orders=observed.orders,
+                    final_positions=observed.positions,
+                    final_cash=str(observed.cash),
+                    buying_power=str(observed.buying_power),
+                    other_asset_values=observed.other_asset_values,
+                    account_key=observed.account_key,
+                )
                 if digest(broker.account["account_number"]) != marker["policy"]["account_digest"]:
                     raise Halt("reconciliation account differs from existing owner run")
                 audit.broker = broker
                 try:
-                    result.update(audit.audit())
+                    result.update(audit.audit(observed, allow_open=True))
                     if result["submission_status"] == "NOT_SUBMITTED":
                         result["outstanding_incident"] = False
+                    elif result["reconciliation_status"] == "OPEN_ORDERS":
+                        result["status"] = "ORDER_OPEN"
                     elif audit.get("finished"):
                         result["status"] = audit.get("finished")
+                        result["outstanding_incident"] = not result["flat_bot_position"]
+                    else:
+                        result["status"] = (
+                            "CLOSED" if result["flat_bot_position"] else "POSITION_OPEN"
+                        )
                         result["outstanding_incident"] = not result["flat_bot_position"]
                 except Halt as exc:
                     result["reconciliation_blocker"] = str(exc)
                     if "contradicts" in str(exc):
                         result["submission_status"] = "SUBMISSION_UNKNOWN"
                 result["broker_calls"] = bridge.calls
+            result["recovery_instruction"] = (
+                "tradeagent new-run --config " + str(settings.path)
+                if result.get("flat_bot_position")
+                and result["reconciliation_status"] == "RECONCILED"
+                and (
+                    audit.get("finished") in {"COMPLETED", "CLOSED_PARTIAL", "NO_TRADE"}
+                    or result["submission_status"] == "NOT_SUBMITTED"
+                )
+                else "tradeagent recover --config "
+                + str(settings.path)
+                + "; reconcile existing broker identity before any new exposure"
+            )
+            if not persist:
+                return result
             target = settings.directory / f"reconciliation-{time.time_ns()}.json"
             result["report_path"] = str(target)
             atomic_json(target, result)
@@ -865,21 +1037,31 @@ def reconcile_live(settings):
 
 def new_live_run(settings):
     """Explicit owner reset only after fresh read-only proof that the old run is closed."""
+    import sqlite3
     import time
     from uuid import uuid4
 
     from .broker import Broker
-    from .execution_policy import check_run_state, owner_file, owner_run_lock
+    from .execution_policy import active_settings, check_run_state, owner_file, owner_run_lock
     from .standalone_mcp import ExternalOAuthToken, ReadOnlyMCP
 
     with owner_run_lock(settings):
-        check_run_state(settings, reconciliation_only=True)
-        if not settings.receipt.exists():
-            raise Halt("no completed owner run to archive")
+        if check_run_state(settings, reconciliation_only=True) is None:
+            return {
+                "status": "NEW_RUN_READY",
+                "already_ready": True,
+                "real_review_place_cancel_calls": 0,
+            }
+        settings = active_settings(settings)
         marker = json.loads(owner_file(settings.directory / "live-run.json").read_text())
-        state = State(settings.directory / "agent")
+        # Archiving verifies closure without migrating historical SQLite bytes.
+        # The existing durable-completion guard below remains mandatory.
+        state = State.__new__(State)
+        state.directory = settings.directory / "agent"
+        state.db = sqlite3.connect(f"file:{state.directory / 'state.sqlite3'}?mode=ro", uri=True)
+        state.db.row_factory = sqlite3.Row
         try:
-            with state.lock(settings.config.lease_seconds):
+            with state.lock(settings.config.lease_seconds, local_owner=True):
                 with ReadOnlyMCP(
                     ExternalOAuthToken(settings.oauth_helper, Path(__file__).parent),
                     settings.timeout,
@@ -916,7 +1098,8 @@ def new_live_run(settings):
         archive = archive_root / str(uuid4())
         # A crash between these operations leaves the receipt in place and halts safely.
         settings.directory.rename(archive)
-        settings.receipt.rename(archive / "owner-config.run.json")
+        if settings.receipt.exists():
+            settings.receipt.rename(archive / "owner-config.run.json")
         for parent in {settings.directory.parent, settings.receipt.parent, archive}:
             descriptor = os.open(parent, os.O_DIRECTORY)
             try:

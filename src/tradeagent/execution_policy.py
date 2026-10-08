@@ -3,10 +3,11 @@
 import hashlib
 import json
 import os
+import sqlite3
 import stat
 import time
 from contextlib import contextmanager
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, fields, replace
 from importlib.resources import files
 from pathlib import Path
 
@@ -17,6 +18,9 @@ from .state import dumps
 from .supervised import SupervisedLifecycle
 
 VERSION = "local-owner-one-shot-v2"
+STATE_SCHEMA_VERSION = 1
+EXECUTION_PROTOCOL_VERSION = 2
+COMPATIBLE_EXECUTION_PROTOCOLS = {1, 2}
 
 
 def package_hash():
@@ -63,6 +67,7 @@ class LocalSettings:
     account_sha256: str | None
     timeout: int
     file_hash: str
+    bound: bool = False
 
     @property
     def directory(self):
@@ -73,9 +78,12 @@ class LocalSettings:
         return self.path.with_name(self.path.name + ".run.json")
 
     def validate(self):
-        if hashlib.sha256(owner_file(self.path).read_bytes()).hexdigest() != self.file_hash:
-            raise Halt("owner LIVE configuration changed during execution")
-        if self != load_live_config(self.path):
+        current = load_live_config(self.path)
+        if current.file_hash != self.file_hash:
+            raise Halt(
+                "owner LIVE configuration changed during execution; active parameters remain journaled, use recover"
+            )
+        if not self.bound and self != current:
             raise Halt("in-memory owner policy differs from TOML configuration")
         self.config.validate()
         self.risk.validate()
@@ -93,22 +101,38 @@ def load_live_config(path):
     except (ValueError, UnicodeError) as exc:
         raise Halt("invalid owner TOML configuration") from exc
     allowed = {
-        "live": {"enabled", "symbols", "state_dir", "max_notional"},
-        "broker": {"oauth_helper", "account_sha256", "timeout_seconds"},
+        "live": {"enabled", "symbols", "state_dir", "max_notional", "max_order_value"},
+        "broker": {"oauth_helper", "account_sha256", "account_number", "timeout_seconds"},
         "risk": {
-            "max_positions",
-            "max_position_fraction",
-            "max_new_exposure_fraction",
-            "min_cash_fraction",
+            f.name
+            for f in fields(Risk)
+            if not f.name.startswith("max_option")
+            and not f.name.startswith("min_option")
+            and f.name not in {"version", "max_total_option_premium_fraction"}
         },
-        "exit": {"hold_seconds", "polls", "order_type", "session_buffer_seconds"},
-        "entry": {"order_type", "dollar_amount", "quantity", "limit_price"},
+        "exit": {
+            "hold_seconds",
+            "polls",
+            "order_type",
+            "session_buffer_seconds",
+            "poll_interval_seconds",
+            "max_exit_attempts",
+            "risk_reduction_on_limits",
+        },
+        "entry": {
+            "order_type",
+            "dollar_amount",
+            "quantity",
+            "limit_price",
+            "symbol",
+            "preferred_symbols",
+        },
     }
     if set(document) - set(allowed) or set(allowed) - {"entry"} - set(document):
         raise Halt("owner TOML requires live, broker, risk and exit sections; entry is optional")
     document.setdefault("entry", {})
-    for name, fields in allowed.items():
-        if not isinstance(document[name], dict) or set(document[name]) - fields:
+    for name, allowed_fields in allowed.items():
+        if not isinstance(document[name], dict) or set(document[name]) - allowed_fields:
             raise Halt("unknown owner configuration field or credential: " + name)
     live, broker, limits, exit_policy, entry = (document[k] for k in allowed)
     if live.get("enabled") is not True:
@@ -126,21 +150,21 @@ def load_live_config(path):
     helper = local_path(broker.get("oauth_helper"), "oauth_helper")
     config = live_config(directory, live.get("symbols"))
     config.validate()
-    defaults = Risk()
-    for name in ("max_position_fraction", "max_new_exposure_fraction", "min_cash_fraction"):
-        if name in limits:
-            limits[name] = str(dec(limits[name]))
+    selector = broker.get("account_number")
+    if selector is not None and (not isinstance(selector, str) or not selector):
+        raise Halt("broker.account_number must identify the chosen eligible account")
+    config = replace(
+        config, account_selector=digest(selector) if selector else broker.get("account_sha256")
+    )
+    for name, value in list(limits.items()):
+        if isinstance(getattr(Risk(), name), str):
+            limits[name] = str(dec(value))
     risk = Risk(**limits)
     risk.validate()
-    if (
-        risk.max_positions > defaults.max_positions
-        or dec(risk.max_position_fraction) > dec(defaults.max_position_fraction)
-        or dec(risk.max_new_exposure_fraction) > dec(defaults.max_new_exposure_fraction)
-        or dec(risk.min_cash_fraction) < dec(defaults.min_cash_fraction)
-    ):
-        raise Halt("owner position limits may tighten but not weaken production risk ceilings")
+    if "max_notional" in live and "max_order_value" in live:
+        raise Halt("use one of live.max_notional or live.max_order_value")
     options = {
-        "max_notional": str(dec(live.get("max_notional", "25"))),
+        "max_notional": str(dec(live.get("max_order_value", live.get("max_notional", "25")))),
         "hold_seconds": exit_policy.get("hold_seconds", 3600),
         "polls": exit_policy.get("polls", 3),
         "entry": entry,
@@ -151,9 +175,26 @@ def load_live_config(path):
             else "limit",
         ),
         "session_buffer_seconds": exit_policy.get("session_buffer_seconds", 600),
+        "poll_interval_seconds": exit_policy.get("poll_interval_seconds", 1),
+        "max_exit_attempts": exit_policy.get("max_exit_attempts"),
+        "risk_reduction_on_limits": exit_policy.get("risk_reduction_on_limits", True),
     }
     from .model import Intent
 
+    if "symbol" in entry and "preferred_symbols" in entry:
+        raise Halt("configure entry.symbol or entry.preferred_symbols, not both")
+    selection = (
+        [entry["symbol"]]
+        if "symbol" in entry
+        else entry.get("preferred_symbols", [config.allowed_symbols[0]])
+    )
+    if (
+        not isinstance(selection, list)
+        or not selection
+        or len(set(selection)) != len(selection)
+        or any(symbol not in config.allowed_symbols for symbol in selection)
+    ):
+        raise Halt("entry selection must explicitly name allowed symbols")
     if entry:
         entry.setdefault("order_type", "market" if "dollar_amount" in entry else "limit")
         candidate = Intent(
@@ -165,6 +206,9 @@ def load_live_config(path):
             dollar_amount=dec(entry["dollar_amount"]) if "dollar_amount" in entry else None,
         )
         candidate.validate()
+        for name in ("quantity", "dollar_amount", "limit_price"):
+            if name in entry:
+                entry[name] = str(dec(entry[name]))
         if candidate.dollar_amount is not None and candidate.dollar_amount > dec(
             options["max_notional"]
         ):
@@ -189,9 +233,20 @@ def load_live_config(path):
         or options["polls"] < 1
     ):
         raise Halt("invalid bounded one-shot capital/exit policy")
+    if (
+        type(options["poll_interval_seconds"]) not in (int, float)
+        or not 0 < options["poll_interval_seconds"]
+    ):
+        raise Halt("exit.poll_interval_seconds must be positive")
+    if options["max_exit_attempts"] is not None and (
+        type(options["max_exit_attempts"]) is not int or options["max_exit_attempts"] <= 0
+    ):
+        raise Halt("exit.max_exit_attempts must be a positive integer")
+    if type(options["risk_reduction_on_limits"]) is not bool:
+        raise Halt("exit.risk_reduction_on_limits must be boolean")
     timeout = broker.get("timeout_seconds", 20)
-    if type(timeout) is not int or not 1 <= timeout <= 60:
-        raise Halt("broker timeout must be 1..60 seconds")
+    if type(timeout) is not int or timeout < 1:
+        raise Halt("broker timeout must be a positive number of seconds")
     account = broker.get("account_sha256")
     if account is not None and (
         not isinstance(account, str)
@@ -199,65 +254,142 @@ def load_live_config(path):
         or any(c not in "0123456789abcdef" for c in account)
     ):
         raise Halt("account_sha256 must be a complete lowercase SHA-256 digest")
-    return LocalSettings(
-        path, config, risk, options, helper, account, timeout, hashlib.sha256(raw).hexdigest()
+    semantic = {
+        "config": asdict(config),
+        "risk": asdict(risk),
+        "options": options,
+        "helper": str(helper),
+        "account": account,
+        "timeout": timeout,
+    }
+    # Equivalent decimal spelling is not an economic configuration change.
+    for name, value in semantic["risk"].items():
+        if isinstance(value, str) and name != "version":
+            semantic["risk"][name] = format(dec(value).normalize(), "f")
+    semantic["options"] = {**options, "entry": dict(entry)}
+    semantic["options"]["max_notional"] = format(dec(options["max_notional"]).normalize(), "f")
+    for name in ("quantity", "dollar_amount", "limit_price"):
+        if name in entry:
+            semantic["options"]["entry"][name] = format(dec(entry[name]).normalize(), "f")
+    semantic["options"]["poll_interval_seconds"] = format(
+        dec(options["poll_interval_seconds"]).normalize(), "f"
     )
+    return LocalSettings(path, config, risk, options, helper, account, timeout, digest(semantic))
 
 
 def create_policy(
     config, risk, account_digest, options, clock=time.time, simulation=False, owner_config_hash=None
 ):
+    from importlib.metadata import version
+
     return {
         "version": VERSION,
+        "application_version": version("tradeagent"),
+        "state_schema_version": STATE_SCHEMA_VERSION,
+        "execution_protocol_version": EXECUTION_PROTOCOL_VERSION,
         "account_digest": account_digest,
-        "package_hash": package_hash(),
-        "config_hash": digest(asdict(config)),
-        "risk_hash": digest(asdict(risk)),
         "schema_hash": Contracts().hash,
         "state_dir": str(Path(config.state_dir).resolve().parent),
+        "config": asdict(config),
+        "risk": asdict(risk),
         "symbols": config.allowed_symbols,
         "options": options,
-        "owner_config_hash": owner_config_hash,
         "simulation": simulation,
         "permissions": {
             "long_only": True,
             "equity_only": True,
             "no_leverage": True,
             "max_entries": 1,
-            "max_exits": 1,
             "cancel_known_pending": True,
         },
     }
+
+
+def check_compatibility(policy):
+    if policy.get("version") != VERSION:
+        raise Halt(
+            "unsupported execution policy; preserve state and install a compatible application"
+        )
+    if policy.get("state_schema_version", 1) != STATE_SCHEMA_VERSION:
+        raise Halt(
+            "incompatible state schema; preserve state and use a supported migration before recover"
+        )
+    if policy.get("execution_protocol_version", 1) not in COMPATIBLE_EXECUTION_PROTOCOLS:
+        raise Halt(
+            "incompatible execution protocol; preserve state and install a compatible version for recover"
+        )
+    if policy.get("schema_hash") != Contracts().hash:
+        raise Halt(
+            "broker contracts incompatible with active state; preserve evidence and update contract adapter before recover"
+        )
+
+
+def active_settings(settings):
+    """New TOML applies to the next lifecycle; active requirements come from its journal."""
+    artifact = check_run_state(settings)
+    if artifact is None:
+        return settings
+    policy = artifact["policy"]
+    if "config" in policy and "risk" in policy:
+        config, risk = Config(**policy["config"]), Risk(**policy["risk"])
+    else:
+        db = sqlite3.connect(f"file:{settings.directory / 'agent/state.sqlite3'}?mode=ro", uri=True)
+        try:
+            row = db.execute(
+                "SELECT payload FROM events WHERE kind='configuration' ORDER BY seq LIMIT 1"
+            ).fetchone()
+            if row is None:
+                raise Halt(
+                    "legacy run lacks recorded configuration; inspect status and preserve evidence"
+                )
+            recorded = json.loads(row[0])
+            config, risk = Config(**recorded["config"]), Risk(**recorded["risk"])
+        finally:
+            db.close()
+    config = replace(config, account_selector=policy["account_digest"])
+    return replace(settings, config=config, risk=risk, options=policy["options"], bound=True)
 
 
 def check_run_state(settings, *, reconciliation_only=False):
     """Read-only lost-state check. The external config receipt cannot rearm a run."""
     directory, receipt = settings.directory, settings.receipt
     marker = directory / "live-run.json"
-    if receipt.exists():
-        owner_file(receipt)
+    if marker.exists() or receipt.exists():
         if not marker.is_file() or not (directory / "agent/state.sqlite3").is_file():
-            raise Halt("owner run was already bound; missing execution state cannot be reset")
+            raise Halt(
+                "missing execution state cannot be reset; restore preserved journal before recover"
+            )
+        with sqlite3.connect(
+            f"file:{directory / 'agent/state.sqlite3'}?mode=ro", uri=True
+        ) as database:
+            if database.execute("PRAGMA user_version").fetchone()[0] not in {0, 1}:
+                raise Halt(
+                    "incompatible execution state schema; preserve journal and use a supported migration"
+                )
         artifact = json.loads(owner_file(marker).read_text())
-        if json.loads(receipt.read_text()) != {"marker_hash": digest(artifact)}:
-            raise Halt("owner run state binding changed")
+        if receipt.exists() and json.loads(owner_file(receipt).read_text()) != {
+            "marker_hash": digest(artifact)
+        }:
+            raise Halt("owner run state binding changed; restore the matching journal/receipt")
         policy = artifact.get("policy", {})
-        expected = create_policy(
-            settings.config,
-            settings.risk,
-            policy.get("account_digest"),
-            settings.options,
-            owner_config_hash=settings.file_hash,
+        check_compatibility(policy)
+        if artifact.get("actor") != "LOCAL_OWNER" or policy.get("simulation") is not False:
+            raise Halt("invalid owner execution context")
+        if policy.get("state_dir") != str(directory):
+            raise Halt(
+                "state directory differs from recorded lifecycle; restore original state path"
+            )
+        selector = settings.config.account_selector or settings.account_sha256
+        if selector and selector != policy.get("account_digest"):
+            raise Halt(
+                "selected account differs from active lifecycle; recover the recorded account first"
+            )
+        return artifact
+    if directory.exists() and any(directory.iterdir()):
+        raise Halt(
+            "state exists without its lifecycle marker; restore evidence; state cannot be reset"
         )
-        if reconciliation_only:
-            # A corrected wheel can READ the prior run; execution keeps the exact code pin.
-            expected["package_hash"] = policy.get("package_hash")
-        if policy != expected:
-            raise Halt("LIVE run account/code/configuration changed; never replay")
-        if settings.account_sha256 and policy.get("account_digest") != settings.account_sha256:
-            raise Halt("owner run account differs from configured account pin")
-    elif marker.exists() or (directory.exists() and any(directory.iterdir())):
-        raise Halt("LIVE one-shot requires isolated fresh state or its existing config receipt")
+    return None
 
 
 class OwnerPolicy:
@@ -292,17 +424,19 @@ class OwnerPolicy:
         if set(self.artifact) != {"policy", "actor"} or self.artifact["actor"] != actor:
             raise Halt("invalid local owner execution policy")
         policy = self.artifact["policy"]
-        expected = create_policy(
-            self.config,
-            self.risk,
-            self.account_digest,
-            self.options,
-            self.clock,
-            self.simulation,
-            self.settings.file_hash if self.settings else None,
-        )
-        if policy != expected:
-            raise Halt("owner execution account/code/configuration context changed")
+        check_compatibility(policy)
+        if policy["account_digest"] != self.account_digest or policy["options"] != self.options:
+            raise Halt("owner execution account or active options changed")
+        if "config" in policy:
+            recorded_config = Config(**policy["config"])
+            recorded_config = replace(
+                recorded_config, account_selector=self.config.account_selector
+            )
+            if (
+                asdict(recorded_config) != asdict(self.config)
+                or Risk(**policy["risk"]) != self.risk
+            ):
+                raise Halt("active execution requirements differ from recorded lifecycle")
         limit = dec(self.options["max_notional"])
         if (
             not 0 < limit
@@ -314,19 +448,28 @@ class OwnerPolicy:
             raise Halt("owner execution exceeds one-shot bounds")
         intents = self.state.db.execute("SELECT payload FROM intents").fetchall()
         sides = [json.loads(row[0])["side"] for row in intents]
-        if len(sides) > 2 or sides.count("buy") > 1 or sides.count("sell") > 1:
-            raise Halt("owner execution one-entry/one-exit budget exceeded")
+        if sides.count("buy") > 1:
+            raise Halt("owner execution one-entry budget exceeded")
+        maximum = self.options.get("max_exit_attempts")
+        if maximum is not None and sides.count("sell") > maximum:
+            raise Halt(
+                "configured exit attempt limit reached; reconcile residual and update next recovery policy explicitly"
+            )
         return policy
 
-    def check(self, intent, snapshot, baseline, cancel=False):
+    def check(self, intent, snapshot, baseline, cancel=False, authorize=True):
         self.validate()
-        if snapshot.account_key != self.account_digest[:16] or snapshot.options:
+        if snapshot.account_key != self.account_digest[:16]:
             raise Halt("owner execution policy account/asset mismatch")
         if intent.asset != "equity" or intent.symbol not in self.config.allowed_symbols:
             raise Halt("owner execution policy requires allowed equity intent")
         if cancel:
             return
-        if self.permission_reader is not None and self.permission_reader() is not False:
+        if (
+            authorize
+            and self.permission_reader is not None
+            and self.permission_reader() is not False
+        ):
             raise Halt("broker trade approvals enabled or uncertain; owner setup required")
         if not self.simulation and self.permission_reader is None:
             raise Halt("broker approval-setting reader required")
@@ -340,7 +483,7 @@ class OwnerPolicy:
             initial = self.state.db.execute(
                 "SELECT payload FROM one_shot_meta WHERE key='initial'"
             ).fetchone()
-            if not initial or dec(json.loads(initial[0])["positions"].get(intent.symbol, 0)) != 0:
+            if not initial:
                 raise Halt("cannot attribute sell position to this one-shot run")
             refs = {row[0] for row in self.state.db.execute("SELECT ref_id FROM intents")}
             owned = sum(
@@ -351,9 +494,23 @@ class OwnerPolicy:
                 ),
                 dec(0),
             )
-            if owned != intent.quantity or snapshot.positions.get(intent.symbol) != owned:
+            original = dec(json.loads(initial[0])["positions"].get(intent.symbol, 0))
+            sellable = max(dec(0), snapshot.available.get(intent.symbol, dec(0)) - original)
+            if (
+                intent.quantity > min(owned, sellable)
+                or snapshot.positions.get(intent.symbol, dec(0)) != original + owned
+            ):
                 raise Halt("exit quantity exceeds confirmed exclusively owned position")
-        check_order(intent, snapshot, self.config, self.risk, self.clock(), baseline)
+        check_order(
+            intent,
+            snapshot,
+            self.config,
+            self.risk,
+            self.clock(),
+            baseline,
+            risk_reducing=intent.side == "sell"
+            and self.options.get("risk_reduction_on_limits", True),
+        )
         if intent.side == "buy" and (Path(self.config.state_dir).parent / "KILL").exists():
             raise Halt("emergency stop prevents new exposure at authorization boundary")
 
@@ -446,8 +603,15 @@ class StandingLifecycle(SupervisedLifecycle):
         self.guard.check_review(intent, review, snapshot)
 
     def _risk(self, intent, snapshot, baseline, fees=0):
-        self.guard.check(intent, snapshot, baseline)
-        return super()._risk(intent, snapshot, baseline, fees)
+        try:
+            result = self.guard.check(intent, snapshot, baseline, authorize=False)
+            self.broker.transport.review_snapshot = (snapshot, baseline)
+            return result
+        except Halt as exc:
+            self.state.event(
+                self.run, "risk_rejected", {"payload": intent.payload(), "reason": str(exc)}
+            )
+            raise
 
     def execute(self, key, intent):
         binding = json.loads(

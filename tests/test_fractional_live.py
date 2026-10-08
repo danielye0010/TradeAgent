@@ -17,7 +17,7 @@ def fractional_runtime(
     tmp_path, monkeypatch, amount="5", mode="filled", exit_mode="filled", fees="0"
 ):
     invoke, sim, calls, target, path = owner_mock_runtime(tmp_path, monkeypatch)
-    text = path.read_text().replace('["QQQ", "IWM"]', '["AAPL"]')
+    text = path.read_text().replace('["IWM", "QQQ"]', '["AAPL"]')
     text = text.replace(
         "[exit]",
         f'[entry]\norder_type = "market"\ndollar_amount = "{amount}"\n[exit]\norder_type = "market"',

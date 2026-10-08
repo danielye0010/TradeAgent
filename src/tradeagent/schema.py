@@ -24,8 +24,8 @@ class Contracts:
         self.tools = self.manifest["tools"]
         self.hash = digest(self.tools)
 
-    def check_current(self, tools, version):
-        if version != self.manifest["server_version"]:
+    def check_current(self, tools, version, *, require_version=True):
+        if require_version and version != self.manifest["server_version"]:
             raise Halt("broker server version drift; rediscovery and review required")
         for name, expected in self.tools.items():
             live = tools.get(name)
