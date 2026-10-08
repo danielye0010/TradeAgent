@@ -19,7 +19,7 @@
     "src/tradeagent/calendar.py": "77f40b61f84fb2f3b0064f6b87b5de1a8e5c9d9f3906fee24536a40ab1dcb37a",
     "src/tradeagent/canary_review.py": "204516d970724f146d2fb9b0581153d23219ff5287b8abb2f6d5f66fbc42f487",
     "src/tradeagent/canary_review_cli.py": "44eda2c1d64f0eb1482681ba219172ab44bc37084c4877c9cacb2ade5f7bc77f",
-    "src/tradeagent/cli.py": "ee006767a6ab4bcb2c8cf1ddcb761c76569f5a331044fe8b2ea91006006d8f5e",
+    "src/tradeagent/cli.py": "cae9021e6435308fd2bfc8caae57d6077477d2685f842bb10942a4513151f99b",
     "src/tradeagent/codex_bridge.py": "851b287ce6e9ba1879e226789b81b907c72c71d50c5ade686e3970b0e333413d",
     "src/tradeagent/contracts/market-data-1.7.0.json": "33922285db496c5a655a909fcc149cebe7ecf1fdfa52b4ef7aed8d5f6b391cfe",
     "src/tradeagent/contracts/official-1.6.2.json": "836d6c9340b472470e12a7294aa9df9d8059e1a18df1f389fc2ac61b8a3fd89a",
@@ -35,11 +35,13 @@
     "src/tradeagent/legacy/release.py": "1047f5a3a8c4bf84e6d642dd0414d190e4765ac1de34ed17a19dab65af31ca8f",
     "src/tradeagent/legacy/runner.py": "3a89efc2fe45592664bc53331040c0b354eafd1b3f4b2fb40e1abf5244e58aa6",
     "src/tradeagent/legacy/standalone.py": "f3c52d43599347e87513b00bf2f770246cfddfa81b8003d2447365d8a8344f89",
-    "src/tradeagent/legacy/standalone_cli.py": "729b3ac84d3aea1e7a9355f2bc8c1dc463ecea08c6c2dfe586c92f0e27f22be0",
+    "src/tradeagent/legacy/standalone_cli.py": "5640aca63537e50520a0cc7326d3ceb8e1325a4c6beddd6860e8036af012af2f",
     "src/tradeagent/legacy/standalone_reference.py": "cd5c7e272d10976316b70b277d789447ca5c42778e0e4a757acc4986502906a3",
     "src/tradeagent/legacy/strategy.py": "cfb61014a51cdaae3259a78bcecbe4d539ec837ebc5db47e09d587c8cff3d74b",
     "src/tradeagent/legacy/supervised_cli.py": "2e998c255edcc01d5645114c8f5fbb9c7f3adac5bbfe708ae9f9696a144790b9",
     "src/tradeagent/model.py": "7cb091ce279096232d52a49a4082b26f2d0693d2f820514d35b6b22d3d6a9ff8",
+    "src/tradeagent/oneshot.py": "977720a7fdce652e54591f4e5556ccee446fe4d9565f7348be87a6dbfde2543e",
+    "src/tradeagent/oneshot_cli.py": "bdd98ba67cb72b3ccac729f226b761a641b3c8f9e41b5c1c2602c3dd8a91502a",
     "src/tradeagent/options.py": "ad85b4b3662947d3bd4a9ccfd1a76326e88751b4091d1208d34537f3f20c50a8",
     "src/tradeagent/prospective/__init__.py": "ec6da6bc1a0b0d491b3deb49ab9ffb0f967de702e9cd2ce560c2132b98399d9b",
     "src/tradeagent/prospective/access.py": "8a2e79855862bc8123a28f85f4227dc05c8fae55ee39853eb10bce3df6360f0e",
@@ -90,6 +92,7 @@
     "tests/test_market_freshness.py": "d4100c767168cdc1c42b244c9d1d95ba52ebd538dbc627592f560f4aad3e291b",
     "tests/test_market_providers.py": "02e297c465b9d3c7c466be06c621d6e703dde9539f779f7122566e8477abe0f4",
     "tests/test_onboarding.py": "dc4ba00657f8c2000771d389cf31fe77136434c91ee796b6e49f3cb161bb4583",
+    "tests/test_oneshot.py": "bce7c083f080506928e5c69162772a90e4e6f6ab33d0c17e4f9b735fb2caf1f1",
     "tests/test_prospective.py": "596505f0c76bd3ca1f60d49255e01c228bf5dd99101d36ea0e5fdd225b8275e3",
     "tests/test_release_policy.py": "406a8f771658e1815cecbab48293b497ac95fd05751f1b5fa726f079629bbf7a",
     "tests/test_research_integrity.py": "7e23af828a9974495d97824e92300aa262a7d3a89d2e69245dee4b4f18358106",
@@ -98,5 +101,5 @@
     "tests/test_standalone.py": "aff198185b7235300e5acd61575a9f1b214bcbd44d02b92ec25c2715839447d0",
     "tests/test_supervised_contract.py": "60bf5ed95f5fe2143faa634b9dd80c7198521f05cdca3a95abdc1e5af5e9aa3c"
   },
-  "framework_sha256": "2bed5060175060a7c99f41c8e1cf051d07ab9295322181716d36ebaab71dce50"
+  "framework_sha256": "5964527d6ecefc79a9acd8553133e9b72eff008ac0e39d2cd4c59a1af85528ba"
 }

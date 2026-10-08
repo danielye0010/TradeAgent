@@ -29,6 +29,16 @@ tradeagent execution simulate --demo-dir data/fresh-execution-demo
 These demonstrations use synthetic state and require no credentials. Choose fresh
 directories; demonstration results do not establish prospective performance.
 
+## One-shot execution validation
+
+Install the wheel in a separate Linux environment, then run
+`tradeagent run-once --paper --state-dir work/fresh-one-shot` for a complete
+synthetic entry, bounded exit and reconciliation. Reusing that directory recovers
+its original run without another entry. `tradeagent live-check` performs only
+read-only readiness checks; `run-once --live` currently returns `LIVE BLOCKED`.
+See [One-shot operation](docs/one-shot.md) for installation, evidence and the
+remaining production prerequisites. No research strategy is enabled for trading.
+
 ## Robinhood deployment
 
 Configure an external OAuth helper for the official

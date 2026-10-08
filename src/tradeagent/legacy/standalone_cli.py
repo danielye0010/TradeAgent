@@ -27,7 +27,7 @@ from .standalone_reference import PublicReferenceReader
 
 
 def local_policy_preflight(artifact, public_key, root, config, risk, facts, now=time.time):
-    if Path(__file__).resolve().parent != Path(root).resolve() / "src/tradeagent":
+    if Path(__file__).resolve().parents[1] != Path(root).resolve() / "src/tradeagent":
         raise Halt("executing package differs from frozen deployment root")
     require_autonomous_release(artifact.get("policy", {}).get("phase"))
     PolicySignature(public_key).verify(artifact, False)

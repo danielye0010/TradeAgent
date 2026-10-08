@@ -18,6 +18,10 @@ from .research.store import Experience
 
 def main(argv=None):
     supplied = list(sys.argv[1:] if argv is None else argv)
+    if supplied and supplied[0] in {"live-check", "run-once"}:
+        from .oneshot_cli import main as oneshot_main
+
+        return oneshot_main(supplied)
     if supplied and supplied[0] == "canary-review":
         from .canary_review_cli import main as review_main
 
@@ -44,6 +48,8 @@ def main(argv=None):
             "retire-lesson",
             "import-execution",
             "replay-history",
+            "live-check",
+            "run-once",
         ],
     )
     parser.add_argument("--state-dir", type=Path, default=Path("data/research"))
