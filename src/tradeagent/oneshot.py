@@ -10,7 +10,7 @@ from zoneinfo import ZoneInfo
 
 from .broker import utc_time
 from .calendar import session_bounds
-from .execution_policy import OwnerGrant, StandingLifecycle, request_policy
+from .execution_policy import OwnerPolicy, StandingLifecycle, create_policy
 from .legacy.standalone import intent_from_row
 from .model import Config, Halt, Intent, Risk, dec, digest
 from .risk import TERMINAL, check_order, check_state
@@ -439,13 +439,13 @@ def run_paper(
                 atomic_json(
                     grant_path,
                     {
-                        "policy": request_policy(
+                        "policy": create_policy(
                             config, risk, adapter.account_digest, options, clock, True
                         ),
                         "actor": "SIMULATED_POLICY_OWNER",
                     },
                 )
-            guard = OwnerGrant(
+            guard = OwnerPolicy(
                 json.loads(grant_path.read_text()),
                 state,
                 config,
@@ -519,63 +519,22 @@ def run_paper(
     return result
 
 
-def run_live(directory, authorization_dir, oauth_helper, root, timeout=20):
-    """Owner-launched real one-shot; this function is never used by live-check."""
+def run_live(settings):
+    """Explicit owner-launched LIVE command; not called by read-only live-check."""
     import time
 
     from .broker import Broker
-    from .execution_policy import live_config, owner_file
+    from .execution_policy import check_run_state, owner_file
     from .standalone_mcp import ExternalOAuthToken, StandaloneExecutionTransport, StandaloneMCP
 
-    if not authorization_dir or not oauth_helper:
-        raise Halt(
-            "LIVE setup requires --authorization-dir and --oauth-helper; run prepare-once then owner signing and setup-once"
-        )
-    authorization_dir = Path(authorization_dir).resolve()
-    artifact = json.loads(owner_file(authorization_dir / "authorization.json").read_text())
-    policy = artifact.get("policy", {})
-    selected = Path(directory or policy["state_dir"]).resolve()
-    if selected != Path(policy["state_dir"]):
-        raise Halt("LIVE state directory differs from signed authorization")
-    options = policy["options"]
-    config, risk = live_config(selected, policy["symbols"]), Risk()
-    marker = selected / "live-run.json"
-    receipt = authorization_dir / "run-binding.json"
-    if receipt.exists() and not marker.exists():
-        raise Halt(
-            "standing authorization was already bound; missing execution state cannot be reset"
-        )
-    expected = {"grant_hash": digest(artifact), "simulation": False, "options": options}
-    if selected.exists() and not marker.exists() and any(selected.iterdir()):
-        raise Halt("LIVE one-shot requires its own isolated fresh state directory")
-    selected.mkdir(mode=0o700, parents=True, exist_ok=True)
-    try:
-        with marker.open("x") as stream:
-            stream.write(dumps(expected))
-            stream.flush()
-            os.fsync(stream.fileno())
-    except FileExistsError:
-        if json.loads(marker.read_text()) != expected:
-            raise Halt("LIVE run authorization/configuration changed; never replay") from None
-    if receipt.exists():
-        if not (selected / "agent/state.sqlite3").exists():
-            raise Halt("standing authorization execution journal is missing; never reset")
-        if json.loads(owner_file(receipt).read_text()) != {
-            "marker_hash": digest(json.loads(marker.read_text()))
-        }:
-            raise Halt("standing authorization state binding changed")
-    else:
-        with receipt.open("x") as stream:
-            stream.write(dumps({"marker_hash": digest(expected)}))
-            stream.flush()
-            os.fsync(stream.fileno())
-    if (
-        receipt.exists()
-        and (selected / "agent").exists()
-        and not (selected / "agent/state.sqlite3").exists()
-    ):
-        raise Halt("standing authorization execution journal is missing")
-    state = State(selected / "agent")
+    settings.validate()
+    check_run_state(settings)
+    selected, config, risk, options = (
+        settings.directory,
+        settings.config,
+        settings.risk,
+        settings.options,
+    )
     result = {
         "mode": "LIVE",
         "status": "HALTED",
@@ -583,30 +542,50 @@ def run_live(directory, authorization_dir, oauth_helper, root, timeout=20):
         "excluded_from_strategy_performance": True,
         "outstanding_incident": True,
     }
-    run_id = None
+    state, run_id = None, None
+    os.umask(0o077)
     try:
-        with state.lock(config.lease_seconds) as fence:
-            # Validate signature and the entire installed-code/config context
-            # before even establishing broker connectivity.
-            guard = OwnerGrant.load(
-                authorization_dir,
-                state=state,
-                config=config,
-                risk=risk,
-                account_digest=policy["account_digest"],
-                options=options,
-                clock=time.time,
-                simulation=False,
-            )
-            guard.validate()
-            with StandaloneMCP(ExternalOAuthToken(oauth_helper, root), timeout) as bridge:
-                broker = Broker(bridge, config, risk)
-                broker.snapshot()
-                if digest(broker.account["account_number"]) != guard.account_digest:
-                    raise Halt("authenticated account differs from standing authorization")
+        with StandaloneMCP(
+            ExternalOAuthToken(settings.oauth_helper, Path(__file__).parent), settings.timeout
+        ) as bridge:
+            broker = Broker(bridge, config, risk)
+            broker.snapshot()
+            account = digest(broker.account["account_number"])
+            if settings.account_sha256 and account != settings.account_sha256:
+                raise Halt("authenticated account differs from configured account pin")
+            artifact = {
+                "policy": create_policy(
+                    config, risk, account, options, owner_config_hash=settings.file_hash
+                ),
+                "actor": "LOCAL_OWNER",
+            }
+            state = State(selected / "agent")
+            with state.lock(config.lease_seconds) as fence:
+                marker = selected / "live-run.json"
+                if settings.receipt.exists():
+                    check_run_state(settings)
+                    if json.loads(owner_file(marker).read_text()) != artifact:
+                        raise Halt("LIVE run account/code/configuration changed; never replay")
+                else:
+                    if marker.exists():
+                        raise Halt("LIVE run has no external configuration receipt; never reset")
+                    with marker.open("x") as stream:
+                        stream.write(dumps(artifact))
+                        stream.flush()
+                        os.fsync(stream.fileno())
+                    with settings.receipt.open("x") as stream:
+                        stream.write(dumps({"marker_hash": digest(artifact)}))
+                        stream.flush()
+                        os.fsync(stream.fileno())
+                    for directory in (selected, settings.receipt.parent):
+                        descriptor = os.open(directory, os.O_DIRECTORY)
+                        try:
+                            os.fsync(descriptor)
+                        finally:
+                            os.close(descriptor)
 
                 def approval_setting():
-                    setting = broker.bridge.read(
+                    setting = bridge.read(
                         "get_trade_approval_setting",
                         {"account_number": broker.account["account_number"]},
                     )["data"]["setting"]
@@ -614,7 +593,23 @@ def run_live(directory, authorization_dir, oauth_helper, root, timeout=20):
                         raise Halt("broker approval setting account mismatch")
                     return setting["human_must_approve_trades"]
 
-                guard.permission_reader = approval_setting
+                guard = OwnerPolicy(
+                    artifact,
+                    state,
+                    config,
+                    risk,
+                    account,
+                    options,
+                    time.time,
+                    settings=settings,
+                    permission_reader=approval_setting,
+                )
+                guard.validate()
+                # Check permission before constructing the write-capable adapter.
+                if approval_setting() is not False:
+                    raise Halt(
+                        "broker trade approvals enabled or uncertain; owner broker setup required"
+                    )
                 adapter = OfficialExecutionAdapter(
                     broker, StandaloneExecutionTransport(bridge, state, broker, guard), time.time
                 )
@@ -650,16 +645,17 @@ def run_live(directory, authorization_dir, oauth_helper, root, timeout=20):
                     result["exit_due"] = controller.get("exit_due")
                     result["exit_reason"] = controller.get("exit_reason")
                     result["broker_calls"] = bridge.calls
-    except (Halt, OSError, ValueError, KeyError, TypeError):
+    except (Halt, OSError, ValueError, KeyError, TypeError) as exc:
         result["reason"] = (
-            "owner authorization, connectivity or runtime prerequisite failed; reconcile existing state before relaunch"
+            str(exc) if isinstance(exc, Halt) else "local runtime prerequisite failed"
         )
         raise
     finally:
-        if run_id:
-            state.event(run_id, "one_shot_final", result)
-            state.finish(run_id, result["status"])
-            state.export_log()
-        atomic_json(selected / "report.json", result)
-        state.close()
+        if state:
+            if run_id:
+                state.event(run_id, "one_shot_final", result)
+                state.finish(run_id, result["status"])
+                state.export_log()
+            atomic_json(selected / "report.json", result)
+            state.close()
     return result

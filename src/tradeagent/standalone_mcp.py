@@ -149,7 +149,7 @@ class StandaloneMCP:
             raise Halt("unsupported standalone protocol method")
         if method == "tools/call" and params.get("name") not in READ_TOOLS:
             if type(before_send) is not WireAuthorization:
-                raise Halt("execution requires the single signed lifecycle boundary")
+                raise Halt("execution requires the single owner lifecycle boundary")
         self.serial += 1
         message = {"jsonrpc": "2.0", "method": method, "params": params}
         if not notification:
@@ -322,7 +322,7 @@ class ReadOnlyMCP(StandaloneMCP):
 
 @dataclass(frozen=True)
 class WireAuthorization:
-    """A signed context and durable-intent proof, never a caller-supplied boolean."""
+    """A validated owner context and durable-intent proof, never a caller-supplied boolean."""
 
     guard: object
     state: object
@@ -348,12 +348,12 @@ class WireAuthorization:
         if not row or json.loads(row["payload"]) != self.intent.payload():
             raise Halt("network intent differs from durable journal")
         expected = {"account_number": args.get("account_number"), **self.intent.payload()}
-        from .execution_policy import OwnerGrant
+        from .execution_policy import OwnerPolicy
 
-        owner = type(self.guard) is OwnerGrant
+        owner = type(self.guard) is OwnerPolicy
         account_digest = self.guard.account_digest if owner else self.guard.context.account_digest
         if digest(expected["account_number"]) != account_digest:
-            raise Halt("network account differs from signed policy")
+            raise Halt("network account differs from execution policy")
         if self.name == "cancel_equity_order":
             if not owner or row["status"] != "pending" or not row["broker_id"]:
                 raise Halt("cancellation requires owner-authorized known pending intent")
@@ -383,13 +383,13 @@ class WireAuthorization:
             ):
                 raise Halt("network placement lacks canary side reservation")
         if args != expected:
-            raise Halt("network payload differs from signed whole-equity intent")
+            raise Halt("network payload differs from validated whole-equity intent")
 
     def __call__(self):
-        from .execution_policy import OwnerGrant
+        from .execution_policy import OwnerPolicy
         from .legacy.release import require_real_release
 
-        if type(self.guard) is OwnerGrant:
+        if type(self.guard) is OwnerPolicy:
             if self.guard.simulation is not False:
                 raise Halt("simulation grant cannot reach real HTTP write boundary")
             self.guard.check(
@@ -424,12 +424,12 @@ class StandaloneExecutionTransport:
         self.bridge, self.state, self.broker, self.guard = bridge, state, broker, guard
 
     def invoke(self, name, arguments):
-        from .execution_policy import OwnerGrant
+        from .execution_policy import OwnerPolicy
         from .legacy.standalone import intent_from_row
         from .model import digest
         from .supervised import state_binding
 
-        owner = type(self.guard) is OwnerGrant
+        owner = type(self.guard) is OwnerPolicy
         if name not in {"review_equity_order", "place_equity_order"} and not (
             owner and name == "cancel_equity_order"
         ):

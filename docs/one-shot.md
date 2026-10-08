@@ -1,167 +1,141 @@
-# One-shot owner execution
+# Owner-operated Linux one-shot execution
 
-The installed CLI owns an isolated execution-canary lifecycle without an LLM.
-Paper and owner-launched LIVE operation use `OneShotRun`, `StandingLifecycle`,
-`OfficialExecutionAdapter` and the existing durable order engine. The controller
-adds scheduling and ownership checks; the existing engine owns review, durable
-reference identity, authorization consumption, submit, cancel and fill accounting.
-No research strategy, prediction or evidence database supplies this canary.
+TradeAgent runs independently from a Linux wheel. The owner configures the official
+Robinhood connection and explicitly launches one entry with its corresponding exit.
+No Codex, Claude, LLM, signing service, Ed25519 key, signed grant, prepare-once,
+setup-once or authorization directory is required. Package installation,
+configuration and live-check never submit orders or install a service or timer.
 
-## Independent Linux installation
+## Install and configure
 
-Build the wheel and install it in a separate environment from SHADOW:
-
-```bash
-python3 -m venv .build-venv
-.build-venv/bin/pip install build
-.build-venv/bin/python -m build
-python3 -m venv .execution-venv
-.execution-venv/bin/pip install dist/tradeagent-0.2.0-py3-none-any.whl
-.execution-venv/bin/tradeagent run-once --paper --state-dir work/fresh-one-shot
-```
-
-Keep SQLite and locks on persistent local Linux storage. The wheel contains its
-broker contracts and needs neither a source checkout nor Codex to run. No service
-or timer is installed by these commands. OpenSSL is required for owner signature
-verification; the OAuth helper remains outside the repository and package.
-
-## Broker reads and current contracts
+Use Python 3.12–3.14 on Linux or Ubuntu/WSL2 and a dedicated environment, separate
+from an existing SHADOW environment:
 
 ```bash
-tradeagent live-check --oauth-helper /absolute/external/oauth-helper \
-  --root /absolute/source-checkout --output work/live-check/report.json
-```
-
-`live-check` cannot review, place, cancel or authorize orders, even when owner
-credentials are available. It checks authenticated metadata against pinned read
-contracts and separately compares write contracts. It reads current account state
-and broker trade-approval settings without printing balances, holdings or account
-identifiers. Its status remains `LIVE BLOCKED` until owner setup is supplied; a
-successful check does not arm the application or prove a real order can fill.
-
-The frozen MCP 1.7.0 contracts include the authenticated customer-approval fields
-on review and placement responses, and `get_trade_approval_setting`. Whole-share
-limit review/place inputs and cancel/order-query schemas were unchanged. Required
-fields remain validated. Explicit or uncertain customer approval blocks execution;
-a placement approval object is not treated as an order acknowledgment.
-
-Quotes and the L2 book are separate timestamped snapshots. Their inside prices
-can differ during market movement. Execution bid/ask, available size and time are
-normalized from the same L2 book; quote bid/ask freshness is checked before that
-normalization, and last-trade valuation keeps its own timestamp. Stale/future data,
-crossed books, insufficient depth and spread limits continue to halt execution.
-The SHADOW provider validates read contracts only; unrelated write schema drift
-cannot prevent a read-only research service from starting.
-
-Only classified transport failures on idempotent reads retry: at most three
-attempts, with 0.2/0.4-second backoff. HTTP 429/502/503/504 and network errors are
-eligible. Authentication failures, malformed data and contract drift do not retry.
-No review, place or cancel is automatically replayed.
-
-## Owner-operated standing authorization
-
-These commands are for the owner to run from their own terminal. The application
-never generates a production signing key, signs a production grant, changes broker
-approval settings or resolves an exceptional broker approval automatically.
-
-First obtain/configure the dedicated Robinhood account and external noninteractive
-OAuth helper. See [Prospective operation](prospective-shadow.md) for the helper
-contract and [Robinhood trade approvals](https://robinhood.com/us/en/support/articles/trading-with-your-agent/)
-for broker settings. Some orders may still require exceptional approval.
-
-Prepare an unsigned request using only authenticated reads:
-
-```bash
+python3 -m venv ~/tradeagent-owner-venv
+source ~/tradeagent-owner-venv/bin/activate
+pip install /absolute/path/tradeagent-0.2.1-py3-none-any.whl
 umask 077
-tradeagent prepare-once --oauth-helper /absolute/external/oauth-helper \
-  --state-dir /absolute/linux/one-shot-state --max-notional 25 \
-  --hold-seconds 3600 --polls 3 --output /absolute/private/request.json
+mkdir -p ~/.config/tradeagent
+cd ~/.config/tradeagent
+python -c 'from importlib.resources import files; from pathlib import Path; Path("tradeagent.toml").open("x").write(files("tradeagent").joinpath("owner.example.toml").read_text())'
+chmod 600 tradeagent.toml
 ```
 
-Review the request and its limits. $25 is a default ceiling, not a promise that
-QQQ or IWM can be purchased. The runner returns `NO_TRADE` if the configured
-ceiling or available funds cannot buy a whole share. It never raises capital to
-force a transaction. An owner may explicitly choose a different cap, bounded by
-$1,000 and the unchanged risk engine. The request authorizes at most one entry,
-its corresponding owned-position exit, and one cancellation attempt per known
-pending order. It is valid for at most 24 hours and binds account, installed code,
-configuration, risk, schemas, universe, exit/poll limits and absolute state path.
+Edit the packaged [owner.example.toml](../src/tradeagent/owner.example.toml) copy:
+replace both `/absolute/...` placeholders with absolute paths on your local Linux
+filesystem. The state path must be an isolated fresh directory, never the SHADOW
+or research state path. The OAuth helper must be an existing owner-only executable
+outside the package and repository. Keep access/refresh tokens, credentials and
+login entirely in the external helper; the TOML accepts no credential fields.
+See [helper contract](prospective-shadow.md). Authentication is never fabricated.
 
-Using an owner-controlled Ed25519 key outside the repository, sign the exact
-request bytes in a separate owner terminal or offline environment:
+The complete configuration is:
+
+```toml
+[live]
+enabled = true
+symbols = ["QQQ", "IWM"]
+state_dir = "/absolute/linux/one-shot-state"
+max_notional = "25"
+
+[broker]
+oauth_helper = "/absolute/external/robinhood-mcp-oauth-helper"
+timeout_seconds = 20
+
+[risk]
+max_positions = 5
+max_position_fraction = "0.20"
+max_new_exposure_fraction = "0.10"
+min_cash_fraction = "0.20"
+
+[exit]
+hold_seconds = 3600
+polls = 3
+```
+
+The initial universe may be a nonempty subset of the ordinary QQQ/IWM ETFs.
+One-shot capital defaults to $25, with an absolute software ceiling of $1,000;
+changing it is an explicit owner configuration choice. There is no leverage,
+shorting, options, fractional-share fallback or automatic capital increase.
+The existing risk engine can impose a smaller budget. If no whole share fits,
+the command returns NO_TRADE. At current prices the $25 default may prevent any entry.
+Position/risk settings may tighten the listed production ceilings but cannot weaken
+them. Hold time is 0–21,600 seconds and polls are 1–30; unknown fields and malformed,
+nonprivate or disabled configurations halt before execution.
+
+The official broker must expose exactly one active agent-accessible account.
+`live-check` reports its complete `account_sha256` digest without its account number.
+Optionally add that independently verified digest to `[broker]` as
+`account_sha256 = "..."` **before the first LIVE launch** to pin the account.
+The first run also persists the authenticated account binding automatically;
+a different account on restart halts. Account eligibility, cash-only capital
+policy and broker permission checks remain mandatory.
+
+## Check and launch
 
 ```bash
-openssl pkeyutl -sign -inkey /absolute/private/owner-ed25519.pem -rawin \
-  -in /absolute/private/request.json -out /absolute/private/request.sig
-sha256sum /absolute/private/owner-public.pem
+tradeagent live-check --config tradeagent.toml
+# Optional private evidence file:
+tradeagent live-check --config tradeagent.toml --output live-check.json
+
+# Owner explicitly initiates real broker execution:
+tradeagent run-once --live --config tradeagent.toml
 ```
 
-Keep the request, signature and public-key files owner-only (mode 0600). Check the
-public-key fingerprint through the owner's trusted key setup, then install:
+`live-check` uses a transport incapable of review/place/cancel. It checks installed
+contracts, fresh account/market state, configured account, whole-share feasibility,
+broker trade-approval settings and existing run binding. READ_ONLY_READY means the
+observed read-only prerequisites passed, not that an order has been submitted or
+will fill. LIVE BLOCKED includes actual blockers, including closed/late session,
+insufficient whole-share capital, unknown orders, authentication or schema errors.
+An enabled application configuration does not change broker approval settings.
+Broker-required customer approvals and exceptional review/placement approvals halt;
+the owner must resolve those with Robinhood. No local flag impersonates approval.
+
+The LIVE command performs fresh checks and runs the existing direct MCP transport,
+`StandingLifecycle`, deterministic risk engine, durable journal and `OneShotRun`.
+The local `OwnerPolicy` replaces cryptographic enrollment at the same guard and
+wire boundaries. Review, exact request/state binding, review expiry, approval
+consumption and submission markers still commit before network placement.
+No broker write is blindly retried. Classified transient idempotent reads retain
+at most three attempts; authentication errors and malformed evidence do not retry.
+
+## Recovery and automatic exit
+
+One configuration and state directory own one lifecycle. The application creates
+`tradeagent.toml.run.json` beside the configuration and `live-run.json` in the
+state directory. These are durable recovery receipts, not signatures or separate
+owner setup. Preserve the config, receipts and journal together. Repeating the
+same LIVE command resumes/reconciles that run and never creates a second entry.
+Missing markers/journal, changed config/package/contracts/account or unexplained
+positions halt. Do not delete state to rearm; a new one-shot requires an explicitly
+new config file and fresh isolated state path, after resolving the previous run.
+
+Pending entries receive bounded polls and at most one durably reserved cancellation
+attempt. Lost acknowledgments are reconciled without resubmission. A partial entry
+exits only confirmed whole shares after the remainder is terminal. A rejected or
+partially filled exit remains a visible incident; the runner never submits another
+exit to hide unresolved exposure. Unknown broker orders always halt safely.
+
+The exit deadline is the earlier of hold time after confirmed fill or ten minutes
+before regular-session close. New exposure needs another minute before that deadline.
+The LIVE runner waits while renewing its lease and monitoring ownership/cash.
+Create `KILL` in the configured state directory to stop new exposure and request
+the single risk-reducing exit. Fresh data, broker permissions and risk checks still
+apply to that exit. Host/broker/market availability and fills cannot be guaranteed.
+Do not stop a process holding a position without arranging owner recovery.
+
+Private `report.json`, journal and events record actual order IDs, observed fills,
+fees, positions, cash, exit and P&L when fully closed. LIVE stdout retains status,
+reason and reconciliation flags. Local incident records require owner attention;
+no remote notification channel or recurring schedule is installed. Real broker
+commissioning is separate from controlled-broker tests.
+
+Paper continues to use the same controller with explicitly synthetic data:
 
 ```bash
-tradeagent setup-once --request /absolute/private/request.json \
-  --signature /absolute/private/request.sig --public-key /absolute/private/owner-public.pem \
-  --public-key-sha256 OWNER_VERIFIED_SHA256 \
-  --authorization-dir /absolute/private/one-shot-authorization
+tradeagent run-once --paper --state-dir /absolute/fresh/synthetic-state
 ```
 
-Setup verifies the signature and fingerprint and creates a new mode-0700 trust
-directory; it never replaces existing trust silently. It does not arm or launch a
-trade. The legacy global release/signing-key gates remain closed for legacy tools;
-this explicit owner-installed one-shot grant is a distinct supported setup path.
-
-After the owner has reviewed configuration and broker eligibility, the implemented
-owner launch interface is:
-
-```bash
-tradeagent run-once --live --authorization-dir /absolute/private/one-shot-authorization \
-  --oauth-helper /absolute/external/oauth-helper
-```
-
-This command can submit real orders; it is not a connectivity test. It was not
-executed against Robinhood during development. Missing/expired/changed authority,
-unsupported account state, approval requirements, stale data or insufficient exit
-capability halt execution. Authentication and passing mocked tests do not establish
-LIVE commissioning or profitability.
-
-## Ownership, recovery and shutdown
-
-One fresh isolated state directory owns one run. The signed authorization is also
-bound to that directory's marker/journal; missing state cannot rearm an already
-bound grant. Never delete state or reuse an authorization to attempt another entry.
-
-Only a position absent initially and attributed to this run's persisted broker
-references can be sold. Pending entries are reconciled for the bounded poll count,
-then one known-order cancellation is reserved durably before network I/O. A lost
-cancel acknowledgment is reconciled, never automatically replayed. A partial entry
-exits only confirmed whole shares after the remainder reaches a terminal state.
-Unknown absent orders and unexplained account movement remain incidents.
-
-The holding deadline is the earlier of the signed hold interval after confirmed
-fill or ten minutes before the regular session close. New entries require at least
-one additional minute before that deadline. LIVE waiting renews the lease and
-monitors authoritative ownership/cash. Restart resumes an existing order/position
-without another entry. The single exit is never repeated after a rejection or
-partial fill; an unresolved residual is a visible incident requiring owner action.
-
-Create `KILL` in the run directory to stop new exposure and request the single
-risk-reducing exit. Authorization, market/session and broker checks still apply.
-Do not stop the process while it holds a position without arranging recovery.
-There is no guarantee of fills or exit while the broker/host/market is unavailable.
-
-`report.json` and the existing engine journal record orders, fills, fees, cash,
-positions, times, incidents and P&L only when the position fully closes. LIVE stdout
-is a status summary; full private evidence remains owner-only on disk. High-priority
-incident events are local; no external notification channel has been configured.
-
-Paper uses the same controller and authorization specialization with an explicitly
-simulated owner grant. Its $10 IWM/$12 QQQ prices and virtual 2026-10-05 clock are
-invented software fixtures, excluded from strategy performance. Reuse its state
-path to test recovery without another entry; use a fresh directory for another
-entirely synthetic run. Exit status 0 means `COMPLETED` or `NO_TRADE`; 2 means
-blocked/halted. Fault injection may exit 1 to model a process crash.
-
-Long-term OAuth renewal/revocation, Windows/WSL uptime, broker exceptions and
-remote incident delivery require separate operational commissioning. No recurring
-LIVE timer or service is installed or enabled by this feature.
+It is software validation, not an execution replacement or market-performance claim.

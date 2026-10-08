@@ -1,25 +1,21 @@
-"""Owner-installed, signed one-shot standing authorization; no production signer."""
+"""Local owner one-shot policy; broker authentication and permissions remain external."""
 
-import base64
 import hashlib
 import json
 import os
 import stat
-import subprocess
-import tempfile
 import time
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from importlib.resources import files
 from pathlib import Path
-from uuid import uuid4
 
-from .model import Config, Halt, dec, digest
+from .model import Config, Halt, Risk, dec, digest
 from .risk import check_order
 from .schema import Contracts
 from .state import dumps
 from .supervised import SupervisedLifecycle
 
-VERSION = "owner-one-shot-v1"
+VERSION = "local-owner-one-shot-v2"
 
 
 def package_hash():
@@ -52,46 +48,129 @@ def owner_file(path):
         or info.st_uid != os.getuid()
         or info.st_mode & 0o077
     ):
-        raise Halt("authorization files require owner-only regular local files")
+        raise Halt("owner configuration/state files require owner-only regular local files")
     return path
 
 
-def verify_signature(policy, signature, public_key):
+@dataclass(frozen=True)
+class LocalSettings:
+    path: Path
+    config: Config
+    risk: Risk
+    options: dict
+    oauth_helper: Path
+    account_sha256: str | None
+    timeout: int
+    file_hash: str
+
+    @property
+    def directory(self):
+        return Path(self.config.state_dir).parent
+
+    @property
+    def receipt(self):
+        return self.path.with_name(self.path.name + ".run.json")
+
+    def validate(self):
+        if hashlib.sha256(owner_file(self.path).read_bytes()).hexdigest() != self.file_hash:
+            raise Halt("owner LIVE configuration changed during execution")
+        if self != load_live_config(self.path):
+            raise Halt("in-memory owner policy differs from TOML configuration")
+        self.config.validate()
+        self.risk.validate()
+
+
+def load_live_config(path):
+    import tomllib
+
+    path = Path(path).resolve()
+    if os.name != "posix" or str(path).startswith(("/mnt/", "//")):
+        raise Halt("owner configuration requires local Linux storage")
+    raw = owner_file(path).read_bytes()
     try:
-        raw = base64.b64decode(signature, validate=True)
-        with tempfile.TemporaryDirectory() as folder:
-            message, sig = Path(folder) / "message", Path(folder) / "signature"
-            message.write_bytes(dumps(policy).encode())
-            sig.write_bytes(raw)
-            result = subprocess.run(
-                [
-                    "openssl",
-                    "pkeyutl",
-                    "-verify",
-                    "-pubin",
-                    "-inkey",
-                    str(public_key),
-                    "-rawin",
-                    "-in",
-                    str(message),
-                    "-sigfile",
-                    str(sig),
-                ],
-                capture_output=True,
-                timeout=10,
-                check=False,
-            )
-            if result.returncode:
-                raise Halt("invalid owner standing-authorization signature")
-    except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
-        raise Halt("owner signature verification unavailable or malformed") from exc
+        document = tomllib.loads(raw.decode())
+    except (ValueError, UnicodeError) as exc:
+        raise Halt("invalid owner TOML configuration") from exc
+    allowed = {
+        "live": {"enabled", "symbols", "state_dir", "max_notional"},
+        "broker": {"oauth_helper", "account_sha256", "timeout_seconds"},
+        "risk": {
+            "max_positions",
+            "max_position_fraction",
+            "max_new_exposure_fraction",
+            "min_cash_fraction",
+        },
+        "exit": {"hold_seconds", "polls"},
+    }
+    if set(document) != set(allowed):
+        raise Halt("owner TOML requires exactly live, broker, risk and exit sections")
+    for name, fields in allowed.items():
+        if not isinstance(document[name], dict) or set(document[name]) - fields:
+            raise Halt("unknown owner configuration field or credential: " + name)
+    live, broker, limits, exit_policy = (document[k] for k in allowed)
+    if live.get("enabled") is not True:
+        raise Halt("explicit live.enabled = true is required")
+
+    def local_path(value, label):
+        if not isinstance(value, str) or not Path(value).is_absolute():
+            raise Halt(label + " requires an absolute Linux path")
+        result = Path(value).resolve()
+        if os.name != "posix" or str(result).startswith(("/mnt/", "//")) or result == Path("/"):
+            raise Halt(label + " requires local Linux storage")
+        return result
+
+    directory = local_path(live.get("state_dir"), "state_dir")
+    helper = local_path(broker.get("oauth_helper"), "oauth_helper")
+    config = live_config(directory, live.get("symbols"))
+    config.validate()
+    if not set(config.allowed_symbols) <= {"QQQ", "IWM"}:
+        raise Halt("initial one-shot universe permits only ordinary QQQ/IWM ETFs")
+    defaults = Risk()
+    for name in ("max_position_fraction", "max_new_exposure_fraction", "min_cash_fraction"):
+        if name in limits:
+            limits[name] = str(dec(limits[name]))
+    risk = Risk(**limits)
+    risk.validate()
+    if (
+        risk.max_positions > defaults.max_positions
+        or dec(risk.max_position_fraction) > dec(defaults.max_position_fraction)
+        or dec(risk.max_new_exposure_fraction) > dec(defaults.max_new_exposure_fraction)
+        or dec(risk.min_cash_fraction) < dec(defaults.min_cash_fraction)
+    ):
+        raise Halt("owner position limits may tighten but not weaken production risk ceilings")
+    options = {
+        "max_notional": str(dec(live.get("max_notional", "25"))),
+        "hold_seconds": exit_policy.get("hold_seconds", 3600),
+        "polls": exit_policy.get("polls", 3),
+    }
+    if (
+        not 0 < dec(options["max_notional"]) <= 1000
+        or type(options["hold_seconds"]) is not int
+        or not 0 <= options["hold_seconds"] <= 21600
+        or type(options["polls"]) is not int
+        or not 1 <= options["polls"] <= 30
+    ):
+        raise Halt("invalid bounded one-shot capital/exit policy")
+    timeout = broker.get("timeout_seconds", 20)
+    if type(timeout) is not int or not 1 <= timeout <= 60:
+        raise Halt("broker timeout must be 1..60 seconds")
+    account = broker.get("account_sha256")
+    if account is not None and (
+        not isinstance(account, str)
+        or len(account) != 64
+        or any(c not in "0123456789abcdef" for c in account)
+    ):
+        raise Halt("account_sha256 must be a complete lowercase SHA-256 digest")
+    return LocalSettings(
+        path, config, risk, options, helper, account, timeout, hashlib.sha256(raw).hexdigest()
+    )
 
 
-def request_policy(config, risk, account_digest, options, clock=time.time, simulation=False):
-    now = clock()
+def create_policy(
+    config, risk, account_digest, options, clock=time.time, simulation=False, owner_config_hash=None
+):
     return {
         "version": VERSION,
-        "grant_id": str(uuid4()),
         "account_digest": account_digest,
         "package_hash": package_hash(),
         "config_hash": digest(asdict(config)),
@@ -100,8 +179,7 @@ def request_policy(config, risk, account_digest, options, clock=time.time, simul
         "state_dir": str(Path(config.state_dir).resolve().parent),
         "symbols": config.allowed_symbols,
         "options": options,
-        "issued_at": now,
-        "expires_at": now + 86400,
+        "owner_config_hash": owner_config_hash,
         "simulation": simulation,
         "permissions": {
             "long_only": True,
@@ -114,33 +192,34 @@ def request_policy(config, risk, account_digest, options, clock=time.time, simul
     }
 
 
-def install_authorization(request, public_key, fingerprint, signature_path, destination):
-    """Owner runs this after offline signing. Never generates a key or signature."""
-    policy = json.loads(owner_file(request).read_text())
-    key = owner_file(public_key).read_bytes()
-    if hashlib.sha256(key).hexdigest() != fingerprint:
-        raise Halt("owner public-key fingerprint mismatch")
-    if policy.get("simulation") is not False or policy.get("package_hash") != package_hash():
-        raise Halt("owner setup requires current production request")
-    signature = base64.b64encode(owner_file(signature_path).read_bytes()).decode()
-    verify_signature(policy, signature, public_key)
-    path = Path(destination).resolve()
-    if path.exists():
-        raise Halt("authorization directory already exists; never silently replace trust")
-    os.umask(0o077)
-    path.mkdir(parents=True, mode=0o700)
-    (path / "owner-public.pem").write_bytes(key)
-    (path / "authorization.json").write_text(
-        dumps({"policy": policy, "signature": signature, "key_sha256": fingerprint})
-    )
-    return {
-        "status": "OWNER_AUTHORIZATION_INSTALLED",
-        "armed": False,
-        "authorization_dir": str(path),
-    }
+def check_run_state(settings):
+    """Read-only lost-state check. The external config receipt cannot rearm a run."""
+    directory, receipt = settings.directory, settings.receipt
+    marker = directory / "live-run.json"
+    if receipt.exists():
+        owner_file(receipt)
+        if not marker.is_file() or not (directory / "agent/state.sqlite3").is_file():
+            raise Halt("owner run was already bound; missing execution state cannot be reset")
+        artifact = json.loads(owner_file(marker).read_text())
+        if json.loads(receipt.read_text()) != {"marker_hash": digest(artifact)}:
+            raise Halt("owner run state binding changed")
+        policy = artifact.get("policy", {})
+        expected = create_policy(
+            settings.config,
+            settings.risk,
+            policy.get("account_digest"),
+            settings.options,
+            owner_config_hash=settings.file_hash,
+        )
+        if policy != expected:
+            raise Halt("LIVE run account/code/configuration changed; never replay")
+        if settings.account_sha256 and policy.get("account_digest") != settings.account_sha256:
+            raise Halt("owner run account differs from configured account pin")
+    elif marker.exists() or (directory.exists() and any(directory.iterdir())):
+        raise Halt("LIVE one-shot requires isolated fresh state or its existing config receipt")
 
 
-class OwnerGrant:
+class OwnerPolicy:
     def __init__(
         self,
         artifact,
@@ -151,104 +230,71 @@ class OwnerGrant:
         options,
         clock,
         simulation=False,
-        public_key=None,
+        settings=None,
         permission_reader=None,
     ):
         self.artifact, self.state, self.config, self.risk = artifact, state, config, risk
         self.account_digest, self.options, self.clock = account_digest, options, clock
-        self.simulation, self.public_key = simulation, public_key
+        self.simulation, self.settings = simulation, settings
         self.permission_reader = permission_reader
 
-    @classmethod
-    def load(cls, directory, **kwargs):
-        root = Path(directory).resolve()
-        info = root.lstat()
-        if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077:
-            raise Halt("owner authorization directory must have mode 0700")
-        artifact = json.loads(owner_file(root / "authorization.json").read_text())
-        key = owner_file(root / "owner-public.pem")
-        return cls(artifact, public_key=key, **kwargs)
-
     def validate(self):
-        artifact = self.artifact
-        policy = artifact.get("policy", {})
-        if self.simulation:
-            if (
-                set(artifact) != {"policy", "actor"}
-                or artifact["actor"] != "SIMULATED_POLICY_OWNER"
-            ):
-                raise Halt("invalid simulated standing authorization")
-        else:
-            if set(artifact) != {"policy", "signature", "key_sha256"} or not self.public_key:
-                raise Halt("owner standing authorization setup required")
-            if (
-                hashlib.sha256(owner_file(self.public_key).read_bytes()).hexdigest()
-                != artifact["key_sha256"]
-            ):
-                raise Halt("owner public-key pin changed")
-            verify_signature(policy, artifact["signature"], self.public_key)
-        expected = request_policy(
-            self.config, self.risk, self.account_digest, self.options, self.clock, self.simulation
+        if not self.simulation:
+            if type(self.settings) is not LocalSettings:
+                raise Halt("explicit local owner configuration required")
+            self.settings.validate()
+            check_run_state(self.settings)
+            marker = self.settings.directory / "live-run.json"
+            if json.loads(owner_file(marker).read_text()) != self.artifact:
+                raise Halt("owner run context changed")
+        actor = "SIMULATED_POLICY_OWNER" if self.simulation else "LOCAL_OWNER"
+        if set(self.artifact) != {"policy", "actor"} or self.artifact["actor"] != actor:
+            raise Halt("invalid local owner execution policy")
+        policy = self.artifact["policy"]
+        expected = create_policy(
+            self.config,
+            self.risk,
+            self.account_digest,
+            self.options,
+            self.clock,
+            self.simulation,
+            self.settings.file_hash if self.settings else None,
         )
-        for name in (
-            "version",
-            "account_digest",
-            "package_hash",
-            "config_hash",
-            "risk_hash",
-            "schema_hash",
-            "state_dir",
-            "symbols",
-            "options",
-            "permissions",
-            "simulation",
-        ):
-            if digest(policy.get(name)) != digest(expected[name]):
-                raise Halt("standing authorization context changed: " + name)
-        if (
-            set(policy) != set(expected)
-            or not isinstance(policy.get("grant_id"), str)
-            or not policy["grant_id"]
-        ):
-            raise Halt("invalid standing authorization identity")
-        issued, expires = dec(policy.get("issued_at")), dec(policy.get("expires_at"))
-        if not issued <= dec(self.clock()) < expires or not 0 < expires - issued <= 86400:
-            raise Halt("standing authorization expired or not active")
+        if policy != expected:
+            raise Halt("owner execution account/code/configuration context changed")
         limit = dec(self.options["max_notional"])
         if (
             not 0 < limit <= 1000
+            or type(self.options["hold_seconds"]) is not int
             or not 0 <= self.options["hold_seconds"] <= 21600
+            or type(self.options["polls"]) is not int
             or not 1 <= self.options["polls"] <= 30
         ):
-            raise Halt("standing authorization exceeds one-shot bounds")
-        if self.config.allowed_symbols != ["QQQ", "IWM"]:
-            raise Halt("one-shot universe requires the frozen ordinary QQQ/IWM ETFs")
+            raise Halt("owner execution exceeds one-shot bounds")
+        if not set(self.config.allowed_symbols) <= {"QQQ", "IWM"}:
+            raise Halt("initial one-shot universe permits only ordinary QQQ/IWM ETFs")
         intents = self.state.db.execute("SELECT payload FROM intents").fetchall()
         sides = [json.loads(row[0])["side"] for row in intents]
         if len(sides) > 2 or sides.count("buy") > 1 or sides.count("sell") > 1:
-            raise Halt("standing authorization one-entry/one-exit budget exceeded")
+            raise Halt("owner execution one-entry/one-exit budget exceeded")
         return policy
 
     def check(self, intent, snapshot, baseline, cancel=False):
         self.validate()
         if snapshot.account_key != self.account_digest[:16] or snapshot.options:
-            raise Halt("standing authorization account/asset mismatch")
+            raise Halt("owner execution policy account/asset mismatch")
         if intent.asset != "equity" or intent.symbol not in self.config.allowed_symbols:
-            raise Halt("standing authorization requires allowed equity intent")
+            raise Halt("owner execution policy requires allowed equity intent")
         if cancel:
             return
         if self.permission_reader is not None and self.permission_reader() is not False:
             raise Halt("broker trade approvals enabled or uncertain; owner setup required")
         if not self.simulation and self.permission_reader is None:
             raise Halt("broker approval-setting reader required")
-        if intent.side == "buy" and self.clock() + self.options["hold_seconds"] + 600 >= float(
-            self.artifact["policy"]["expires_at"]
-        ):
-            raise Halt("standing authorization has insufficient time for its bounded exit")
         if intent.side == "buy" and intent.quantity * intent.limit_price > dec(
             self.options["max_notional"]
         ):
-            raise Halt("standing authorization entry capital limit")
+            raise Halt("owner execution policy entry capital limit")
         if intent.side == "sell":
             initial = self.state.db.execute(
                 "SELECT payload FROM one_shot_meta WHERE key='initial'"
@@ -272,13 +318,13 @@ class OwnerGrant:
 
     def verify(self, artifact, binding, simulation=False):
         self.validate()
-        if simulation != self.simulation or artifact.get("grant") != self.artifact:
-            raise Halt("standing decision authorization mismatch")
+        if simulation != self.simulation or artifact.get("policy_context") != self.artifact:
+            raise Halt("owner decision authorization mismatch")
         if (
             binding.get("account_digest") != self.account_digest
             or binding.get("simulation") != self.simulation
         ):
-            raise Halt("standing decision account/mode mismatch")
+            raise Halt("owner decision account/mode mismatch")
         if "payload" in binding:
             if (
                 artifact.get("binding") != binding
@@ -286,17 +332,17 @@ class OwnerGrant:
                 or binding.get("risk") != json.loads(dumps(asdict(self.risk)))
                 or binding.get("schema_hash") != self.validate()["schema_hash"]
             ):
-                raise Halt("standing decision differs from reviewed context")
+                raise Halt("owner decision differs from reviewed context")
         elif binding.get("action") != "cancel" or artifact.get("binding") != binding:
-            raise Halt("standing cancellation differs from exact known order")
+            raise Halt("owner cancellation differs from exact known order")
 
 
 class StandingLifecycle(SupervisedLifecycle):
     """Authorization specialization only; durable review/place/cancel/fills stay in core."""
 
     def __init__(self, state, adapter, config, risk, run, fence, clock, guard):
-        if type(guard) is not OwnerGrant or guard.simulation != adapter.is_simulation:
-            raise Halt("production controller requires an exact owner standing guard")
+        if type(guard) is not OwnerPolicy or guard.simulation != adapter.is_simulation:
+            raise Halt("production controller requires an exact local owner guard")
         self.guard = guard
         guard.validate()
         super().__init__(state, adapter, config, risk, run, fence, clock)
@@ -347,7 +393,7 @@ class StandingLifecycle(SupervisedLifecycle):
             self.state.db.execute("SELECT packet FROM plans WHERE key=?", (key,)).fetchone()[0]
         )["binding"]
         return super().execute(
-            key, intent, {"grant": self.guard.artifact, "binding": binding}, self.guard
+            key, intent, {"policy_context": self.guard.artifact, "binding": binding}, self.guard
         )
 
     def cancel(self, key, intent, artifact=None):
@@ -361,5 +407,5 @@ class StandingLifecycle(SupervisedLifecycle):
             "expires": self.clock() + 30,
         }
         return super().cancel(
-            key, intent, {"grant": self.guard.artifact, "binding": binding}, self.guard
+            key, intent, {"policy_context": self.guard.artifact, "binding": binding}, self.guard
         )

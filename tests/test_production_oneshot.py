@@ -1,79 +1,46 @@
-"""Production controller, signed owner setup and real wire encoding with HTTP replaced."""
+"""Production controller, local owner configuration and real wire encoding with HTTP replaced."""
 
-import hashlib
 import io
 import json
-import subprocess
 import time
 
 import pytest
 
-from tradeagent.execution_policy import install_authorization, live_config, request_policy
-from tradeagent.model import Halt, Risk
+from tradeagent.execution_policy import load_live_config
+from tradeagent.model import Halt
 from tradeagent.oneshot import paper_snapshot, run_live
 from tradeagent.schema import Contracts
 from tradeagent.simulator import SimClock, SimulatedMCP
 from tradeagent.standalone_mcp import ReadOnlyMCP, StandaloneMCP, TransientReadFailure
-from tradeagent.state import dumps
 
 
-def signed_mock_runtime(tmp_path, monkeypatch, scenario="full_fill", approval=False):
-    """Test-only key/account. Every HTTPS connection is replaced before invocation."""
+def owner_mock_runtime(
+    tmp_path,
+    monkeypatch,
+    scenario="full_fill",
+    approval=False,
+    review_approval=False,
+    exit_scenario="full_fill",
+):
+    """Test-only account/configuration. Every HTTPS connection is replaced before invocation."""
     clock = SimClock()
     monkeypatch.setattr(time, "time", clock)
     monkeypatch.setattr("tradeagent.oneshot.wait_for_poll", clock.advance)
-    target, trust = tmp_path / "live-state", tmp_path / "owner-authorization"
-    options = {"max_notional": "25", "hold_seconds": 0, "polls": 2}
-    config = live_config(target, ["QQQ", "IWM"])
+    target, trust = tmp_path / "live-state", tmp_path / "tradeagent.toml"
+    trust.write_text(f'''[live]
+enabled = true
+symbols = ["QQQ", "IWM"]
+state_dir = "{target}"
+max_notional = "25"
+[broker]
+oauth_helper = "{tmp_path / "TEST_ONLY_HELPER"}"
+[risk]
+[exit]
+hold_seconds = 0
+polls = 2
+''')
+    trust.chmod(0o600)
     sim = SimulatedMCP(tmp_path / "mock-broker", clock, scenario, paper_snapshot(clock))
-    request, private, public, signature = (
-        tmp_path / n
-        for n in ("request", "test-only-private.pem", "test-only-public.pem", "signature")
-    )
-    subprocess.run(
-        ["openssl", "genpkey", "-algorithm", "ED25519", "-out", str(private)],
-        check=True,
-        capture_output=True,
-    )
-    subprocess.run(
-        ["openssl", "pkey", "-in", str(private), "-pubout", "-out", str(public)],
-        check=True,
-        capture_output=True,
-    )
-    request.write_text(
-        dumps(
-            request_policy(
-                config,
-                Risk(),
-                __import__("tradeagent.model", fromlist=["digest"]).digest(
-                    sim.account["account_number"]
-                ),
-                options,
-                clock,
-            )
-        )
-    )
-    subprocess.run(
-        [
-            "openssl",
-            "pkeyutl",
-            "-sign",
-            "-inkey",
-            str(private),
-            "-rawin",
-            "-in",
-            str(request),
-            "-out",
-            str(signature),
-        ],
-        check=True,
-        capture_output=True,
-    )
-    for path in (request, public, signature):
-        path.chmod(0o600)
-    install_authorization(
-        request, public, hashlib.sha256(public.read_bytes()).hexdigest(), signature, trust
-    )
     calls = []
     pins = Contracts()
 
@@ -123,8 +90,10 @@ def signed_mock_runtime(tmp_path, monkeypatch, scenario="full_fill", approval=Fa
                     }
                 else:
                     if name == "place_equity_order" and args["side"] == "sell":
-                        sim.scenario = "full_fill"
+                        sim.scenario = exit_scenario
                     output = sim.invoke(name, args)
+                    if name == "review_equity_order" and review_approval:
+                        output["data"]["customer_approval_required"] = True
                 result = {"structuredContent": output, "content": [], "isError": False}
             return Response({"jsonrpc": "2.0", "id": message.get("id"), "result": result})
 
@@ -144,7 +113,7 @@ def signed_mock_runtime(tmp_path, monkeypatch, scenario="full_fill", approval=Fa
     monkeypatch.setattr("tradeagent.broker.Broker", mock_reads)
 
     def invoke():
-        return run_live(target, trust, tmp_path / "TEST_ONLY_HELPER", tmp_path)
+        return run_live(load_live_config(trust))
 
     return invoke, sim, calls, target, trust
 
@@ -153,7 +122,7 @@ def signed_mock_runtime(tmp_path, monkeypatch, scenario="full_fill", approval=Fa
     "scenario", ["full_fill", "partial_fill", "lost_ack", "timeout_before_ack"]
 )
 def test_same_live_controller_and_direct_wire_non_live(tmp_path, monkeypatch, scenario):
-    invoke, sim, calls, target, trust = signed_mock_runtime(tmp_path, monkeypatch, scenario)
+    invoke, sim, calls, target, trust = owner_mock_runtime(tmp_path, monkeypatch, scenario)
     try:
         result = invoke()
         assert result["mode"] == "LIVE"  # production branch; all HTTP replaced
@@ -190,7 +159,7 @@ def test_same_live_controller_and_direct_wire_non_live(tmp_path, monkeypatch, sc
 
 
 def test_live_controller_restart_after_accepted_before_ack(tmp_path, monkeypatch):
-    invoke, sim, calls, target, trust = signed_mock_runtime(
+    invoke, sim, calls, target, trust = owner_mock_runtime(
         tmp_path, monkeypatch, "crash_after_acceptance"
     )
     try:
@@ -209,19 +178,18 @@ def test_live_controller_restart_after_accepted_before_ack(tmp_path, monkeypatch
         sim.close()
 
 
-def test_owner_signature_and_broker_approval_not_bypassed(tmp_path, monkeypatch):
-    invoke, sim, calls, target, trust = signed_mock_runtime(tmp_path, monkeypatch, approval=True)
+def test_local_configuration_and_broker_approval_not_bypassed(tmp_path, monkeypatch):
+    invoke, sim, calls, target, trust = owner_mock_runtime(tmp_path, monkeypatch, approval=True)
     try:
-        assert invoke()["status"] == "HALTED"
+        with pytest.raises(Halt, match="broker trade approvals"):
+            invoke()
         assert not any(
             m["method"] == "tools/call" and m["params"]["name"].startswith(("review_", "place_"))
             for m in calls
         )
-        artifact = json.loads((trust / "authorization.json").read_text())
-        artifact["policy"]["options"]["max_notional"] = "1000"
-        (trust / "authorization.json").write_text(dumps(artifact))
+        trust.write_text(trust.read_text().replace('max_notional = "25"', 'max_notional = "1000"'))
         before = len(calls)
-        with pytest.raises(Halt, match="signature|authorization/configuration"):
+        with pytest.raises(Halt, match="configuration changed"):
             invoke()
         assert len(calls) == before
     finally:
@@ -265,7 +233,7 @@ def test_read_only_contract_validation_ignores_write_drift_only():
 
 
 def test_live_controller_recovers_confirmed_fill_before_ack_without_rebuy(tmp_path, monkeypatch):
-    invoke, sim, calls, target, trust = signed_mock_runtime(tmp_path, monkeypatch)
+    invoke, sim, calls, target, trust = owner_mock_runtime(tmp_path, monkeypatch)
     original = sim._place
 
     def crash_after_fill(name, arguments):
@@ -292,9 +260,7 @@ def test_live_controller_recovers_confirmed_fill_before_ack_without_rebuy(tmp_pa
 
 
 def test_cancel_failure_is_not_replayed_and_state_cannot_be_reset(tmp_path, monkeypatch):
-    invoke, sim, calls, target, trust = signed_mock_runtime(
-        tmp_path, monkeypatch, "cancel_rejected"
-    )
+    invoke, sim, calls, target, trust = owner_mock_runtime(tmp_path, monkeypatch, "cancel_rejected")
     try:
         assert invoke()["status"] == "HALTED"
         assert invoke()["status"] == "HALTED"
@@ -314,28 +280,26 @@ def test_cancel_failure_is_not_replayed_and_state_cannot_be_reset(tmp_path, monk
         sim.close()
 
 
-def test_expired_signed_grant_stops_before_broker_connection(tmp_path, monkeypatch):
-    invoke, sim, calls, target, trust = signed_mock_runtime(tmp_path, monkeypatch)
+def test_disabled_config_stops_before_broker_connection(tmp_path, monkeypatch):
+    invoke, sim, calls, target, trust = owner_mock_runtime(tmp_path, monkeypatch)
     try:
-        sim.clock.advance(86400)
-        with pytest.raises(Halt, match="expired"):
+        trust.write_text(trust.read_text().replace("enabled = true", "enabled = false"))
+        with pytest.raises(Halt, match="live.enabled"):
             invoke()
         assert calls == []
     finally:
         sim.close()
 
 
-def test_grant_requires_authorized_time_for_the_exit_before_entry(tmp_path, monkeypatch):
-    invoke, sim, calls, target, trust = signed_mock_runtime(tmp_path, monkeypatch)
+def test_missing_journal_stops_before_broker_connection(tmp_path, monkeypatch):
+    invoke, sim, calls, target, trust = owner_mock_runtime(tmp_path, monkeypatch)
     try:
-        sim.clock.advance(86400 - 100)
-        result = invoke()
-        assert result["status"] == "HALTED"
-        assert "insufficient time" in result["reason"]
-        assert not any(
-            m["method"] == "tools/call" and m["params"]["name"].startswith(("review_", "place_"))
-            for m in calls
-        )
+        assert invoke()["status"] == "COMPLETED"
+        (target / "agent/state.sqlite3").unlink()
+        before = len(calls)
+        with pytest.raises(Halt, match="cannot be reset"):
+            invoke()
+        assert len(calls) == before
     finally:
         sim.close()
 
@@ -343,7 +307,7 @@ def test_grant_requires_authorized_time_for_the_exit_before_entry(tmp_path, monk
 def test_kill_arriving_after_review_blocks_production_submission(tmp_path, monkeypatch):
     from tradeagent.execution_policy import StandingLifecycle
 
-    invoke, sim, calls, target, trust = signed_mock_runtime(tmp_path, monkeypatch)
+    invoke, sim, calls, target, trust = owner_mock_runtime(tmp_path, monkeypatch)
     original = StandingLifecycle.execute
 
     def stop_before_execute(engine, key, intent):
@@ -356,6 +320,172 @@ def test_kill_arriving_after_review_blocks_production_submission(tmp_path, monke
         assert result["status"] == "HALTED"
         assert not any(
             m["method"] == "tools/call" and m["params"]["name"] == "place_equity_order"
+            for m in calls
+        )
+    finally:
+        sim.close()
+
+
+@pytest.mark.parametrize(
+    "replacement",
+    [
+        ('max_notional = "25"', 'max_notional = "1001"'),
+        ("hold_seconds = 0", "hold_seconds = true"),
+        ("polls = 2", "polls = 0"),
+        ("[risk]", "[risk]\nmax_positions = 6"),
+        ("[risk]", '[risk]\nmin_cash_fraction = "0.10"'),
+        ("[broker]", '[broker]\naccess_token = "DO_NOT_ACCEPT_CREDENTIALS"'),
+        ('symbols = ["QQQ", "IWM"]', 'symbols = ["TQQQ"]'),
+    ],
+)
+def test_invalid_local_policy_stops_before_network(tmp_path, monkeypatch, replacement):
+    invoke, sim, calls, target, config_path = owner_mock_runtime(tmp_path, monkeypatch)
+    try:
+        config_path.write_text(config_path.read_text().replace(*replacement))
+        with pytest.raises(Halt):
+            invoke()
+        assert calls == [] and not target.exists()
+    finally:
+        sim.close()
+
+
+def test_config_changes_after_review_stop_before_submit(tmp_path, monkeypatch):
+    from tradeagent.execution_policy import StandingLifecycle
+
+    invoke, sim, calls, target, config_path = owner_mock_runtime(tmp_path, monkeypatch)
+    original = StandingLifecycle.execute
+
+    def edit_then_submit(engine, key, intent):
+        config_path.write_text(config_path.read_text() + "\n# owner changed configuration\n")
+        return original(engine, key, intent)
+
+    monkeypatch.setattr(StandingLifecycle, "execute", edit_then_submit)
+    try:
+        assert invoke()["status"] == "HALTED"
+        assert not any(
+            m["method"] == "tools/call" and m["params"]["name"] == "place_equity_order"
+            for m in calls
+        )
+    finally:
+        sim.close()
+
+
+def test_broker_exceptional_review_approval_still_blocks(tmp_path, monkeypatch):
+    invoke, sim, calls, target, config_path = owner_mock_runtime(
+        tmp_path, monkeypatch, review_approval=True
+    )
+    try:
+        result = invoke()
+        assert result["status"] == "HALTED" and "approval" in result["reason"]
+        assert not any(
+            m["method"] == "tools/call" and m["params"]["name"] == "place_equity_order"
+            for m in calls
+        )
+    finally:
+        sim.close()
+
+
+def test_live_partial_exit_remains_visible_without_second_exit(tmp_path, monkeypatch):
+    invoke, sim, calls, target, config_path = owner_mock_runtime(
+        tmp_path, monkeypatch, exit_scenario="partial_fill"
+    )
+    try:
+        result = invoke()
+        assert result["status"] == "HALTED" and result["outstanding_incident"]
+        assert not result["flat_bot_position"]
+        assert invoke()["status"] == "HALTED"
+        placements = [
+            m["params"]["arguments"]
+            for m in calls
+            if m["method"] == "tools/call" and m["params"]["name"] == "place_equity_order"
+        ]
+        assert [p["side"] for p in placements] == ["buy", "sell"]
+    finally:
+        sim.close()
+
+
+def test_installed_entry_script_runs_local_live_and_recovers(tmp_path, monkeypatch, capsys):
+    import runpy
+    import sys
+    from pathlib import Path
+
+    invoke, sim, calls, target, config_path = owner_mock_runtime(tmp_path, monkeypatch)
+    entry = Path(sys.executable).parent / "tradeagent"
+    if not entry.exists():
+        sim.close()
+        pytest.skip("console script checked in isolated wheel installation")
+    monkeypatch.setattr(
+        sys, "argv", [str(entry), "run-once", "--live", "--config", str(config_path)]
+    )
+    try:
+        for _ in range(2):
+            with pytest.raises(SystemExit) as exit_info:
+                runpy.run_path(str(entry), run_name="__main__")
+            assert exit_info.value.code == 0
+            result = json.loads(capsys.readouterr().out)
+            assert result["mode"] == "LIVE" and result["status"] == "COMPLETED"
+            assert result["flat_bot_position"] and result["cash_reconciled"]
+        assert (
+            sum(
+                m["method"] == "tools/call" and m["params"]["name"] == "place_equity_order"
+                for m in calls
+            )
+            == 2
+        )
+    finally:
+        sim.close()
+
+
+def test_in_memory_policy_cannot_weaken_owner_toml(tmp_path, monkeypatch):
+    invoke, sim, calls, target, config_path = owner_mock_runtime(tmp_path, monkeypatch)
+    settings = load_live_config(config_path)
+    settings.options["max_notional"] = "1000"
+    try:
+        with pytest.raises(Halt, match="differs from TOML"):
+            run_live(settings)
+        assert calls == [] and not target.exists()
+    finally:
+        sim.close()
+
+
+def test_configured_account_mismatch_cannot_place(tmp_path, monkeypatch):
+    invoke, sim, calls, target, config_path = owner_mock_runtime(tmp_path, monkeypatch)
+    config_path.write_text(
+        config_path.read_text().replace("[broker]", '[broker]\naccount_sha256 = "' + "0" * 64 + '"')
+    )
+    try:
+        with pytest.raises(Halt, match="account pin"):
+            invoke()
+        assert not any(
+            m["method"] == "tools/call"
+            and m["params"]["name"].startswith(("review_", "place_", "cancel_"))
+            for m in calls
+        )
+        assert not target.exists()
+    finally:
+        sim.close()
+
+
+def test_local_readiness_never_instantiates_execution_state(tmp_path, monkeypatch):
+    from tradeagent.oneshot_cli import live_check
+
+    invoke, sim, calls, target, config_path = owner_mock_runtime(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        "tradeagent.oneshot_cli.ExternalOAuthToken", lambda *args: lambda: "TEST_ONLY_TOKEN"
+    )
+
+    monkeypatch.setattr("tradeagent.oneshot_cli.Broker", lambda *args: sim)
+    try:
+        result = live_check(settings=load_live_config(config_path))
+        assert result["status"] == "READ_ONLY_READY" and not result["armed"]
+        assert result["real_review_place_cancel_calls"] == 0
+        assert (
+            not target.exists()
+            and not config_path.with_name(config_path.name + ".run.json").exists()
+        )
+        assert not any(
+            m["method"] == "tools/call"
+            and m["params"]["name"].startswith(("review_", "place_", "cancel_"))
             for m in calls
         )
     finally:

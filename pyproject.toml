@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tradeagent"
-version = "0.2.0"
+version = "0.2.1"
 description = "Prospective quantitative strategy research, daily learning, champion/challenger evolution, and durable broker execution."
 readme = "README.md"
 license = "Apache-2.0 AND MIT"
@@ -35,7 +35,7 @@ tradeagent = "tradeagent.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-tradeagent = ["contracts/*.json"]
+tradeagent = ["contracts/*.json", "owner.example.toml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

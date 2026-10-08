@@ -1,0 +1,22 @@
+# Copy outside the package, edit absolute paths, then chmod 600 tradeagent.toml.
+[live]
+enabled = true
+symbols = ["QQQ", "IWM"]
+state_dir = "/absolute/linux/one-shot-state"
+max_notional = "25"
+
+[broker]
+oauth_helper = "/absolute/external/robinhood-mcp-oauth-helper"
+timeout_seconds = 20
+# Optional account pin: use the full digest from live-check before the first run.
+# account_sha256 = "OWNER_VERIFIED_ACCOUNT_SHA256"
+
+[risk]
+max_positions = 5
+max_position_fraction = "0.20"
+max_new_exposure_fraction = "0.10"
+min_cash_fraction = "0.20"
+
+[exit]
+hold_seconds = 3600
+polls = 3
