@@ -14,7 +14,7 @@ from an existing SHADOW environment:
 ```bash
 python3 -m venv ~/tradeagent-owner-venv
 source ~/tradeagent-owner-venv/bin/activate
-pip install /absolute/path/tradeagent-0.2.1-py3-none-any.whl
+pip install /absolute/path/tradeagent-0.2.2-py3-none-any.whl
 umask 077
 mkdir -p ~/.config/tradeagent
 cd ~/.config/tradeagent
@@ -49,20 +49,47 @@ max_position_fraction = "0.20"
 max_new_exposure_fraction = "0.10"
 min_cash_fraction = "0.20"
 
+[entry]
+order_type = "market"
+dollar_amount = "5"
+
 [exit]
-hold_seconds = 3600
+order_type = "market"
+hold_seconds = 30
 polls = 3
+session_buffer_seconds = 60
 ```
 
-The initial universe may be a nonempty subset of the ordinary QQQ/IWM ETFs.
-One-shot capital defaults to $25, with an absolute software ceiling of $1,000;
-changing it is an explicit owner configuration choice. There is no leverage,
-shorting, options, fractional-share fallback or automatic capital increase.
-The existing risk engine can impose a smaller budget. If no whole share fits,
-the command returns NO_TRADE. At current prices the $25 default may prevent any entry.
-Position/risk settings may tighten the listed production ceilings but cannot weaken
-them. Hold time is 0–21,600 seconds and polls are 1–30; unknown fields and malformed,
-nonprivate or disabled configurations halt before execution.
+The owner chooses `live.symbols`; there is no QQQ/IWM/SPY whitelist. LIVE requires
+current US tradability metadata and an eligible authenticated account. Fractional
+entries additionally require the account-specific `fractional_tradability` result.
+The example is a $5 dollar-based market buy, one entry and one exact quantity exit,
+with a strict configured $25 entry ceiling. Change the explicit amount to `"10"`
+for a $10 test. There is no automatic capital increase, leverage or short selling.
+Risk settings still enforce position, exposure, cash reserve, spread, depth,
+daily loss and turnover limits, and may reduce the available budget. The runner
+rejects a requested amount that exceeds the budget; it does not silently resize it.
+
+The official MCP supports dollar amounts only for regular-hours market orders.
+A dollar entry must be at least $1 with cent precision. Fractional quantities must
+have at most six decimal places and also require regular-hours market orders.
+A quantity entry replaces `dollar_amount` with `quantity = "0.02"` (fractional market)
+or `quantity = "1"` (whole market). A whole-share limit entry uses `order_type = "limit"`
+and an explicit `limit_price = "..."`; the fresh-quote and whole-cent price gates still
+apply. Exactly one sizing field is accepted. An omitted `[entry]` retains the existing
+budget-sized whole-share limit behavior. Fractional/dollar entries require
+`exit.order_type = "market"`; whole-share exits may use market or limit.
+No requested buy quantity is guessed from dollars for ownership or reconciliation.
+The dollar amount and actual executed notional are separate journal/report fields.
+Market quantity entries reserve the configured quote tolerance in their risk budget;
+a market order cannot guarantee its fill price. Dollar orders are bounded by the
+submitted dollar instruction. Any actual entry above `max_notional` is reported as
+an incident after attempting the single exit, never as successful completion.
+
+Capital, holding duration, poll count and session buffer are owner settings with
+positive/finite validation, rather than hardcoded $1,000, six-hour or ETF restrictions.
+The current position/risk settings may tighten the listed production ceilings.
+Unknown fields, disabled LIVE, invalid combinations or nonprivate files halt.
 
 The official broker must expose exactly one active agent-accessible account.
 `live-check` reports its complete `account_sha256` digest without its account number.
@@ -84,11 +111,11 @@ tradeagent run-once --live --config tradeagent.toml
 ```
 
 `live-check` uses a transport incapable of review/place/cancel. It checks installed
-contracts, fresh account/market state, configured account, whole-share feasibility,
+contracts, fresh account/market state, configured account, requested entry feasibility,
 broker trade-approval settings and existing run binding. READ_ONLY_READY means the
 observed read-only prerequisites passed, not that an order has been submitted or
 will fill. LIVE BLOCKED includes actual blockers, including closed/late session,
-insufficient whole-share capital, unknown orders, authentication or schema errors.
+insufficient entry budget, unknown orders, authentication or schema errors.
 An enabled application configuration does not change broker approval settings.
 Broker-required customer approvals and exceptional review/placement approvals halt;
 the owner must resolve those with Robinhood. No local flag impersonates approval.
@@ -109,17 +136,35 @@ state directory. These are durable recovery receipts, not signatures or separate
 owner setup. Preserve the config, receipts and journal together. Repeating the
 same LIVE command resumes/reconciles that run and never creates a second entry.
 Missing markers/journal, changed config/package/contracts/account or unexplained
-positions halt. Do not delete state to rearm; a new one-shot requires an explicitly
-new config file and fresh isolated state path, after resolving the previous run.
+positions halt. Do not delete state to rearm. Once the old round trip is closed,
+use the explicit read-only archive operation with the same configuration:
+
+```bash
+tradeagent new-run --config tradeagent.toml
+tradeagent live-check --config tradeagent.toml
+# A separate explicit owner launch is required for any subsequent round trip:
+tradeagent run-once --live --config tradeagent.toml
+```
+
+`new-run` checks the previous durable completion, authenticated account, all order
+identities, exact bot-owned residual, current holdings and cash before moving its
+journal, report and receipt into a private sibling `.history` directory. It refuses
+unfinished or incident runs and uses a stable configuration lock shared with LIVE.
+It never places orders. A crash while archiving fails closed with preserved evidence.
+Each explicitly launched lifecycle remains limited to one entry and one exit.
 
 Pending entries receive bounded polls and at most one durably reserved cancellation
 attempt. Lost acknowledgments are reconciled without resubmission. A partial entry
-exits only confirmed whole shares after the remainder is terminal. A rejected or
+exits only the exact confirmed quantity, including fractional shares, after the
+remainder is terminal. No exit quantity is rounded or derived from buy dollars. A rejected or
 partially filled exit remains a visible incident; the runner never submits another
 exit to hide unresolved exposure. Unknown broker orders always halt safely.
 
-The exit deadline is the earlier of hold time after confirmed fill or ten minutes
-before regular-session close. New exposure needs another minute before that deadline.
+The exit deadline is the earlier of the configured hold time after the latest
+confirmed fill or `session_buffer_seconds` before regular close. The example uses
+30 seconds of holding and a 60-second closing buffer. New exposure requires an
+additional cancellation/poll window of at least one minute. The hold duration is
+an execution-test setting, not a permanent strategy rule.
 The LIVE runner waits while renewing its lease and monitoring ownership/cash.
 Create `KILL` in the configured state directory to stop new exposure and request
 the single risk-reducing exit. Fresh data, broker permissions and risk checks still
@@ -127,7 +172,12 @@ apply to that exit. Host/broker/market availability and fills cannot be guarante
 Do not stop a process holding a position without arranging owner recovery.
 
 Private `report.json`, journal and events record actual order IDs, observed fills,
-fees, positions, cash, exit and P&L when fully closed. LIVE stdout retains status,
+fees, positions, cash, executed notional, weighted execution price, exact residual,
+exit and P&L when fully closed. `COMPLETED` requires both broker orders to be filled
+and fresh final reconciliation. A cancelled partial entry that was fully exited is
+`CLOSED_PARTIAL`; a partial/rejected/unknown exit is `HALTED`, with residual and
+incident evidence. Estimated prices, ACKs and terminal orders without fills are
+never labeled successful real trading. LIVE stdout retains status,
 reason and reconciliation flags. Local incident records require owner attention;
 no remote notification channel or recurring schedule is installed. Real broker
 commissioning is separate from controlled-broker tests.

@@ -6,31 +6,14 @@ from dataclasses import asdict
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from ..model import Halt, Intent, dec
+from ..model import Halt, Intent
 from ..risk import check_state
 from .autonomous import AutonomousCanaryLifecycle, AutonomousPolicyLifecycle
 from .strategy import TestTrendStrategy
 
 
 def intent_from_row(row):
-    payload = json.loads(row["payload"])
-    if set(payload) != {
-        "symbol",
-        "side",
-        "quantity",
-        "limit_price",
-        "type",
-        "time_in_force",
-        "market_hours",
-    } or (
-        payload["type"] != "limit"
-        or payload["time_in_force"] != "gfd"
-        or payload["market_hours"] != "regular_hours"
-    ):
-        raise Halt("recovery requires an exact ordinary equity intent")
-    return Intent(
-        payload["symbol"], payload["side"], dec(payload["quantity"]), dec(payload["limit_price"])
-    )
+    return Intent.from_payload(json.loads(row["payload"]))
 
 
 def run_policy_once(

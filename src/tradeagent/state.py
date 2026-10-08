@@ -186,11 +186,20 @@ class State:
             )
             expected_side = payload["legs"][0]["side"] if "legs" in payload else payload["side"]
             expected_price = payload.get("limit_price", payload.get("price"))
+            from .model import Intent
+
             if (
-                order.get("symbol") != expected_symbol
-                or order.get("side") != expected_side
-                or dec(order.get("quantity")) != dec(payload["quantity"])
-                or (order.get("price") is not None and dec(order["price"]) != dec(expected_price))
+                not Intent.from_payload(payload).matches_order(order)
+                if "legs" not in payload
+                else (
+                    order.get("symbol") != expected_symbol
+                    or order.get("side") != expected_side
+                    or dec(order.get("quantity")) != dec(payload["quantity"])
+                    or (
+                        order.get("price") is not None
+                        and dec(order["price"]) != dec(expected_price)
+                    )
+                )
             ):
                 raise Halt("broker order does not match persisted intent")
             self.update(

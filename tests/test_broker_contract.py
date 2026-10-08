@@ -160,9 +160,19 @@ def test_missing_quotes_rejected(raw):
 
 def test_fills_must_reconcile(raw):
     raw.payloads["get_equity_orders"]["orders"] = [
-        {"id": "fake-order", "state": "filled", "cumulative_quantity": "1", "executions": []}
+        {
+            "id": "fake-order",
+            "symbol": "QQQ",
+            "side": "buy",
+            "type": "limit",
+            "quantity": "1",
+            "price": "500",
+            "state": "filled",
+            "cumulative_quantity": "1",
+            "executions": [],
+        }
     ]
-    with pytest.raises(Halt, match="cumulative fills"):
+    with pytest.raises(Halt, match="fill/order quantities"):
         broker(raw).snapshot(NOW.timestamp())
 
 

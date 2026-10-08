@@ -71,6 +71,8 @@ def test_approved_fake_submission_requires_reconciliation(tmp_path, monkeypatch,
                                 "symbol": "SPY",
                                 "side": "buy",
                                 "quantity": "5.00000000",
+                                "type": "limit",
+                                "cumulative_quantity": "5",
                                 "price": "100.0100",
                                 "state": "filled",
                             }

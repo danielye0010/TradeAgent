@@ -70,7 +70,7 @@ def test_conservative_valid_buy(snap, config):
     "intent,reason",
     [
         (buy(11), "new exposure"),
-        (buy("0.5"), "whole-share"),
+        (buy("0.5"), "fractional shares require"),
         (buy(5, "TSLA"), "not allowed"),
         (Intent("SPY", "sell", D(1), D("99.99")), "short"),
         (Intent("SPY", "buy", D(1), D("100.01"), "crypto"), "not allowed"),
@@ -296,6 +296,9 @@ def test_pending_and_interrupted_recovery(tmp_path, snap, config):
         "symbol": "SPY",
         "side": "buy",
         "quantity": "5",
+        "type": "limit",
+        "price": "100.01",
+        "cumulative_quantity": "0",
         "state": "queued",
     }
     snap.orders = [order]
@@ -303,6 +306,7 @@ def test_pending_and_interrupted_recovery(tmp_path, snap, config):
         state.recover(current, snap)
     assert state.db.execute("SELECT status FROM intents").fetchone()[0] == "pending"
     order["state"] = "filled"
+    order["cumulative_quantity"] = "5"
     state.recover(current, snap)
     assert state.db.execute("SELECT status FROM intents").fetchone()[0] == "filled"
     assert (

@@ -68,6 +68,8 @@ def state_binding(s, economic_only=False):
             "bids": {} if economic_only else s.bids,
             "orders": s.orders,
             "tradable": s.tradable,
+            "fractional_tradable": s.fractional_tradable,
+            "countries": s.countries,
             "options": s.options,
             "option_available": s.option_available,
             "option_basis": s.option_cost_basis,
@@ -152,7 +154,11 @@ class OfficialExecutionAdapter:
         echoed = (
             ("legs", "direction", "type", "quantity", "price", "time_in_force", "market_hours")
             if isinstance(intent, OptionIntent)
-            else ("symbol", "side", "type", "quantity", "limit_price")
+            else tuple(
+                k
+                for k in ("symbol", "side", "type", "quantity", "dollar_amount", "limit_price")
+                if k in payload
+            )
         )
         if any(reviewed.get(k) != payload[k] for k in echoed):
             raise Halt("broker review differs from exact requested payload")
@@ -224,10 +230,16 @@ class OfficialExecutionAdapter:
         ):
             raise Halt("unrecognized or mismatched broker acknowledgment")
         if (
-            order["symbol"] != intent.symbol
-            or order["side"] != intent.side
-            or dec(order["quantity"]) != intent.quantity
-            or dec(order["price"]) != intent.limit_price
+            (not isinstance(intent, OptionIntent) and not intent.matches_order(order))
+            or (
+                isinstance(intent, OptionIntent)
+                and (
+                    order["symbol"] != intent.symbol
+                    or order["side"] != intent.side
+                    or dec(order["quantity"]) != intent.quantity
+                    or dec(order["price"]) != intent.limit_price
+                )
+            )
             or (not isinstance(intent, OptionIntent) and order.get("ref_id") != ref_id)
         ):
             raise Halt("broker acknowledgment differs from approved order")
@@ -570,15 +582,18 @@ class SupervisedLifecycle:
         order = matches[0]
         if any(o["id"] != order["id"] and o.get("state") not in TERMINAL for o in snapshot.orders):
             raise Halt("conflicting/unknown pending broker order during final reconciliation")
-        if (
-            order["symbol"] != intent.symbol
-            or order["side"] != intent.side
-            or dec(order["quantity"]) != intent.quantity
-            or dec(order["price"]) != intent.limit_price
+        if (not isinstance(intent, OptionIntent) and not intent.matches_order(order)) or (
+            isinstance(intent, OptionIntent)
+            and (
+                order["symbol"] != intent.symbol
+                or order["side"] != intent.side
+                or dec(order["quantity"]) != intent.quantity
+                or dec(order["price"]) != intent.limit_price
+            )
         ):
             raise Halt("reconciled order differs from persisted intent")
         cumulative = dec(order.get("cumulative_quantity"))
-        if not 0 <= cumulative <= intent.quantity:
+        if cumulative < 0 or (intent.quantity is not None and cumulative > intent.quantity):
             raise Halt("invalid cumulative fill quantity")
         packet = json.loads(
             self.state.db.execute("SELECT packet FROM plans WHERE key=?", (key,)).fetchone()[0]
@@ -634,7 +649,9 @@ class SupervisedLifecycle:
                 "key": key,
                 "state": order["state"],
                 "filled": str(cumulative),
-                "remaining": str(intent.quantity - cumulative),
+                "remaining": str(intent.quantity - cumulative)
+                if intent.quantity is not None
+                else None,
                 "fees": str(fees),
                 "executions": fills,
                 "order": order,
@@ -654,7 +671,7 @@ class SupervisedLifecycle:
             "status": status,
             "order_id": order["id"],
             "filled": str(cumulative),
-            "remaining": str(intent.quantity - cumulative),
+            "remaining": str(intent.quantity - cumulative) if intent.quantity is not None else None,
             "cash": str(snapshot.cash),
             "nav": str(snapshot.nav),
         }

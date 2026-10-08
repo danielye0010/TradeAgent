@@ -5,6 +5,7 @@ import json
 import os
 import stat
 import time
+from contextlib import contextmanager
 from dataclasses import asdict, dataclass
 from importlib.resources import files
 from pathlib import Path
@@ -100,14 +101,16 @@ def load_live_config(path):
             "max_new_exposure_fraction",
             "min_cash_fraction",
         },
-        "exit": {"hold_seconds", "polls"},
+        "exit": {"hold_seconds", "polls", "order_type", "session_buffer_seconds"},
+        "entry": {"order_type", "dollar_amount", "quantity", "limit_price"},
     }
-    if set(document) != set(allowed):
-        raise Halt("owner TOML requires exactly live, broker, risk and exit sections")
+    if set(document) - set(allowed) or set(allowed) - {"entry"} - set(document):
+        raise Halt("owner TOML requires live, broker, risk and exit sections; entry is optional")
+    document.setdefault("entry", {})
     for name, fields in allowed.items():
         if not isinstance(document[name], dict) or set(document[name]) - fields:
             raise Halt("unknown owner configuration field or credential: " + name)
-    live, broker, limits, exit_policy = (document[k] for k in allowed)
+    live, broker, limits, exit_policy, entry = (document[k] for k in allowed)
     if live.get("enabled") is not True:
         raise Halt("explicit live.enabled = true is required")
 
@@ -123,8 +126,6 @@ def load_live_config(path):
     helper = local_path(broker.get("oauth_helper"), "oauth_helper")
     config = live_config(directory, live.get("symbols"))
     config.validate()
-    if not set(config.allowed_symbols) <= {"QQQ", "IWM"}:
-        raise Halt("initial one-shot universe permits only ordinary QQQ/IWM ETFs")
     defaults = Risk()
     for name in ("max_position_fraction", "max_new_exposure_fraction", "min_cash_fraction"):
         if name in limits:
@@ -142,13 +143,50 @@ def load_live_config(path):
         "max_notional": str(dec(live.get("max_notional", "25"))),
         "hold_seconds": exit_policy.get("hold_seconds", 3600),
         "polls": exit_policy.get("polls", 3),
+        "entry": entry,
+        "exit_order_type": exit_policy.get(
+            "order_type",
+            "market"
+            if entry.get("order_type") == "market" or "dollar_amount" in entry
+            else "limit",
+        ),
+        "session_buffer_seconds": exit_policy.get("session_buffer_seconds", 600),
     }
+    from .model import Intent
+
+    if entry:
+        entry.setdefault("order_type", "market" if "dollar_amount" in entry else "limit")
+        candidate = Intent(
+            config.allowed_symbols[0],
+            "buy",
+            dec(entry["quantity"]) if "quantity" in entry else None,
+            dec(entry["limit_price"]) if "limit_price" in entry else None,
+            order_type=entry["order_type"],
+            dollar_amount=dec(entry["dollar_amount"]) if "dollar_amount" in entry else None,
+        )
+        candidate.validate()
+        if candidate.dollar_amount is not None and candidate.dollar_amount > dec(
+            options["max_notional"]
+        ):
+            raise Halt("configured entry amount exceeds maximum notional")
     if (
-        not 0 < dec(options["max_notional"]) <= 1000
+        options["exit_order_type"] not in {"market", "limit"}
+        or type(options["session_buffer_seconds"]) is not int
+        or options["session_buffer_seconds"] < 0
+    ):
+        raise Halt("invalid exit type/session buffer")
+    if (
+        entry
+        and ("dollar_amount" in entry or ("quantity" in entry and dec(entry["quantity"]) % 1))
+        and options["exit_order_type"] != "market"
+    ):
+        raise Halt("fractional entry requires a market exit")
+    if (
+        not 0 < dec(options["max_notional"])
         or type(options["hold_seconds"]) is not int
-        or not 0 <= options["hold_seconds"] <= 21600
+        or options["hold_seconds"] < 0
         or type(options["polls"]) is not int
-        or not 1 <= options["polls"] <= 30
+        or options["polls"] < 1
     ):
         raise Halt("invalid bounded one-shot capital/exit policy")
     timeout = broker.get("timeout_seconds", 20)
@@ -264,15 +302,13 @@ class OwnerPolicy:
             raise Halt("owner execution account/code/configuration context changed")
         limit = dec(self.options["max_notional"])
         if (
-            not 0 < limit <= 1000
+            not 0 < limit
             or type(self.options["hold_seconds"]) is not int
-            or not 0 <= self.options["hold_seconds"] <= 21600
+            or self.options["hold_seconds"] < 0
             or type(self.options["polls"]) is not int
-            or not 1 <= self.options["polls"] <= 30
+            or self.options["polls"] < 1
         ):
             raise Halt("owner execution exceeds one-shot bounds")
-        if not set(self.config.allowed_symbols) <= {"QQQ", "IWM"}:
-            raise Halt("initial one-shot universe permits only ordinary QQQ/IWM ETFs")
         intents = self.state.db.execute("SELECT payload FROM intents").fetchall()
         sides = [json.loads(row[0])["side"] for row in intents]
         if len(sides) > 2 or sides.count("buy") > 1 or sides.count("sell") > 1:
@@ -291,7 +327,9 @@ class OwnerPolicy:
             raise Halt("broker trade approvals enabled or uncertain; owner setup required")
         if not self.simulation and self.permission_reader is None:
             raise Halt("broker approval-setting reader required")
-        if intent.side == "buy" and intent.quantity * intent.limit_price > dec(
+        if not self.simulation and snapshot.countries.get(intent.symbol) != "US":
+            raise Halt("US equity eligibility unavailable")
+        if intent.side == "buy" and intent.risk_notional(snapshot, self.risk) > dec(
             self.options["max_notional"]
         ):
             raise Halt("owner execution policy entry capital limit")
@@ -409,3 +447,22 @@ class StandingLifecycle(SupervisedLifecycle):
         return super().cancel(
             key, intent, {"policy_context": self.guard.artifact, "binding": binding}, self.guard
         )
+
+
+@contextmanager
+def owner_run_lock(settings):
+    """Stable owner-command lock lives outside the state that new-run archives."""
+    import fcntl
+
+    settings.validate()
+    path = settings.path.with_name(settings.path.name + ".lock")
+    descriptor = os.open(path, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+    try:
+        owner_file(path)
+        try:
+            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError as exc:
+            raise Halt("another owner command holds the configuration lock") from exc
+        yield
+    finally:
+        os.close(descriptor)

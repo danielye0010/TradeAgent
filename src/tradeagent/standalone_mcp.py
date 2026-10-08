@@ -383,7 +383,7 @@ class WireAuthorization:
             ):
                 raise Halt("network placement lacks canary side reservation")
         if args != expected:
-            raise Halt("network payload differs from validated whole-equity intent")
+            raise Halt("network payload differs from validated equity intent")
 
     def __call__(self):
         from .execution_policy import OwnerPolicy

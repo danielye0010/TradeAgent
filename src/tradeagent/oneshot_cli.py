@@ -9,7 +9,7 @@ from pathlib import Path
 from .broker import Broker
 from .execution_policy import check_run_state, load_live_config
 from .model import Config, Halt, Risk, digest
-from .oneshot import atomic_json, choose_entry, run_live, run_paper
+from .oneshot import atomic_json, choose_entry, new_live_run, run_live, run_paper
 from .risk import check_state
 from .schema import Contracts, structural
 from .simulator import SCENARIOS
@@ -128,17 +128,34 @@ def live_check(oauth_helper=None, root=None, timeout=10, settings=None):
                 bounds = session_bounds(
                     datetime.fromtimestamp(time.time(), ZoneInfo("America/New_York")).date()
                 )
-                if not bounds or time.time() >= bounds[1] - 660:
+                if not bounds or time.time() >= bounds[1] - settings.options.get(
+                    "session_buffer_seconds", 600
+                ) - max(60, settings.options["polls"] * 2):
                     result["blockers"].append("Insufficient regular-session exit window")
                 result["will_resume_existing_run"] = settings.receipt.exists()
                 if not snapshot.regular_session:
                     result["blockers"].append("Regular trading session is closed")
                 intent, reasons = choose_entry(
-                    snapshot, config, risk, time.time(), settings.options["max_notional"]
+                    snapshot,
+                    config,
+                    risk,
+                    time.time(),
+                    settings.options["max_notional"],
+                    settings.options.get("entry"),
                 )
                 result["entry_feasible"] = intent is not None
                 result["entry_blockers"] = reasons if intent is None else []
                 result["configured_max_notional"] = settings.options["max_notional"]
+                result["configured_entry"] = settings.options.get("entry")
+                result["candidate_payload"] = intent.payload() if intent else None
+                result["symbol_eligibility"] = {
+                    s: {
+                        "tradable": snapshot.tradable.get(s),
+                        "fractional_tradable": snapshot.fractional_tradable.get(s),
+                        "country": snapshot.countries.get(s),
+                    }
+                    for s in config.allowed_symbols
+                }
                 if intent is None:
                     result["blockers"].extend(reasons)
                 if (settings.directory / "KILL").exists():
@@ -169,6 +186,10 @@ def main(argv=None):
     )
     check.add_argument("--config", type=Path)
     check.add_argument("--output", type=Path)
+    fresh = commands.add_parser(
+        "new-run", help="archive a broker-reconciled completed run; never orders"
+    )
+    fresh.add_argument("--config", type=Path, required=True)
     once = commands.add_parser("run-once", help="one owner-launched entry and automatic exit")
     modes = once.add_mutually_exclusive_group(required=True)
     modes.add_argument("--paper", action="store_true")
@@ -196,6 +217,9 @@ def main(argv=None):
                 args.output.parent.mkdir(parents=True, exist_ok=True)
                 atomic_json(args.output, result)
             code = 0 if result["live_ready"] else 2
+        elif args.command == "new-run":
+            result = new_live_run(load_live_config(args.config))
+            code = 0
         elif args.live:
             if not args.config:
                 raise Halt("LIVE requires --config with explicit live.enabled = true")

@@ -220,5 +220,5 @@ def test_terminal_history_cannot_claim_filled_with_only_partial_executions():
             ],
         }
     ]
-    with pytest.raises(Halt, match="filled equity order has incomplete"):
+    with pytest.raises(Halt, match="filled order has incomplete"):
         Broker(bridge, Config(allowed_symbols=["SPY"]), Risk()).snapshot(NOW.timestamp())

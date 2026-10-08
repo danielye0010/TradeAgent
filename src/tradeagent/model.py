@@ -186,6 +186,8 @@ class Snapshot:
     high_water_nav: Decimal | None = None
     accounting_verified: bool = True
     liquidity: dict[str, dict] = field(default_factory=dict)
+    fractional_tradable: dict[str, bool] = field(default_factory=dict)
+    countries: dict[str, str] = field(default_factory=dict)
 
 
 # Immutable allowance for the observed official equity price-book clock skew.
@@ -210,17 +212,110 @@ def timestamp_fresh(value, now, age, *, future_skew=0):
 class Intent:
     symbol: str
     side: str
-    quantity: Decimal
-    limit_price: Decimal
+    quantity: Decimal | None
+    limit_price: Decimal | None
     asset: str = "equity"
+    order_type: str = "limit"
+    dollar_amount: Decimal | None = None
+
+    def validate(self):
+        if self.side not in {"buy", "sell"} or self.order_type not in {"market", "limit"}:
+            raise Halt("unsupported equity side/order type")
+        if (self.quantity is None) == (self.dollar_amount is None):
+            raise Halt("exactly one quantity or dollar amount is required")
+        if self.quantity is not None:
+            q = dec(self.quantity)
+            if q <= 0 or q != q.quantize(dec("0.000001")):
+                raise Halt("equity quantity must be positive with at most six decimal places")
+            if q != q.to_integral_value() and self.order_type != "market":
+                raise Halt("fractional shares require regular-hours market orders")
+        else:
+            amount = dec(self.dollar_amount)
+            if (
+                self.side != "buy"
+                or self.order_type != "market"
+                or amount < 1
+                or amount != amount.quantize(dec(".01"))
+            ):
+                raise Halt("dollar entry requires market buy, at least $1 and cent precision")
+        if self.order_type == "limit":
+            price = dec(self.limit_price)
+            if price <= 0 or price != price.quantize(dec(".01")):
+                raise Halt("positive whole-cent limit price required")
+        elif self.limit_price is not None:
+            raise Halt("market orders must not carry a limit price")
 
     def payload(self):
-        return {
+        self.validate()
+        result = {
             "symbol": self.symbol,
             "side": self.side,
-            "quantity": str(self.quantity),
-            "type": "limit",
-            "limit_price": str(self.limit_price),
+            "type": self.order_type,
             "time_in_force": "gfd",
             "market_hours": "regular_hours",
         }
+        if self.quantity is not None:
+            result["quantity"] = str(self.quantity)
+        else:
+            result["dollar_amount"] = str(self.dollar_amount)
+        if self.order_type == "limit":
+            result["limit_price"] = str(self.limit_price)
+        return result
+
+    @classmethod
+    def from_payload(cls, payload):
+        intent = cls(
+            payload.get("symbol"),
+            payload.get("side"),
+            dec(payload["quantity"]) if "quantity" in payload else None,
+            dec(payload["limit_price"]) if "limit_price" in payload else None,
+            order_type=payload.get("type"),
+            dollar_amount=dec(payload["dollar_amount"]) if "dollar_amount" in payload else None,
+        )
+        if intent.payload() != payload:
+            raise Halt("recovery requires an exact ordinary equity intent")
+        return intent
+
+    def risk_notional(self, snapshot, risk=None):
+        if self.dollar_amount is not None:
+            return dec(self.dollar_amount)
+        price = (
+            self.limit_price
+            if self.order_type == "limit"
+            else (snapshot.asks[self.symbol] if self.side == "buy" else snapshot.bids[self.symbol])
+        )
+        reserve = (
+            1 + dec(risk.review_price_tolerance_fraction)
+            if risk is not None and self.side == "buy" and self.order_type == "market"
+            else 1
+        )
+        return dec(self.quantity) * dec(price) * reserve
+
+    def matches_order(self, order):
+        if (
+            order.get("symbol") != self.symbol
+            or order.get("side") != self.side
+            or order.get("type") != self.order_type
+        ):
+            return False
+        dollars = order.get("dollar_based_amount")
+        if self.dollar_amount is not None:
+            if not isinstance(dollars, dict) or dollars.get("currency_code") != "USD":
+                return False
+            if dec(dollars.get("amount")) != self.dollar_amount:
+                return False
+        elif dollars is not None or dec(order.get("quantity")) != self.quantity:
+            return False
+        if self.order_type == "limit" and dec(order.get("price")) != self.limit_price:
+            return False
+        cumulative = dec(order.get("cumulative_quantity"))
+        return cumulative >= 0 and (
+            self.quantity is None
+            or (
+                cumulative <= self.quantity
+                and (order.get("state") != "filled" or cumulative == self.quantity)
+            )
+        )
+
+    def remaining(self, cumulative):
+        return str(self.quantity - cumulative) if self.quantity is not None else None

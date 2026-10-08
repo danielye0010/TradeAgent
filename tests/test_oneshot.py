@@ -43,7 +43,7 @@ def test_complete_autonomous_paper_round_trip_and_no_reentry(tmp_path):
 
 def test_partial_entry_cancel_then_exit_only_confirmed_owned_quantity(tmp_path):
     result = run_paper(tmp_path, entry_scenario="partial_fill")
-    assert result["status"] == "COMPLETED"
+    assert result["status"] == "CLOSED_PARTIAL"
     assert result["bought"] == result["sold"] == "1"
     assert result["orders"][0]["state"] == "partially_filled_rest_cancelled"
     assert result["orders"][1]["quantity"] == "1"

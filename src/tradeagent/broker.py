@@ -157,20 +157,9 @@ class Broker:
         orders, fills, ledger, turnover = [], set(), [], Decimal(0)
         day = datetime.fromtimestamp(observed, ZoneInfo("America/New_York")).date()
         for row in orders_by_id.values():
-            order = {
-                k: row.get(k)
-                for k in (
-                    "id",
-                    "ref_id",
-                    "symbol",
-                    "side",
-                    "state",
-                    "type",
-                    "quantity",
-                    "cumulative_quantity",
-                    "price",
-                )
-            }
+            from .options import normalize_order
+
+            order = normalize_order(row)
             if not isinstance(order["state"], str):
                 raise Halt("missing order lifecycle state")
             executed = Decimal(0)
@@ -211,8 +200,6 @@ class Broker:
                     turnover += qty * price
             if executed != dec(row.get("cumulative_quantity")):
                 raise Halt("execution details do not reconcile cumulative fills")
-            if order["state"] == "filled" and executed != dec(row.get("quantity")):
-                raise Halt("filled equity order has incomplete executions")
             # Production reconciliation needs the same fee/execution detail that
             # the simulator already exposes. Never discard it after normalization.
             order["executions"] = rows(row.get("executions"), "executions")
@@ -264,16 +251,19 @@ class Broker:
                 utc_time(q.get("venue_bid_time")),
                 utc_time(q.get("venue_ask_time")),
             )
-        tradability = data(
-            self.bridge.read(
-                "get_equity_tradability",
-                {
-                    "account_number": self.account["account_number"],
-                    "symbols": self.config.allowed_symbols,
-                },
+        all_trade_rows = []
+        for offset in range(0, len(self.config.allowed_symbols), 10):
+            tradability = data(
+                self.bridge.read(
+                    "get_equity_tradability",
+                    {
+                        "account_number": self.account["account_number"],
+                        "symbols": self.config.allowed_symbols[offset : offset + 10],
+                    },
+                )
             )
-        )
-        trade_rows = unique(rows(tradability.get("results"), "tradability"), "symbol")
+            all_trade_rows.extend(rows(tradability.get("results"), "tradability"))
+        trade_rows = unique(all_trade_rows, "symbol")
         if set(trade_rows) != set(self.config.allowed_symbols):
             raise Halt("incomplete tradability coverage")
         tradable = {
@@ -300,6 +290,10 @@ class Broker:
             daily_turnover=turnover,
             account_type=self.account.get("type", "unknown"),
             tradable=tradable,
+            fractional_tradable={
+                s: r.get("fractional_tradability") == "tradable" for s, r in trade_rows.items()
+            },
+            countries={s: r.get("country", "") for s, r in trade_rows.items()},
             bid_times=bid_times,
             ask_times=ask_times,
             regular_session=False,

@@ -97,10 +97,10 @@ def check_order(
         raise Halt("regular session unavailable; no after-hours orders")
     if i.asset not in {"equity", "etf"} or i.symbol not in c.allowed_symbols:
         raise Halt("asset or symbol not allowed")
-    if i.side not in {"buy", "sell"} or dec(i.quantity) <= 0 or dec(i.limit_price) <= 0:
-        raise Halt("invalid order")
-    if i.quantity != i.quantity.to_integral_value():
-        raise Halt("whole-share orders only")
+    i.validate()
+    fractional = i.dollar_amount is not None or i.quantity != i.quantity.to_integral_value()
+    if fractional and s.fractional_tradable.get(i.symbol) is not True:
+        raise Halt("fractional trading eligibility unavailable")
     if s.tradable.get(i.symbol) is not True:
         raise Halt("symbol not tradable")
     book = s.liquidity.get(i.symbol)
@@ -113,7 +113,8 @@ def check_order(
             future_skew=MAX_FUTURE_SKEW_SECONDS,
         )
         or min(dec(book.get("bid_size")), dec(book.get("ask_size"))) < r.min_equity_depth_shares
-        or dec(book.get("ask_size" if i.side == "buy" else "bid_size")) < i.quantity
+        or dec(book.get("ask_size" if i.side == "buy" else "bid_size"))
+        < (i.quantity if i.quantity is not None else i.dollar_amount / dec(s.bids.get(i.symbol)))
     ):
         raise Halt("equity liquidity/depth gate")
     ask, bid = dec(s.asks.get(i.symbol)), dec(s.bids.get(i.symbol))
@@ -128,18 +129,18 @@ def check_order(
         raise Halt("stale bid/ask book")
     if (ask - bid) / s.prices[i.symbol] > dec(r.max_spread_fraction):
         raise Halt("spread limit")
-    if abs(i.limit_price - (ask if i.side == "buy" else bid)) / s.prices[i.symbol] > dec(
-        r.review_price_tolerance_fraction
-    ):
+    if i.order_type == "limit" and abs(
+        i.limit_price - (ask if i.side == "buy" else bid)
+    ) / s.prices[i.symbol] > dec(r.review_price_tolerance_fraction):
         raise Halt("order price differs from current quote")
-    if i.limit_price != i.limit_price.quantize(dec("0.01")):
-        raise Halt("whole-cent limit prices only")
     if dec(cycle_exposure) < 0 or dec(cycle_turnover) < 0 or dec(s.daily_turnover) < 0:
         raise Halt("invalid risk accounting")
     baseline = dec(day_start_nav)
     if baseline <= 0 or (baseline - s.nav) / baseline >= dec(r.daily_loss_halt_fraction):
         raise Halt("daily loss halt")
-    notional = i.quantity * i.limit_price
+    notional = i.risk_notional(s, r)
+    if fractional and i.side == "buy" and notional < 1:
+        raise Halt("fractional entry minimum is $1")
     if s.daily_turnover + dec(cycle_turnover) + notional > s.nav * dec(
         r.max_daily_turnover_fraction
     ):

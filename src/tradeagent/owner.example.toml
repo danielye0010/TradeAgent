@@ -17,6 +17,12 @@ max_position_fraction = "0.20"
 max_new_exposure_fraction = "0.10"
 min_cash_fraction = "0.20"
 
+[entry]
+order_type = "market"
+dollar_amount = "5"
+
 [exit]
-hold_seconds = 3600
+order_type = "market"
+hold_seconds = 30
 polls = 3
+session_buffer_seconds = 60

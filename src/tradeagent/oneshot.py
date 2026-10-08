@@ -37,7 +37,7 @@ def paper_snapshot(clock):
     return s
 
 
-def choose_entry(snapshot, config, risk, now, limit):
+def choose_entry(snapshot, config, risk, now, limit, entry=None):
     """Isolated execution canary, not an alpha signal or research selector."""
     check_state(snapshot, risk, now)
     reasons = []
@@ -59,13 +59,27 @@ def choose_entry(snapshot, config, risk, now, limit):
             snapshot.nav * dec(risk.max_position_fraction),
             max(dec(0), snapshot.cash - snapshot.nav * dec(risk.min_cash_fraction)),
         )
-        quantity = (budget / ask).to_integral_value(rounding="ROUND_FLOOR")
-        if quantity <= 0:
-            reasons.append(
-                f"{symbol}: capital limit cannot buy one whole share; no fractional fallback"
+        if entry:
+            intent = Intent(
+                symbol,
+                "buy",
+                dec(entry["quantity"]) if "quantity" in entry else None,
+                dec(entry["limit_price"]) if "limit_price" in entry else None,
+                order_type=entry["order_type"],
+                dollar_amount=dec(entry["dollar_amount"]) if "dollar_amount" in entry else None,
             )
+            if intent.risk_notional(snapshot, risk) > budget:
+                reasons.append(f"{symbol}: configured entry exceeds available risk/cash budget")
+                continue
+        else:
+            quantity = (budget / ask).to_integral_value(rounding="ROUND_FLOOR")
+            if quantity <= 0:
+                reasons.append(f"{symbol}: configured whole-share budget is insufficient")
+                continue
+            intent = Intent(symbol, "buy", quantity, ask)
+        if config.mode == "LIVE" and snapshot.countries.get(symbol) != "US":
+            reasons.append(f"{symbol}: US equity eligibility unavailable")
             continue
-        intent = Intent(symbol, "buy", quantity, ask)
         try:
             check_order(intent, snapshot, config, risk, now, snapshot.nav)
         except Halt as exc:
@@ -199,10 +213,7 @@ class OneShotRun:
             if (
                 order["id"] in seen
                 or (row["broker_id"] and row["broker_id"] != order["id"])
-                or order["symbol"] != intent.symbol
-                or order["side"] != intent.side
-                or dec(order["quantity"]) != intent.quantity
-                or dec(order["price"]) != intent.limit_price
+                or not intent.matches_order(order)
                 or row["status"] != order["state"]
                 or order["state"] not in TERMINAL
             ):
@@ -211,7 +222,8 @@ class OneShotRun:
             quantity = sum((dec(f["quantity"]) for f in order["executions"]), dec(0))
             if (
                 quantity != dec(order["cumulative_quantity"])
-                or not 0 <= quantity <= intent.quantity
+                or quantity < 0
+                or (intent.quantity is not None and quantity > intent.quantity)
             ):
                 raise Halt("fill detail does not match confirmed cumulative quantity")
             notional = sum(
@@ -252,6 +264,10 @@ class OneShotRun:
             "bought": str(bought),
             "sold": str(sold),
             "known_fees": str(fees),
+            "entry_executed_notional": str(spent),
+            "exit_executed_notional": str(proceeds),
+            "bot_owned_residual": str(bought - sold),
+            "unknown_orders": [],
             "realized_pnl": str(proceeds - spent - fees) if bought == sold and bought > 0 else None,
             "flat_bot_position": bought == sold,
             "unrelated_holdings_unchanged": True,
@@ -284,12 +300,19 @@ class OneShotRun:
             bounds = session_bounds(
                 datetime.fromtimestamp(self.clock(), ZoneInfo("America/New_York")).date()
             )
-            if not bounds or self.clock() >= bounds[1] - 660:
+            if not bounds or self.clock() >= bounds[1] - self.options.get(
+                "session_buffer_seconds", 600
+            ) - max(60, self.options["polls"] * 2):
                 return self.finish("NO_TRADE", reason="insufficient regular-session exit window")
             check_state(initial, self.risk, self.clock())
             self.state.recover(self.run_id, initial)
             intent, reasons = choose_entry(
-                initial, self.config, self.risk, self.clock(), self.options["max_notional"]
+                initial,
+                self.config,
+                self.risk,
+                self.clock(),
+                self.options["max_notional"],
+                self.options.get("entry"),
             )
             if intent is None:
                 return self.finish("NO_TRADE", reason="; ".join(reasons))
@@ -299,7 +322,11 @@ class OneShotRun:
                     "time": self.clock(),
                     "price": str(initial.prices[intent.symbol]),
                     "symbol": intent.symbol,
-                    "quantity": str(intent.quantity),
+                    "quantity": str(intent.quantity) if intent.quantity is not None else None,
+                    "dollar_amount": str(intent.dollar_amount)
+                    if intent.dollar_amount is not None
+                    else None,
+                    "order_type": intent.order_type,
                     "source": "SYNTHETIC_EXECUTION_CANARY"
                     if self.engine.broker.is_simulation
                     else "OWNER_EXECUTION_CANARY",
@@ -315,8 +342,6 @@ class OneShotRun:
             filled = dec(order["cumulative_quantity"])
             if not filled:
                 return self.finish("NO_TRADE", reason="entry terminal without a confirmed fill")
-            if filled != filled.to_integral_value():
-                raise Halt("fractional residual unsupported by whole-share exit risk gate")
             symbol = intent_from_row(entry).symbol
             if (
                 dec(self.get("initial")["positions"].get(symbol, 0)) != 0
@@ -330,7 +355,9 @@ class OneShotRun:
             if not bounds:
                 raise Halt("holding window has no regular session")
             requested_due = fill_time + self.options["hold_seconds"]
-            deadline = min(requested_due, bounds[1] - 600)
+            deadline = min(
+                requested_due, bounds[1] - self.options.get("session_buffer_seconds", 600)
+            )
             self.put("exit_due", deadline)
             if self.kill_switch.exists():
                 reason = "kill_switch_risk_reduction"
@@ -347,13 +374,29 @@ class OneShotRun:
             if self.engine.broker.is_simulation:
                 self.broker.scenario = self.options["exit_scenario"]
             snapshot = self.broker.snapshot()
-            self.submit(Intent(symbol, "sell", filled, snapshot.bids[symbol]))
+            exit_type = self.options.get("exit_order_type", "limit")
+            self.submit(
+                Intent(
+                    symbol,
+                    "sell",
+                    filled,
+                    snapshot.bids[symbol] if exit_type == "limit" else None,
+                    order_type=exit_type,
+                )
+            )
             exits = [r for r in self.rows() if intent_from_row(r).side == "sell"]
         self.settle(exits[0])
         audit = self.audit()
         if not audit["flat_bot_position"]:
             raise Halt("exit terminal but bot-owned exposure remains; no second exit authorized")
-        return self.finish("COMPLETED", **audit)
+        entry_state = next(o["state"] for o in audit["orders"] if o["side"] == "buy")
+        exit_state = next(o["state"] for o in audit["orders"] if o["side"] == "sell")
+        if dec(audit["entry_executed_notional"]) > dec(self.options["max_notional"]):
+            raise Halt(
+                "actual entry exceeded configured notional; exposure closed, review required"
+            )
+        status = "COMPLETED" if entry_state == exit_state == "filled" else "CLOSED_PARTIAL"
+        return self.finish(status, **audit)
 
     def finish(self, status, **extra):
         audit = self.audit()
@@ -520,6 +563,13 @@ def run_paper(
 
 
 def run_live(settings):
+    from .execution_policy import owner_run_lock
+
+    with owner_run_lock(settings):
+        return _run_live(settings)
+
+
+def _run_live(settings):
     """Explicit owner-launched LIVE command; not called by read-only live-check."""
     import time
 
@@ -659,3 +709,68 @@ def run_live(settings):
             atomic_json(selected / "report.json", result)
             state.close()
     return result
+
+
+def new_live_run(settings):
+    """Explicit owner reset only after fresh read-only proof that the old run is closed."""
+    import time
+    from uuid import uuid4
+
+    from .broker import Broker
+    from .execution_policy import check_run_state, owner_file, owner_run_lock
+    from .standalone_mcp import ExternalOAuthToken, ReadOnlyMCP
+
+    with owner_run_lock(settings):
+        check_run_state(settings)
+        if not settings.receipt.exists():
+            raise Halt("no completed owner run to archive")
+        marker = json.loads(owner_file(settings.directory / "live-run.json").read_text())
+        state = State(settings.directory / "agent")
+        try:
+            with state.lock(settings.config.lease_seconds):
+                with ReadOnlyMCP(
+                    ExternalOAuthToken(settings.oauth_helper, Path(__file__).parent),
+                    settings.timeout,
+                ) as bridge:
+                    broker = Broker(bridge, settings.config, settings.risk)
+                    snapshot = broker.snapshot()
+                    if (
+                        digest(broker.account["account_number"])
+                        != marker["policy"]["account_digest"]
+                    ):
+                        raise Halt("archive account differs from owner run")
+                    # Reuse the existing accounting audit without creating any write adapter.
+                    audit = OneShotRun.__new__(OneShotRun)
+                    audit.state, audit.broker, audit.risk, audit.clock = (
+                        state,
+                        broker,
+                        settings.risk,
+                        time.time,
+                    )
+                    if audit.get("finished") not in {"COMPLETED", "CLOSED_PARTIAL", "NO_TRADE"}:
+                        raise Halt("unfinished/incident run cannot be replaced")
+                    evidence = audit.audit()
+                    if not evidence["flat_bot_position"]:
+                        raise Halt("residual bot-owned position prevents a new run")
+                    check_state(snapshot, settings.risk, time.time())
+                    atomic_json(settings.directory / "archive-reconciliation.json", evidence)
+        finally:
+            state.close()
+        archive_root = settings.directory.with_name(settings.directory.name + ".history")
+        archive_root.mkdir(mode=0o700, exist_ok=True)
+        archive = archive_root / str(uuid4())
+        # A crash between these operations leaves the receipt in place and halts safely.
+        settings.directory.rename(archive)
+        settings.receipt.rename(archive / "owner-config.run.json")
+        for parent in {settings.directory.parent, settings.receipt.parent, archive}:
+            descriptor = os.open(parent, os.O_DIRECTORY)
+            try:
+                os.fsync(descriptor)
+            finally:
+                os.close(descriptor)
+        return {
+            "status": "NEW_RUN_READY",
+            "archived_run": str(archive),
+            "real_review_place_cancel_calls": 0,
+            "next_run_requires_explicit_launch": True,
+        }

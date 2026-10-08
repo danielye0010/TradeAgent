@@ -202,6 +202,8 @@ def normalize_order(row, asset="equity"):
         )
         result = {k: row.get(k) for k in required}
         result["ref_id"] = row.get("ref_id")
+        result["dollar_based_amount"] = row.get("dollar_based_amount")
+        result["average_price"] = row.get("average_price")
         fills = rows(row.get("executions"), "executions")
     else:
         legs = rows(row.get("legs"), "option legs")
@@ -230,16 +232,30 @@ def normalize_order(row, asset="equity"):
     if (
         not result.get("id")
         or result.get("side") not in {"buy", "sell"}
-        or result.get("type") != "limit"
+        or result.get("type") not in ({"market", "limit"} if asset == "equity" else {"limit"})
         or not result.get("state")
-        or dec(result.get("quantity")) <= 0
-        or dec(result.get("price")) <= 0
+        or (result.get("quantity") is not None and dec(result["quantity"]) <= 0)
+        or (result.get("type") == "limit" and dec(result.get("price")) <= 0)
     ):
         raise Halt("malformed/unsupported broker order")
     cumulative = dec(result["cumulative_quantity"])
-    if not 0 <= cumulative <= dec(result["quantity"]):
+    dollars = result.get("dollar_based_amount")
+    if dollars is not None:
+        if (
+            asset != "equity"
+            or result["type"] != "market"
+            or result["side"] != "buy"
+            or dollars.get("currency_code") != "USD"
+            or dec(dollars.get("amount")) < 1
+        ):
+            raise Halt("invalid dollar order")
+    elif result["quantity"] is None:
+        raise Halt("missing requested quantity and dollar amount")
+    if cumulative < 0 or (result["quantity"] is not None and cumulative > dec(result["quantity"])):
         raise Halt("invalid cumulative fill quantity")
-    if result["state"] == "filled" and cumulative != dec(result["quantity"]):
+    if result["state"] == "filled" and (
+        cumulative <= 0 or (dollars is None and cumulative != dec(result["quantity"]))
+    ):
         raise Halt("filled order has incomplete executions")
     if sum((dec(f["quantity"]) for f in fills), dec(0)) != cumulative:
         raise Halt("fill/order quantities do not reconcile")
@@ -248,7 +264,17 @@ def normalize_order(row, asset="equity"):
         if dec(f["quantity"]) <= 0 or dec(f["price"]) <= 0:
             raise Halt("invalid execution")
         utc_time(f["timestamp"])
-    result.update(asset=asset, executions=fills, fees=row.get("fees"))
+    notional = sum((dec(f["quantity"]) * dec(f["price"]) for f in fills), dec(0))
+    result.update(
+        asset=asset,
+        executions=fills,
+        fees=row.get("fees"),
+        executed_notional=str(notional),
+        execution_average_price=str(notional / cumulative) if cumulative else None,
+    )
+    if asset == "equity" and result["average_price"] is not None and cumulative:
+        if abs(dec(result["average_price"]) - notional / cumulative) > dec(".01"):
+            raise Halt("broker average price disagrees with execution details")
     return result
 
 

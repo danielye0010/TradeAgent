@@ -41,6 +41,8 @@ polls = 2
 ''')
     trust.chmod(0o600)
     sim = SimulatedMCP(tmp_path / "mock-broker", clock, scenario, paper_snapshot(clock))
+    sim.initial.countries = {s: "US" for s in sim.initial.tradable}
+    sim.initial.fractional_tradable = {s: True for s in sim.initial.tradable}
     calls = []
     pins = Contracts()
 
@@ -128,7 +130,9 @@ def test_same_live_controller_and_direct_wire_non_live(tmp_path, monkeypatch, sc
         assert result["mode"] == "LIVE"  # production branch; all HTTP replaced
         expected = (
             "COMPLETED"
-            if scenario in {"full_fill", "partial_fill"}
+            if scenario == "full_fill"
+            else "CLOSED_PARTIAL"
+            if scenario == "partial_fill"
             else "NO_TRADE"
             if scenario == "lost_ack"
             else "HALTED"
@@ -141,9 +145,9 @@ def test_same_live_controller_and_direct_wire_non_live(tmp_path, monkeypatch, sc
             for m in calls
             if m["method"] == "tools/call" and m["params"]["name"] == "place_equity_order"
         ]
-        assert len(writes) == (2 if expected == "COMPLETED" else 1)
+        assert len(writes) == (2 if expected in {"COMPLETED", "CLOSED_PARTIAL"} else 1)
         assert len({m["params"]["arguments"]["ref_id"] for m in writes}) == len(writes)
-        if expected == "COMPLETED":
+        if expected in {"COMPLETED", "CLOSED_PARTIAL"}:
             assert result["flat_bot_position"] and result["cash_reconciled"]
             assert result["final_positions"] == {}
         if scenario == "partial_fill":
@@ -329,13 +333,13 @@ def test_kill_arriving_after_review_blocks_production_submission(tmp_path, monke
 @pytest.mark.parametrize(
     "replacement",
     [
-        ('max_notional = "25"', 'max_notional = "1001"'),
+        ('max_notional = "25"', 'max_notional = "0"'),
         ("hold_seconds = 0", "hold_seconds = true"),
         ("polls = 2", "polls = 0"),
         ("[risk]", "[risk]\nmax_positions = 6"),
         ("[risk]", '[risk]\nmin_cash_fraction = "0.10"'),
         ("[broker]", '[broker]\naccess_token = "DO_NOT_ACCEPT_CREDENTIALS"'),
-        ('symbols = ["QQQ", "IWM"]', 'symbols = ["TQQQ"]'),
+        ('symbols = ["QQQ", "IWM"]', 'symbols = ["qqq"]'),
     ],
 )
 def test_invalid_local_policy_stops_before_network(tmp_path, monkeypatch, replacement):
