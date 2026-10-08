@@ -211,3 +211,26 @@ def test_pagination_collects_all_pages(raw):
 
     raw.read = pages
     assert [row["symbol"] for row in b.paged("get_equity_positions", "positions")] == ["SPY", "QQQ"]
+
+
+def test_independent_quote_and_depth_snapshots_use_coherent_book(raw):
+    # A newer L2 inside market need not equal an earlier top-of-book quote.
+    book = raw.payloads["get_equity_price_book"]["books"][0]
+    book["updated_at"] = (NOW + timedelta(seconds=1)).isoformat()
+    book["bids"][0]["price"] = "100.00"
+    book["asks"][0]["price"] = "100.02"
+    result = broker(raw).snapshot((NOW + timedelta(seconds=1)).timestamp())
+    assert result.bids["SPY"] == D("100.00") and result.asks["SPY"] == D("100.02")
+    assert result.bid_times["SPY"] == result.ask_times["SPY"] == result.liquidity["SPY"]["asof"]
+    assert result.quote_times["SPY"] == (NOW - timedelta(seconds=1)).timestamp()
+
+
+@pytest.mark.parametrize("source", ["quote", "book"])
+def test_coherent_book_does_not_mask_stale_quote_or_depth(raw, source):
+    old = (NOW - timedelta(seconds=121)).isoformat()
+    if source == "quote":
+        raw.payloads["get_equity_quotes"]["results"][0]["quote"]["venue_bid_time"] = old
+    else:
+        raw.payloads["get_equity_price_book"]["books"][0]["updated_at"] = old
+    with pytest.raises(Halt, match="stale/future"):
+        broker(raw).snapshot(NOW.timestamp())

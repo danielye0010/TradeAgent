@@ -7,7 +7,7 @@ import pytest
 
 from tradeagent.cli import main
 from tradeagent.model import Config, Halt, Risk, dec
-from tradeagent.oneshot import PaperRun, choose_entry, paper_snapshot, run_paper
+from tradeagent.oneshot import OneShotRun, choose_entry, paper_snapshot, run_paper
 from tradeagent.oneshot_cli import live_check
 from tradeagent.simulator import SimClock, SimulatedMCP
 from tradeagent.state import State
@@ -126,7 +126,7 @@ def test_kill_blocks_entry_but_allows_recovered_position_exit(tmp_path, monkeypa
     blocked = run_paper(tmp_path / "blocked", kill_switch=kill)
     assert blocked["status"] == "NO_TRADE" and orders(tmp_path / "blocked") == 0
     kill.unlink()
-    original = PaperRun.advance
+    original = OneShotRun.advance
 
     def interrupt(self, seconds):
         if seconds >= 3600:
@@ -134,7 +134,7 @@ def test_kill_blocks_entry_but_allows_recovered_position_exit(tmp_path, monkeypa
         return original(self, seconds)
 
     with monkeypatch.context() as patch:
-        patch.setattr(PaperRun, "advance", interrupt)
+        patch.setattr(OneShotRun, "advance", interrupt)
         with pytest.raises(SystemExit):
             run_paper(tmp_path / "held", kill_switch=kill)
     kill.touch()
@@ -289,11 +289,19 @@ def test_current_read_contract_success_does_not_imply_live_readiness(monkeypatch
         def __exit__(self, *args):
             pass
 
+        def read(self, name, args):
+            return {
+                "data": {
+                    "setting": {"account_number": "SYNTHETIC", "human_must_approve_trades": False}
+                }
+            }
+
     monkeypatch.setattr("tradeagent.oneshot_cli.ExternalOAuthToken", lambda *args: object())
     monkeypatch.setattr("tradeagent.oneshot_cli.ReadOnlyPreflightMCP", ReadFake)
     attempts = []
 
-    def current_snapshot(*args):
+    def current_snapshot(broker):
+        broker.account = {"account_number": "SYNTHETIC"}
         attempts.append(1)
         if len(attempts) <= quote_failures:
             raise Halt("quote/depth disagreement; refresh required")

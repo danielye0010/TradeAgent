@@ -16,7 +16,7 @@ from ..calendar import session_bounds
 from ..model import Halt
 from ..research.domain import Bar, iso, timestamp
 from ..schema import structural
-from ..standalone_mcp import ExternalOAuthToken, StandaloneMCP
+from ..standalone_mcp import ExternalOAuthToken, ReadOnlyMCP
 
 SYMBOLS = ("QQQ", "IWM", "SPY")
 URL = "https://data.alpaca.markets/v2/stocks/snapshots?symbols=QQQ%2CIWM%2CSPY&feed=sip"
@@ -239,7 +239,7 @@ def open_provider(provider, repo, oauth_helper=None):
         yield Alpaca(access.load())
     else:
         helper = oauth_helper or Path.home() / ".local/libexec/robinhood-mcp-oauth-helper"
-        with StandaloneMCP(ExternalOAuthToken(helper, repo)) as bridge:
+        with ReadOnlyMCP(ExternalOAuthToken(helper, repo)) as bridge:
             yield Robinhood(bridge)
 
 

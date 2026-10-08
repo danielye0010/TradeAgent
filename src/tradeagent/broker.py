@@ -107,8 +107,14 @@ class Broker:
             cursors.add(cursor)
         raise Halt("broker pagination exceeded safety bound; state incomplete")
 
-    def snapshot(self, now=None):
-        observed = datetime.now(timezone.utc).timestamp() if now is None else now
+    def snapshot(self, now=None, clock=None):
+        observed = (
+            clock()
+            if clock is not None
+            else datetime.now(timezone.utc).timestamp()
+            if now is None
+            else now
+        )
         self.accounts()
         p = data(
             self.bridge.read("get_portfolio", {"account_number": self.account["account_number"]})
@@ -178,7 +184,14 @@ class Broker:
                     raise Halt("invalid fill")
                 executed += qty
                 ts = utc_time(fill.get("timestamp"))
-                if ts > observed:
+                fill_receipt = (
+                    clock()
+                    if clock is not None
+                    else datetime.now(timezone.utc).timestamp()
+                    if now is None
+                    else now
+                )
+                if ts > fill_receipt:
                     raise Halt("future fill timestamp")
                 ledger.append(
                     {
@@ -245,6 +258,8 @@ class Broker:
                 )
             quote_times[symbol], prices[symbol] = max(candidates, key=lambda v: v[0])
             bids[symbol], asks[symbol] = dec(q.get("bid_price")), dec(q.get("ask_price"))
+            if bids[symbol] <= 0 or asks[symbol] < bids[symbol]:
+                raise Halt("invalid/crossed equity quote")
             bid_times[symbol], ask_times[symbol] = (
                 utc_time(q.get("venue_bid_time")),
                 utc_time(q.get("venue_ask_time")),
@@ -312,14 +327,36 @@ class Broker:
                 books[symbol] = book
         if set(books) != set(self.config.allowed_symbols):
             raise Halt("equity depth coverage incomplete")
+        validated = (
+            clock()
+            if clock is not None
+            else datetime.now(timezone.utc).timestamp()
+            if now is None
+            else now
+        )
         for symbol, book in books.items():
             bid_rows, ask_rows = rows(book.get("bids"), "bids"), rows(book.get("asks"), "asks")
             if not bid_rows or not ask_rows:
                 raise Halt("empty equity book")
             best_bid = max(dec(b["price"]) for b in bid_rows)
             best_ask = min(dec(a["price"]) for a in ask_rows)
-            if best_bid != snapshot.bids[symbol] or best_ask != snapshot.asks[symbol]:
-                raise Halt("quote/depth disagreement; refresh required")
+            # Quotes and L2 are independently timestamped observations. Do not
+            # demand price equality across different instants. Execution prices
+            # and executable size must come from the SAME coherent book.
+            completed = validated
+            book_time = utc_time(book.get("updated_at"))
+            if best_bid <= 0 or best_ask < best_bid:
+                raise Halt("invalid/crossed equity book")
+            for stamp in (snapshot.bid_times[symbol], snapshot.ask_times[symbol], book_time):
+                if not timestamp_fresh(
+                    stamp,
+                    completed,
+                    self.risk.max_data_age_seconds,
+                    future_skew=MAX_FUTURE_SKEW_SECONDS,
+                ):
+                    raise Halt("stale/future quote or equity book")
+            snapshot.bids[symbol], snapshot.asks[symbol] = best_bid, best_ask
+            snapshot.bid_times[symbol] = snapshot.ask_times[symbol] = book_time
             if any(
                 type(row.get("quantity")) is not int or row["quantity"] < 0
                 for row in bid_rows + ask_rows
@@ -349,7 +386,6 @@ class Broker:
         # A market update produced while these reads were in flight is not future
         # data. Keep account asof at request start; validate returned market data
         # at completion, including the existing bounded provider clock allowance.
-        validated = datetime.now(timezone.utc).timestamp() if now is None else now
         snapshot.regular_session = regular_session(validated) and all(
             timestamp_fresh(
                 utc_time(quotes[s]["venue_last_trade_time"]),

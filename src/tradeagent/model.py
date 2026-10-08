@@ -49,8 +49,8 @@ class Config:
             raise Halt("invalid execution mode")
         if type(self.live_enabled) is not bool or type(self.supervised_enabled) is not bool:
             raise Halt("mode flags must be booleans")
-        if self.live_enabled or self.mode == "LIVE":
-            raise Halt("LIVE mode is disabled")
+        if self.live_enabled != (self.mode == "LIVE"):
+            raise Halt("LIVE requires explicit enablement and matching mode")
         if self.mode == "SUPERVISED" and not self.supervised_enabled:
             raise Halt("SUPERVISED needs explicit configuration enablement")
         if not 0 < dec(self.target_fraction) <= 1:

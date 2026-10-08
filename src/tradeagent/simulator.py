@@ -214,6 +214,7 @@ class SimulatedMCP:
             body = {k: args[k] for k in ("symbol", "side", "type", "quantity", "limit_price")}
             body.update(
                 order_checks={},
+                customer_approval_required=False,
                 quote_data=self._quote(args["symbol"]),
                 market_data_disclosure="SIMULATED QUOTE; synthetic data; no real broker order.",
             )

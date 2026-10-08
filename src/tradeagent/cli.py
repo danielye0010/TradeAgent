@@ -18,7 +18,7 @@ from .research.store import Experience
 
 def main(argv=None):
     supplied = list(sys.argv[1:] if argv is None else argv)
-    if supplied and supplied[0] in {"live-check", "run-once"}:
+    if supplied and supplied[0] in {"live-check", "run-once", "prepare-once", "setup-once"}:
         from .oneshot_cli import main as oneshot_main
 
         return oneshot_main(supplied)
@@ -50,6 +50,8 @@ def main(argv=None):
             "replay-history",
             "live-check",
             "run-once",
+            "prepare-once",
+            "setup-once",
         ],
     )
     parser.add_argument("--state-dir", type=Path, default=Path("data/research"))

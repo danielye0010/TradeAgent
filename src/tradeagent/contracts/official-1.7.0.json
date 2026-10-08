@@ -1,6 +1,6 @@
 {
   "server_version": "1.7.0",
-  "source_schema_sha256": "a930fe7924b76571de412dc12cbc2adf8e8c35a5e94cabb5a23cf6ed68e58b98",
+  "source_schema_sha256": "5f792616b70b47abd382e3aa403ee5f6d5f7ae672cfa07dfd75697f6330ad03a",
   "tools": {
     "review_equity_order": {
       "inputSchema": {
@@ -174,6 +174,15 @@
                 "additionalProperties": false
               },
               "market_data_disclosure": {
+                "type": "string"
+              },
+              "customer_approval_required": {
+                "type": [
+                  "null",
+                  "boolean"
+                ]
+              },
+              "customer_approval_required_reason": {
                 "type": "string"
               }
             },
@@ -427,6 +436,621 @@
                   "created_at",
                   "last_transaction_at",
                   "executions"
+                ],
+                "additionalProperties": false
+              },
+              "approval": {
+                "type": [
+                  "null",
+                  "object"
+                ],
+                "properties": {
+                  "approval_id": {
+                    "type": "string"
+                  },
+                  "account_number": {
+                    "type": "string"
+                  },
+                  "asset_class": {
+                    "type": "string"
+                  },
+                  "state": {
+                    "type": "string"
+                  },
+                  "is_edited": {
+                    "type": "boolean"
+                  },
+                  "rationale": {
+                    "type": "string"
+                  },
+                  "proposed_order": {
+                    "type": [
+                      "null",
+                      "object"
+                    ],
+                    "properties": {
+                      "asset_class": {
+                        "type": "string"
+                      },
+                      "side": {
+                        "type": "string"
+                      },
+                      "order_type": {
+                        "type": "string"
+                      },
+                      "time_in_force": {
+                        "type": "string"
+                      },
+                      "market_hours": {
+                        "type": "string"
+                      },
+                      "trigger": {
+                        "type": "string"
+                      },
+                      "contingency_type": {
+                        "type": "string"
+                      },
+                      "sub_orders": {
+                        "type": [
+                          "null",
+                          "array"
+                        ],
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "asset_class": {
+                              "type": "string"
+                            },
+                            "side": {
+                              "type": "string"
+                            },
+                            "quantity": {
+                              "type": "string"
+                            },
+                            "order_type": {
+                              "type": "string"
+                            },
+                            "trigger": {
+                              "type": "string"
+                            },
+                            "limit_price": {
+                              "type": [
+                                "null",
+                                "object"
+                              ],
+                              "properties": {
+                                "amount": {
+                                  "type": "string"
+                                },
+                                "currency_code": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "amount"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "stop_price": {
+                              "type": [
+                                "null",
+                                "object"
+                              ],
+                              "properties": {
+                                "amount": {
+                                  "type": "string"
+                                },
+                                "currency_code": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "amount"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "time_in_force": {
+                              "type": "string"
+                            },
+                            "is_primary": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "asset_class",
+                            "side",
+                            "quantity",
+                            "order_type",
+                            "trigger",
+                            "time_in_force",
+                            "is_primary"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "quantity": {
+                        "type": "string"
+                      },
+                      "dollar_amount": {
+                        "type": [
+                          "null",
+                          "object"
+                        ],
+                        "properties": {
+                          "amount": {
+                            "type": "string"
+                          },
+                          "currency_code": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "limit_price": {
+                        "type": [
+                          "null",
+                          "object"
+                        ],
+                        "properties": {
+                          "amount": {
+                            "type": "string"
+                          },
+                          "currency_code": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "stop_price": {
+                        "type": [
+                          "null",
+                          "object"
+                        ],
+                        "properties": {
+                          "amount": {
+                            "type": "string"
+                          },
+                          "currency_code": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "peg_type": {
+                        "type": "string"
+                      },
+                      "price_peg": {
+                        "type": [
+                          "null",
+                          "object"
+                        ],
+                        "properties": {
+                          "amount": {
+                            "type": "string"
+                          },
+                          "currency_code": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "percentage_peg": {
+                        "type": "string"
+                      },
+                      "symbol": {
+                        "type": "string"
+                      },
+                      "strike_price": {
+                        "type": [
+                          "null",
+                          "object"
+                        ],
+                        "properties": {
+                          "amount": {
+                            "type": "string"
+                          },
+                          "currency_code": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "expiration_date": {
+                        "type": "string"
+                      },
+                      "option_type": {
+                        "type": "string"
+                      },
+                      "position_effect": {
+                        "type": "string"
+                      },
+                      "estimated_cost": {
+                        "type": [
+                          "null",
+                          "object"
+                        ],
+                        "properties": {
+                          "amount": {
+                            "type": "string"
+                          },
+                          "currency_code": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "estimated_credit": {
+                        "type": [
+                          "null",
+                          "object"
+                        ],
+                        "properties": {
+                          "amount": {
+                            "type": "string"
+                          },
+                          "currency_code": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "estimated_quantity": {
+                        "type": "string"
+                      },
+                      "tax_lot_selection_type": {
+                        "type": "string"
+                      },
+                      "tax_lots": {
+                        "type": [
+                          "null",
+                          "array"
+                        ],
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "open_lot_id": {
+                              "type": "string"
+                            },
+                            "quantity": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "open_lot_id",
+                            "quantity"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": [
+                      "asset_class"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "actual_order": {
+                    "type": [
+                      "null",
+                      "object"
+                    ],
+                    "properties": {
+                      "asset_class": {
+                        "type": "string"
+                      },
+                      "side": {
+                        "type": "string"
+                      },
+                      "order_type": {
+                        "type": "string"
+                      },
+                      "time_in_force": {
+                        "type": "string"
+                      },
+                      "market_hours": {
+                        "type": "string"
+                      },
+                      "trigger": {
+                        "type": "string"
+                      },
+                      "contingency_type": {
+                        "type": "string"
+                      },
+                      "sub_orders": {
+                        "type": [
+                          "null",
+                          "array"
+                        ],
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "asset_class": {
+                              "type": "string"
+                            },
+                            "side": {
+                              "type": "string"
+                            },
+                            "quantity": {
+                              "type": "string"
+                            },
+                            "order_type": {
+                              "type": "string"
+                            },
+                            "trigger": {
+                              "type": "string"
+                            },
+                            "limit_price": {
+                              "type": [
+                                "null",
+                                "object"
+                              ],
+                              "properties": {
+                                "amount": {
+                                  "type": "string"
+                                },
+                                "currency_code": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "amount"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "stop_price": {
+                              "type": [
+                                "null",
+                                "object"
+                              ],
+                              "properties": {
+                                "amount": {
+                                  "type": "string"
+                                },
+                                "currency_code": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "amount"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "time_in_force": {
+                              "type": "string"
+                            },
+                            "is_primary": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "asset_class",
+                            "side",
+                            "quantity",
+                            "order_type",
+                            "trigger",
+                            "time_in_force",
+                            "is_primary"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "quantity": {
+                        "type": "string"
+                      },
+                      "dollar_amount": {
+                        "type": [
+                          "null",
+                          "object"
+                        ],
+                        "properties": {
+                          "amount": {
+                            "type": "string"
+                          },
+                          "currency_code": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "limit_price": {
+                        "type": [
+                          "null",
+                          "object"
+                        ],
+                        "properties": {
+                          "amount": {
+                            "type": "string"
+                          },
+                          "currency_code": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "stop_price": {
+                        "type": [
+                          "null",
+                          "object"
+                        ],
+                        "properties": {
+                          "amount": {
+                            "type": "string"
+                          },
+                          "currency_code": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "peg_type": {
+                        "type": "string"
+                      },
+                      "price_peg": {
+                        "type": [
+                          "null",
+                          "object"
+                        ],
+                        "properties": {
+                          "amount": {
+                            "type": "string"
+                          },
+                          "currency_code": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "percentage_peg": {
+                        "type": "string"
+                      },
+                      "symbol": {
+                        "type": "string"
+                      },
+                      "strike_price": {
+                        "type": [
+                          "null",
+                          "object"
+                        ],
+                        "properties": {
+                          "amount": {
+                            "type": "string"
+                          },
+                          "currency_code": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "expiration_date": {
+                        "type": "string"
+                      },
+                      "option_type": {
+                        "type": "string"
+                      },
+                      "position_effect": {
+                        "type": "string"
+                      },
+                      "estimated_cost": {
+                        "type": [
+                          "null",
+                          "object"
+                        ],
+                        "properties": {
+                          "amount": {
+                            "type": "string"
+                          },
+                          "currency_code": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "estimated_credit": {
+                        "type": [
+                          "null",
+                          "object"
+                        ],
+                        "properties": {
+                          "amount": {
+                            "type": "string"
+                          },
+                          "currency_code": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "estimated_quantity": {
+                        "type": "string"
+                      },
+                      "tax_lot_selection_type": {
+                        "type": "string"
+                      },
+                      "tax_lots": {
+                        "type": [
+                          "null",
+                          "array"
+                        ],
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "open_lot_id": {
+                              "type": "string"
+                            },
+                            "quantity": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "open_lot_id",
+                            "quantity"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": [
+                      "asset_class"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "expires_at": {
+                    "type": "string"
+                  },
+                  "created_at": {
+                    "type": "string"
+                  },
+                  "updated_at": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "approval_id",
+                  "account_number",
+                  "asset_class",
+                  "state",
+                  "is_edited"
                 ],
                 "additionalProperties": false
               }
@@ -1224,6 +1848,15 @@
                   "equities"
                 ],
                 "additionalProperties": false
+              },
+              "customer_approval_required": {
+                "type": [
+                  "null",
+                  "boolean"
+                ]
+              },
+              "customer_approval_required_reason": {
+                "type": "string"
               }
             },
             "required": [
@@ -1528,6 +2161,621 @@
                   "last_transaction_at",
                   "is_replaceable",
                   "legs"
+                ],
+                "additionalProperties": false
+              },
+              "approval": {
+                "type": [
+                  "null",
+                  "object"
+                ],
+                "properties": {
+                  "approval_id": {
+                    "type": "string"
+                  },
+                  "account_number": {
+                    "type": "string"
+                  },
+                  "asset_class": {
+                    "type": "string"
+                  },
+                  "state": {
+                    "type": "string"
+                  },
+                  "is_edited": {
+                    "type": "boolean"
+                  },
+                  "rationale": {
+                    "type": "string"
+                  },
+                  "proposed_order": {
+                    "type": [
+                      "null",
+                      "object"
+                    ],
+                    "properties": {
+                      "asset_class": {
+                        "type": "string"
+                      },
+                      "side": {
+                        "type": "string"
+                      },
+                      "order_type": {
+                        "type": "string"
+                      },
+                      "time_in_force": {
+                        "type": "string"
+                      },
+                      "market_hours": {
+                        "type": "string"
+                      },
+                      "trigger": {
+                        "type": "string"
+                      },
+                      "contingency_type": {
+                        "type": "string"
+                      },
+                      "sub_orders": {
+                        "type": [
+                          "null",
+                          "array"
+                        ],
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "asset_class": {
+                              "type": "string"
+                            },
+                            "side": {
+                              "type": "string"
+                            },
+                            "quantity": {
+                              "type": "string"
+                            },
+                            "order_type": {
+                              "type": "string"
+                            },
+                            "trigger": {
+                              "type": "string"
+                            },
+                            "limit_price": {
+                              "type": [
+                                "null",
+                                "object"
+                              ],
+                              "properties": {
+                                "amount": {
+                                  "type": "string"
+                                },
+                                "currency_code": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "amount"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "stop_price": {
+                              "type": [
+                                "null",
+                                "object"
+                              ],
+                              "properties": {
+                                "amount": {
+                                  "type": "string"
+                                },
+                                "currency_code": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "amount"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "time_in_force": {
+                              "type": "string"
+                            },
+                            "is_primary": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "asset_class",
+                            "side",
+                            "quantity",
+                            "order_type",
+                            "trigger",
+                            "time_in_force",
+                            "is_primary"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "quantity": {
+                        "type": "string"
+                      },
+                      "dollar_amount": {
+                        "type": [
+                          "null",
+                          "object"
+                        ],
+                        "properties": {
+                          "amount": {
+                            "type": "string"
+                          },
+                          "currency_code": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "limit_price": {
+                        "type": [
+                          "null",
+                          "object"
+                        ],
+                        "properties": {
+                          "amount": {
+                            "type": "string"
+                          },
+                          "currency_code": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "stop_price": {
+                        "type": [
+                          "null",
+                          "object"
+                        ],
+                        "properties": {
+                          "amount": {
+                            "type": "string"
+                          },
+                          "currency_code": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "peg_type": {
+                        "type": "string"
+                      },
+                      "price_peg": {
+                        "type": [
+                          "null",
+                          "object"
+                        ],
+                        "properties": {
+                          "amount": {
+                            "type": "string"
+                          },
+                          "currency_code": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "percentage_peg": {
+                        "type": "string"
+                      },
+                      "symbol": {
+                        "type": "string"
+                      },
+                      "strike_price": {
+                        "type": [
+                          "null",
+                          "object"
+                        ],
+                        "properties": {
+                          "amount": {
+                            "type": "string"
+                          },
+                          "currency_code": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "expiration_date": {
+                        "type": "string"
+                      },
+                      "option_type": {
+                        "type": "string"
+                      },
+                      "position_effect": {
+                        "type": "string"
+                      },
+                      "estimated_cost": {
+                        "type": [
+                          "null",
+                          "object"
+                        ],
+                        "properties": {
+                          "amount": {
+                            "type": "string"
+                          },
+                          "currency_code": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "estimated_credit": {
+                        "type": [
+                          "null",
+                          "object"
+                        ],
+                        "properties": {
+                          "amount": {
+                            "type": "string"
+                          },
+                          "currency_code": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "estimated_quantity": {
+                        "type": "string"
+                      },
+                      "tax_lot_selection_type": {
+                        "type": "string"
+                      },
+                      "tax_lots": {
+                        "type": [
+                          "null",
+                          "array"
+                        ],
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "open_lot_id": {
+                              "type": "string"
+                            },
+                            "quantity": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "open_lot_id",
+                            "quantity"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": [
+                      "asset_class"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "actual_order": {
+                    "type": [
+                      "null",
+                      "object"
+                    ],
+                    "properties": {
+                      "asset_class": {
+                        "type": "string"
+                      },
+                      "side": {
+                        "type": "string"
+                      },
+                      "order_type": {
+                        "type": "string"
+                      },
+                      "time_in_force": {
+                        "type": "string"
+                      },
+                      "market_hours": {
+                        "type": "string"
+                      },
+                      "trigger": {
+                        "type": "string"
+                      },
+                      "contingency_type": {
+                        "type": "string"
+                      },
+                      "sub_orders": {
+                        "type": [
+                          "null",
+                          "array"
+                        ],
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "asset_class": {
+                              "type": "string"
+                            },
+                            "side": {
+                              "type": "string"
+                            },
+                            "quantity": {
+                              "type": "string"
+                            },
+                            "order_type": {
+                              "type": "string"
+                            },
+                            "trigger": {
+                              "type": "string"
+                            },
+                            "limit_price": {
+                              "type": [
+                                "null",
+                                "object"
+                              ],
+                              "properties": {
+                                "amount": {
+                                  "type": "string"
+                                },
+                                "currency_code": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "amount"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "stop_price": {
+                              "type": [
+                                "null",
+                                "object"
+                              ],
+                              "properties": {
+                                "amount": {
+                                  "type": "string"
+                                },
+                                "currency_code": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "amount"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "time_in_force": {
+                              "type": "string"
+                            },
+                            "is_primary": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "asset_class",
+                            "side",
+                            "quantity",
+                            "order_type",
+                            "trigger",
+                            "time_in_force",
+                            "is_primary"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "quantity": {
+                        "type": "string"
+                      },
+                      "dollar_amount": {
+                        "type": [
+                          "null",
+                          "object"
+                        ],
+                        "properties": {
+                          "amount": {
+                            "type": "string"
+                          },
+                          "currency_code": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "limit_price": {
+                        "type": [
+                          "null",
+                          "object"
+                        ],
+                        "properties": {
+                          "amount": {
+                            "type": "string"
+                          },
+                          "currency_code": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "stop_price": {
+                        "type": [
+                          "null",
+                          "object"
+                        ],
+                        "properties": {
+                          "amount": {
+                            "type": "string"
+                          },
+                          "currency_code": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "peg_type": {
+                        "type": "string"
+                      },
+                      "price_peg": {
+                        "type": [
+                          "null",
+                          "object"
+                        ],
+                        "properties": {
+                          "amount": {
+                            "type": "string"
+                          },
+                          "currency_code": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "percentage_peg": {
+                        "type": "string"
+                      },
+                      "symbol": {
+                        "type": "string"
+                      },
+                      "strike_price": {
+                        "type": [
+                          "null",
+                          "object"
+                        ],
+                        "properties": {
+                          "amount": {
+                            "type": "string"
+                          },
+                          "currency_code": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "expiration_date": {
+                        "type": "string"
+                      },
+                      "option_type": {
+                        "type": "string"
+                      },
+                      "position_effect": {
+                        "type": "string"
+                      },
+                      "estimated_cost": {
+                        "type": [
+                          "null",
+                          "object"
+                        ],
+                        "properties": {
+                          "amount": {
+                            "type": "string"
+                          },
+                          "currency_code": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "estimated_credit": {
+                        "type": [
+                          "null",
+                          "object"
+                        ],
+                        "properties": {
+                          "amount": {
+                            "type": "string"
+                          },
+                          "currency_code": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "amount"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "estimated_quantity": {
+                        "type": "string"
+                      },
+                      "tax_lot_selection_type": {
+                        "type": "string"
+                      },
+                      "tax_lots": {
+                        "type": [
+                          "null",
+                          "array"
+                        ],
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "open_lot_id": {
+                              "type": "string"
+                            },
+                            "quantity": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "open_lot_id",
+                            "quantity"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": [
+                      "asset_class"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "expires_at": {
+                    "type": "string"
+                  },
+                  "created_at": {
+                    "type": "string"
+                  },
+                  "updated_at": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "approval_id",
+                  "account_number",
+                  "asset_class",
+                  "state",
+                  "is_edited"
                 ],
                 "additionalProperties": false
               }
@@ -3392,6 +4640,65 @@
       "annotations": {
         "readOnlyHint": true
       }
+    },
+    "get_trade_approval_setting": {
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "account_number": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_number"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "setting": {
+                "type": "object",
+                "properties": {
+                  "account_number": {
+                    "type": "string"
+                  },
+                  "human_must_approve_trades": {
+                    "type": "boolean"
+                  },
+                  "updated_at": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "account_number",
+                  "human_must_approve_trades"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "setting"
+            ],
+            "additionalProperties": false
+          },
+          "guide": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "guide"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
     }
-  }
+  },
+  "reviewed_at": "2026-10-08"
 }

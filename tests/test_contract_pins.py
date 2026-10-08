@@ -10,11 +10,20 @@ from tradeagent.model import Halt
 from tradeagent.schema import Contracts
 
 
-def test_reviewed_170_preserves_all_162_structural_contracts():
+def test_reviewed_170_preserves_inputs_and_adds_authenticated_approval_outputs():
     contracts = Contracts()
     old = json.loads(files("tradeagent").joinpath("contracts/official-1.6.2.json").read_text())
     assert contracts.manifest["server_version"] == "1.7.0"
-    assert contracts.tools == old["tools"]
+    current = copy.deepcopy(contracts.tools)
+    assert "get_trade_approval_setting" in current
+    del current["get_trade_approval_setting"]
+    for name in ("review_equity_order", "review_option_order"):
+        fields = current[name]["outputSchema"]["properties"]["data"]["properties"]
+        assert fields.pop("customer_approval_required") == {"type": ["null", "boolean"]}
+        assert fields.pop("customer_approval_required_reason") == {"type": "string"}
+    for name in ("place_equity_order", "place_option_order"):
+        current[name]["outputSchema"]["properties"]["data"]["properties"].pop("approval")
+    assert current == old["tools"]
     contracts.check_current(contracts.tools, "1.7.0")
 
 

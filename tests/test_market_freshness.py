@@ -74,7 +74,11 @@ def test_risk_accepts_only_small_book_clock_skew(offset):
 
 @pytest.mark.parametrize("offset", [0.250001, 1, -120.000001])
 def test_risk_rejects_future_or_stale_book_beyond_boundary(offset):
-    _, config, risk, snapshot = snapshot_with_book_offset(offset)
+    with pytest.raises(Halt, match="stale/future"):
+        snapshot_with_book_offset(offset)
+    # The risk authority also rejects an independently supplied stale book.
+    _, config, risk, snapshot = snapshot_with_book_offset(0)
+    snapshot.liquidity["SPY"]["asof"] = NOW.timestamp() + offset
     with pytest.raises(Halt, match="liquidity/depth"):
         check_order(
             Intent("SPY", "buy", dec(1), dec("100.01")),
@@ -95,8 +99,13 @@ def test_skew_allowance_does_not_accept_quote_book_mismatch(change):
         book["bids"][0]["price"] = "99.98"
     else:
         book["symbol"] = "QQQ"
-    with pytest.raises(Halt, match="disagreement|coverage"):
-        Broker(raw, Config(allowed_symbols=["SPY"]), Risk()).snapshot(NOW.timestamp())
+    if change == "symbol":
+        with pytest.raises(Halt, match="coverage"):
+            Broker(raw, Config(allowed_symbols=["SPY"]), Risk()).snapshot(NOW.timestamp())
+    else:
+        snapshot = Broker(raw, Config(allowed_symbols=["SPY"]), Risk()).snapshot(NOW.timestamp())
+        assert snapshot.bids["SPY"] == dec("99.98")
+        assert snapshot.bid_times["SPY"] == snapshot.liquidity["SPY"]["asof"]
 
 
 @pytest.mark.parametrize("field,reason", [("quote", "stale market"), ("account", "stale account")])

@@ -470,7 +470,7 @@ def test_direct_json_and_sse_catalog_initialization_without_codex(monkeypatch):
 
     monkeypatch.setattr(module.http.client, "HTTPSConnection", Connection)
     with StandaloneMCP(lambda: "SYNTHETIC_TOKEN") as bridge:
-        assert len(bridge.tools) == 18
+        assert len(bridge.tools) == len(pins.tools)
         assert bridge.protocol == "2025-11-25"
         assert bridge.calls == []
     assert len(calls) == 3

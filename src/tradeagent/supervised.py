@@ -11,7 +11,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from .accounting import Accounting
-from .broker import data, utc_time
+from .broker import Broker, data, utc_time
 from .model import Halt, dec, digest, timestamp_fresh
 from .options import OptionIntent, check_option_order, normalize_order
 from .risk import TERMINAL, check_order
@@ -34,7 +34,7 @@ def redact(value):
     return value
 
 
-def state_binding(s):
+def state_binding(s, economic_only=False):
     # Observation timestamps change on refresh. Bind economic/permission state;
     # independently check ALL refreshed timestamps for freshness in risk.
     options = {}
@@ -58,14 +58,14 @@ def state_binding(s):
             "eligible": s.agentic_eligible,
             "policy": s.account_policy,
             "option_level": s.option_level,
-            "nav": s.nav,
+            "nav": None if economic_only else s.nav,
             "cash": s.cash,
             "buying_power": s.buying_power,
             "positions": s.positions,
             "available": s.available,
-            "prices": s.prices,
-            "asks": s.asks,
-            "bids": s.bids,
+            "prices": {} if economic_only else s.prices,
+            "asks": {} if economic_only else s.asks,
+            "bids": {} if economic_only else s.bids,
             "orders": s.orders,
             "tradable": s.tradable,
             "options": s.options,
@@ -73,7 +73,9 @@ def state_binding(s):
             "option_basis": s.option_cost_basis,
             "quotes": options,
             "liquidity": {
-                k: {f: v for f, v in book.items() if f != "asof"} for k, book in s.liquidity.items()
+                k: {f: v for f, v in book.items() if f != "asof"}
+                for k, book in s.liquidity.items()
+                if not economic_only
             },
             "regular_session": s.regular_session,
             "daily_turnover": s.daily_turnover,
@@ -111,7 +113,11 @@ class OfficialExecutionAdapter:
         return digest(self.read_broker.account["account_number"])
 
     def snapshot(self, intent=None):
-        result = self.read_broker.snapshot()
+        result = (
+            self.read_broker.snapshot(clock=self.clock)
+            if isinstance(self.read_broker, Broker)
+            else self.read_broker.snapshot()
+        )
         if isinstance(intent, OptionIntent) and intent.symbol not in result.option_quotes:
             from .options import OptionsReader
 
@@ -155,6 +161,10 @@ class OfficialExecutionAdapter:
             and reviewed.get("account_number") != args["account_number"]
         ):
             raise Halt("review account mismatch")
+        if reviewed.get("customer_approval_required") is True or (
+            not self.is_simulation and reviewed.get("customer_approval_required") is not False
+        ):
+            raise Halt("broker customer approval required or uncertain; owner must resolve")
         checks = reviewed.get("order_checks")
         if not isinstance(checks, dict) or checks:
             raise Halt("broker review alerts require human investigation; no automated override")
@@ -200,6 +210,8 @@ class OfficialExecutionAdapter:
                 )
             ):
                 raise Halt("broker approval required; no automatic retry")
+        if data(response).get("approval") is not None:
+            raise Halt("broker created a customer approval request; reconcile without resubmission")
         raw = data(response).get("order")
         if not isinstance(raw, dict):
             raise Halt("submission returned no order; ambiguous approval/acknowledgment")
@@ -299,7 +311,12 @@ class SupervisedLifecycle:
     def __init__(self, state, broker, config, risk, run_id, fence, clock=time.time):
         config.validate()
         risk.validate()
-        if config.mode != "SUPERVISED" or config.supervised_enabled is not True:
+        if config.mode == "LIVE":
+            from .execution_policy import StandingLifecycle
+
+            if type(self) is not StandingLifecycle or self.guard.simulation is not False:
+                raise Halt("LIVE lifecycle requires owner standing authorization")
+        elif config.mode != "SUPERVISED" or config.supervised_enabled is not True:
             raise Halt("supervised lifecycle requires explicit mode")
         self.state, self.broker, self.config, self.risk, self.run, self.fence, self.clock = (
             state,
@@ -315,6 +332,9 @@ class SupervisedLifecycle:
         CREATE TABLE IF NOT EXISTS approvals(key TEXT PRIMARY KEY REFERENCES intents(key), artifact TEXT NOT NULL,
             consumed INTEGER NOT NULL DEFAULT 0);
         """)
+
+    def _state_binding(self, snapshot):
+        return state_binding(snapshot)
 
     def _risk(self, intent, snapshot, baseline, fees=0):
         try:
@@ -416,7 +436,7 @@ class SupervisedLifecycle:
             fresh = self.broker.snapshot(intent)
             self._risk(intent, fresh, baseline, review["fees"])
             self._review_market(intent, review, fresh)
-            if state_binding(initial) != state_binding(fresh):
+            if self._state_binding(initial) != self._state_binding(fresh):
                 raise Halt("account/market changed during broker review")
         except Exception as exc:
             self.state.update(key, "abandoned")
@@ -442,7 +462,7 @@ class SupervisedLifecycle:
             "risk": asdict(self.risk),
             "schema_hash": self.broker.contracts.hash,
             "review_hash": digest(review),
-            "state_hash": state_binding(fresh),
+            "state_hash": self._state_binding(fresh),
             "expires": now + 30,
             "simulation": self.broker.is_simulation,
             "instrument": asdict(intent.contract)
@@ -494,7 +514,7 @@ class SupervisedLifecycle:
         try:
             fresh = self.broker.snapshot(intent)
             self._risk(intent, fresh, packet["baseline"], packet["review"]["fees"])
-            if state_binding(fresh) != binding["state_hash"]:
+            if self._state_binding(fresh) != binding["state_hash"]:
                 raise Halt("account/market changed after approval; approval invalidated")
         except Exception:
             self.state.update(key, "abandoned")

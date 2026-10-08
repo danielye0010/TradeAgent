@@ -1,21 +1,22 @@
-"""One-shot paper orchestration over the existing durable execution lifecycle."""
+"""Shared owner-authorized one-shot orchestration over the durable execution lifecycle."""
 
 import json
 import os
 from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
+from time import sleep as wait_for_poll
 from zoneinfo import ZoneInfo
 
 from .broker import utc_time
 from .calendar import session_bounds
-from .demo import simulated_human
+from .execution_policy import OwnerGrant, StandingLifecycle, request_policy
 from .legacy.standalone import intent_from_row
 from .model import Config, Halt, Intent, Risk, dec, digest
 from .risk import TERMINAL, check_order, check_state
 from .simulator import SCENARIOS, SimClock, SimulatedMCP, funded_snapshot
 from .state import State, dumps
-from .supervised import OfficialExecutionAdapter, SupervisedLifecycle
+from .supervised import OfficialExecutionAdapter
 
 IDENTITY = "one-shot-paper-execution-canary-v1"
 
@@ -84,24 +85,21 @@ def atomic_json(path, value):
     temporary.replace(path)
 
 
-class PaperRun:
-    """Paper-only controller; broker review/submit/cancel/reconcile stay in core."""
+class OneShotRun:
+    """Shared production/paper controller over the existing durable order engine."""
 
-    def __init__(self, state, broker, clock, config, risk, fence, run_id, options, kill_switch):
-        if type(broker) is not SimulatedMCP or broker.is_simulation is not True:
-            raise Halt("paper controller requires the local simulator; no live transport")
-        self.state, self.sim, self.clock = state, broker, clock
+    def __init__(
+        self, state, broker, clock, config, risk, fence, run_id, options, kill_switch, engine
+    ):
+        if (
+            type(engine) is not StandingLifecycle
+            or engine.guard.simulation != engine.broker.is_simulation
+        ):
+            raise Halt("one-shot controller requires owner-authorized existing lifecycle")
+        self.state, self.broker, self.clock = state, broker, clock
         self.options, self.kill_switch = options, Path(kill_switch)
         self.config, self.risk, self.run_id = config, risk, run_id
-        self.engine = SupervisedLifecycle(
-            state,
-            OfficialExecutionAdapter(broker, broker, clock),
-            config,
-            risk,
-            run_id,
-            fence,
-            clock,
-        )
+        self.engine = engine
         state.db.execute(
             "CREATE TABLE IF NOT EXISTS one_shot_meta(key TEXT PRIMARY KEY, payload TEXT NOT NULL)"
         )
@@ -120,7 +118,16 @@ class PaperRun:
             )
 
     def advance(self, seconds):
-        self.clock.advance(seconds)
+        if self.engine.broker.is_simulation:
+            self.clock.advance(seconds)
+        else:
+            deadline = self.clock() + seconds
+            while self.clock() < deadline and not self.kill_switch.exists():
+                self.engine.fence()
+                self.engine.guard.validate()
+                if all(row["status"] in TERMINAL for row in self.rows()):
+                    self.audit()  # authoritative ownership/cash monitoring while held
+                wait_for_poll(min(5, max(0, deadline - self.clock())))
         self.put("clock", self.clock())
 
     def rows(self):
@@ -130,17 +137,17 @@ class PaperRun:
         self.put(intent.side + "_submission_time", self.clock())
         plan = self.engine.prepare(
             intent,
-            f"{IDENTITY}:{intent.side}",
+            f"{self.config.strategy_version}:{intent.side}",
             {
                 "execution_canary": True,
-                "synthetic_fixture": True,
+                "synthetic_fixture": self.engine.broker.is_simulation,
                 "excluded_from_strategy_performance": True,
             },
         )
         if plan["status"] != "approval_required":
             raise Halt("one-shot side is already reserved; never replay")
         try:
-            return self.engine.execute(plan["key"], intent, simulated_human(plan))
+            return self.engine.execute(plan["key"], intent)
         except Halt:
             row = self.state.db.execute(
                 "SELECT * FROM intents WHERE key=?", (plan["key"],)
@@ -162,15 +169,14 @@ class PaperRun:
             result = self.engine.reconcile(row["key"], intent)
         row = self.state.db.execute("SELECT * FROM intents WHERE key=?", (row["key"],)).fetchone()
         if row["status"] == "pending" and row["broker_id"]:
-            binding = {
-                "action": "cancel",
-                "key": row["key"],
-                "order_id": row["broker_id"],
-                "account_digest": self.engine.broker.account_digest,
-                "simulation": True,
-                "expires": self.clock() + 30,
-            }
-            result = self.engine.cancel(row["key"], intent, simulated_human({"binding": binding}))
+            cancellation = "cancel_reserved:" + row["key"]
+            if self.get(cancellation):
+                raise Halt("cancellation was already attempted; reconcile only, never replay")
+            self.put(cancellation, {"order_id": row["broker_id"], "at": self.clock()})
+            try:
+                result = self.engine.cancel(row["key"], intent)
+            except Halt:
+                result = self.engine.reconcile(row["key"], intent)
         if result["status"] not in TERMINAL:
             raise Halt("order remains open after bounded cancellation; no repeat order")
         return result
@@ -178,7 +184,7 @@ class PaperRun:
     def audit(self):
         """Whole-round-trip cash/holdings proof from the core's normalized fills."""
         initial = self.get("initial")
-        snapshot = self.sim.snapshot()
+        snapshot = self.broker.snapshot()
         orders, seen = [], set()
         expected_cash = dec(initial["cash"])
         positions = {s: dec(q) for s, q in initial["positions"].items()}
@@ -254,10 +260,10 @@ class PaperRun:
 
     def execute(self):
         saved_clock = self.get("clock")
-        if saved_clock is not None:
+        if saved_clock is not None and self.engine.broker.is_simulation:
             self.clock.advance(max(0, saved_clock - self.clock()))
         if self.get("initial") is None:
-            self.put("initial", asdict(self.sim.snapshot()))
+            self.put("initial", asdict(self.broker.snapshot()))
         rows = self.rows()
         if (
             len(rows) > 2
@@ -274,7 +280,12 @@ class PaperRun:
         if not entries:
             if self.kill_switch.exists():
                 return self.finish("NO_TRADE", reason="kill switch prevents new exposure")
-            initial = self.sim.snapshot()
+            initial = self.broker.snapshot()
+            bounds = session_bounds(
+                datetime.fromtimestamp(self.clock(), ZoneInfo("America/New_York")).date()
+            )
+            if not bounds or self.clock() >= bounds[1] - 660:
+                return self.finish("NO_TRADE", reason="insufficient regular-session exit window")
             check_state(initial, self.risk, self.clock())
             self.state.recover(self.run_id, initial)
             intent, reasons = choose_entry(
@@ -289,7 +300,9 @@ class PaperRun:
                     "price": str(initial.prices[intent.symbol]),
                     "symbol": intent.symbol,
                     "quantity": str(intent.quantity),
-                    "source": "SYNTHETIC_EXECUTION_CANARY",
+                    "source": "SYNTHETIC_EXECUTION_CANARY"
+                    if self.engine.broker.is_simulation
+                    else "OWNER_EXECUTION_CANARY",
                 },
             )
             self.submit(intent)
@@ -297,7 +310,7 @@ class PaperRun:
         entry = entries[0]
         if not exits:
             self.settle(entry)
-            snapshot = self.sim.snapshot()
+            snapshot = self.broker.snapshot()
             order = next(o for o in snapshot.orders if o.get("ref_id") == entry["ref_id"])
             filled = dec(order["cumulative_quantity"])
             if not filled:
@@ -328,11 +341,12 @@ class PaperRun:
                     if deadline == requested_due
                     else "regular_session_exit_deadline"
                 )
-            # Simulated clock advances rather than sleeping an hour. No order/fill
-            # is manufactured by this advance; the normal simulator submits/fills.
+            if self.kill_switch.exists():
+                reason = "kill_switch_risk_reduction"
             self.put("exit_reason", reason)
-            self.sim.scenario = self.options["exit_scenario"]
-            snapshot = self.sim.snapshot()
+            if self.engine.broker.is_simulation:
+                self.broker.scenario = self.options["exit_scenario"]
+            snapshot = self.broker.snapshot()
             self.submit(Intent(symbol, "sell", filled, snapshot.bids[symbol]))
             exits = [r for r in self.rows() if intent_from_row(r).side == "sell"]
         self.settle(exits[0])
@@ -419,7 +433,30 @@ def run_paper(
                 directory / "broker", clock, entry_scenario, initial or paper_snapshot(clock)
             )
             run_id = state.start(config, risk)
-            controller = PaperRun(
+            adapter = OfficialExecutionAdapter(sim, sim, clock)
+            grant_path = directory / "paper-owner-grant.json"
+            if not grant_path.exists():
+                atomic_json(
+                    grant_path,
+                    {
+                        "policy": request_policy(
+                            config, risk, adapter.account_digest, options, clock, True
+                        ),
+                        "actor": "SIMULATED_POLICY_OWNER",
+                    },
+                )
+            guard = OwnerGrant(
+                json.loads(grant_path.read_text()),
+                state,
+                config,
+                risk,
+                adapter.account_digest,
+                options,
+                clock,
+                simulation=True,
+            )
+            engine = StandingLifecycle(state, adapter, config, risk, run_id, fence, clock, guard)
+            controller = OneShotRun(
                 state,
                 sim,
                 clock,
@@ -429,6 +466,7 @@ def run_paper(
                 run_id,
                 options,
                 kill_switch or directory / "KILL",
+                engine,
             )
             try:
                 result.update(controller.execute())
@@ -477,5 +515,151 @@ def run_paper(
     finally:
         if sim:
             sim.close()
+        state.close()
+    return result
+
+
+def run_live(directory, authorization_dir, oauth_helper, root, timeout=20):
+    """Owner-launched real one-shot; this function is never used by live-check."""
+    import time
+
+    from .broker import Broker
+    from .execution_policy import live_config, owner_file
+    from .standalone_mcp import ExternalOAuthToken, StandaloneExecutionTransport, StandaloneMCP
+
+    if not authorization_dir or not oauth_helper:
+        raise Halt(
+            "LIVE setup requires --authorization-dir and --oauth-helper; run prepare-once then owner signing and setup-once"
+        )
+    authorization_dir = Path(authorization_dir).resolve()
+    artifact = json.loads(owner_file(authorization_dir / "authorization.json").read_text())
+    policy = artifact.get("policy", {})
+    selected = Path(directory or policy["state_dir"]).resolve()
+    if selected != Path(policy["state_dir"]):
+        raise Halt("LIVE state directory differs from signed authorization")
+    options = policy["options"]
+    config, risk = live_config(selected, policy["symbols"]), Risk()
+    marker = selected / "live-run.json"
+    receipt = authorization_dir / "run-binding.json"
+    if receipt.exists() and not marker.exists():
+        raise Halt(
+            "standing authorization was already bound; missing execution state cannot be reset"
+        )
+    expected = {"grant_hash": digest(artifact), "simulation": False, "options": options}
+    if selected.exists() and not marker.exists() and any(selected.iterdir()):
+        raise Halt("LIVE one-shot requires its own isolated fresh state directory")
+    selected.mkdir(mode=0o700, parents=True, exist_ok=True)
+    try:
+        with marker.open("x") as stream:
+            stream.write(dumps(expected))
+            stream.flush()
+            os.fsync(stream.fileno())
+    except FileExistsError:
+        if json.loads(marker.read_text()) != expected:
+            raise Halt("LIVE run authorization/configuration changed; never replay") from None
+    if receipt.exists():
+        if not (selected / "agent/state.sqlite3").exists():
+            raise Halt("standing authorization execution journal is missing; never reset")
+        if json.loads(owner_file(receipt).read_text()) != {
+            "marker_hash": digest(json.loads(marker.read_text()))
+        }:
+            raise Halt("standing authorization state binding changed")
+    else:
+        with receipt.open("x") as stream:
+            stream.write(dumps({"marker_hash": digest(expected)}))
+            stream.flush()
+            os.fsync(stream.fileno())
+    if (
+        receipt.exists()
+        and (selected / "agent").exists()
+        and not (selected / "agent/state.sqlite3").exists()
+    ):
+        raise Halt("standing authorization execution journal is missing")
+    state = State(selected / "agent")
+    result = {
+        "mode": "LIVE",
+        "status": "HALTED",
+        "execution_canary": True,
+        "excluded_from_strategy_performance": True,
+        "outstanding_incident": True,
+    }
+    run_id = None
+    try:
+        with state.lock(config.lease_seconds) as fence:
+            # Validate signature and the entire installed-code/config context
+            # before even establishing broker connectivity.
+            guard = OwnerGrant.load(
+                authorization_dir,
+                state=state,
+                config=config,
+                risk=risk,
+                account_digest=policy["account_digest"],
+                options=options,
+                clock=time.time,
+                simulation=False,
+            )
+            guard.validate()
+            with StandaloneMCP(ExternalOAuthToken(oauth_helper, root), timeout) as bridge:
+                broker = Broker(bridge, config, risk)
+                broker.snapshot()
+                if digest(broker.account["account_number"]) != guard.account_digest:
+                    raise Halt("authenticated account differs from standing authorization")
+
+                def approval_setting():
+                    setting = broker.bridge.read(
+                        "get_trade_approval_setting",
+                        {"account_number": broker.account["account_number"]},
+                    )["data"]["setting"]
+                    if setting["account_number"] != broker.account["account_number"]:
+                        raise Halt("broker approval setting account mismatch")
+                    return setting["human_must_approve_trades"]
+
+                guard.permission_reader = approval_setting
+                adapter = OfficialExecutionAdapter(
+                    broker, StandaloneExecutionTransport(bridge, state, broker, guard), time.time
+                )
+                run_id = state.start(config, risk)
+                engine = StandingLifecycle(
+                    state, adapter, config, risk, run_id, fence, time.time, guard
+                )
+                controller = OneShotRun(
+                    state,
+                    broker,
+                    time.time,
+                    config,
+                    risk,
+                    fence,
+                    run_id,
+                    options,
+                    selected / "KILL",
+                    engine,
+                )
+                try:
+                    result.update(controller.execute())
+                    result["outstanding_incident"] = False
+                except Halt as exc:
+                    result.update(status="HALTED", reason=str(exc), outstanding_incident=True)
+                    try:
+                        result.update(controller.audit())
+                    except Halt as audit_error:
+                        result["reconciliation_blocker"] = str(audit_error)
+                finally:
+                    result["submission_times"] = {
+                        side: controller.get(side + "_submission_time") for side in ("buy", "sell")
+                    }
+                    result["exit_due"] = controller.get("exit_due")
+                    result["exit_reason"] = controller.get("exit_reason")
+                    result["broker_calls"] = bridge.calls
+    except (Halt, OSError, ValueError, KeyError, TypeError):
+        result["reason"] = (
+            "owner authorization, connectivity or runtime prerequisite failed; reconcile existing state before relaunch"
+        )
+        raise
+    finally:
+        if run_id:
+            state.event(run_id, "one_shot_final", result)
+            state.finish(run_id, result["status"])
+            state.export_log()
+        atomic_json(selected / "report.json", result)
         state.close()
     return result

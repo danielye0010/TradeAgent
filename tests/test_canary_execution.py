@@ -48,10 +48,8 @@ def test_inflight_and_bounded_postreceipt_market_times_pass(monkeypatch, offset)
 
 @pytest.mark.parametrize("offset", [MAX_FUTURE_SKEW_SECONDS + 0.001, -120.001])
 def test_future_beyond_cap_and_stale_market_times_fail(monkeypatch, offset):
-    s, config, risk, _, receipt = receipt_snapshot(monkeypatch, offset)
-    assert not s.regular_session
-    with pytest.raises(Halt):
-        check_order(Intent("SPY", "buy", dec(1), dec("100.01")), s, config, risk, receipt, s.nav)
+    with pytest.raises(Halt, match="stale/future"):
+        receipt_snapshot(monkeypatch, offset)
 
 
 def test_validation_receipt_calendar_still_blocks_after_close(monkeypatch):
@@ -67,7 +65,9 @@ def test_validation_receipt_calendar_still_blocks_after_close(monkeypatch):
     monkeypatch.setattr("tradeagent.broker.datetime", ReceiptClock)
     raw = RawReadFake()
     quote = raw.payloads["get_equity_quotes"]["results"][0]["quote"]
-    quote["venue_last_trade_time"] = start.isoformat()
+    for field in ("venue_last_trade_time", "venue_bid_time", "venue_ask_time"):
+        quote[field] = start.isoformat()
+    raw.payloads["get_equity_price_book"]["books"][0]["updated_at"] = start.isoformat()
     assert not Broker(raw, Config(allowed_symbols=["SPY"]), Risk()).snapshot().regular_session
 
 

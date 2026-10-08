@@ -238,7 +238,7 @@ def test_default_provider_does_not_load_alpaca(monkeypatch, tmp_path):
         def __exit__(self, *args):
             pass
 
-    monkeypatch.setattr(providers, "StandaloneMCP", MockSession)
+    monkeypatch.setattr(providers, "ReadOnlyMCP", MockSession)
     monkeypatch.setattr(providers, "ExternalOAuthToken", lambda *args: object())
     monkeypatch.setattr(access, "load", lambda: pytest.fail("Alpaca credential loaded"))
     with providers.open_provider("robinhood", tmp_path) as source:

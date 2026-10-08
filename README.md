@@ -35,9 +35,10 @@ Install the wheel in a separate Linux environment, then run
 `tradeagent run-once --paper --state-dir work/fresh-one-shot` for a complete
 synthetic entry, bounded exit and reconciliation. Reusing that directory recovers
 its original run without another entry. `tradeagent live-check` performs only
-read-only readiness checks; `run-once --live` currently returns `LIVE BLOCKED`.
-See [One-shot operation](docs/one-shot.md) for installation, evidence and the
-remaining production prerequisites. No research strategy is enabled for trading.
+read-only readiness checks. The owner-operated `prepare-once` and `setup-once`
+commands establish a signed, bounded standing grant before `run-once --live` can
+execute. See [One-shot operation](docs/one-shot.md) for setup and recovery.
+Real broker execution remains uncommissioned. No research strategy is enabled for trading.
 
 ## Robinhood deployment
 
