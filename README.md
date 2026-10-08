@@ -113,7 +113,8 @@ Options counterfactuals require recorded executable quotes. Automatic option
 allocation and the research-to-live bridge remain deferred.
 
 [Architecture](docs/architecture.md) · [Provider capabilities](docs/market-data.md) ·
-[Research protocol](docs/research-protocol.md) · [Getting started](docs/getting-started.md) ·
+[Research protocol](docs/research-protocol.md) · [Alpha research and TradePlans](docs/tradeplan-engine.md) ·
+[Getting started](docs/getting-started.md) ·
 [Execution boundary](docs/deployment.md)
 
 ## Development

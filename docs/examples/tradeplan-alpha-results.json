@@ -1,0 +1,1458 @@
+{
+  "data_digest": "cd96141f589941032366da78214ddaf70c7411deaa95164d63dc99ec24dc8464",
+  "coverage": {
+    "skipped": [
+      {
+        "date": "2026-07-16",
+        "minute": 30,
+        "reason": "QQQ: incomplete window 1784145300.0..1784145600.0"
+      },
+      {
+        "date": "2026-07-16",
+        "minute": 90,
+        "reason": "QQQ: incomplete window 1784145300.0..1784145600.0"
+      },
+      {
+        "date": "2026-09-15",
+        "reason": "corporate-action day excluded; gap reference ambiguous"
+      },
+      {
+        "date": "2026-09-18",
+        "reason": "corporate-action day excluded; gap reference ambiguous"
+      },
+      {
+        "date": "2026-09-21",
+        "reason": "corporate-action day excluded; gap reference ambiguous"
+      }
+    ],
+    "complete_sessions": 55,
+    "first": "2026-07-17",
+    "last": "2026-10-07"
+  },
+  "selected_before_test": "cash",
+  "plan_decisions": {
+    "NO_TRADE": 330,
+    "UNDERLYING": 0
+  },
+  "all_plans_research_only": true,
+  "periods": {
+    "train": {
+      "adaptive_pooled:30:60": {
+        "sessions": 20,
+        "trades": 0,
+        "active_days": 0,
+        "gross": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "low": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "base": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "stress": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "mean_trade_gross_bps": null,
+        "mean_trade_net_bps": null,
+        "worst_adverse": null,
+        "mean_beta_residual_bps": null,
+        "matched_spy_net": 0,
+        "excess_vs_matched_spy_net": 0.0,
+        "diagnostics": {
+          "adverse_direction": 0,
+          "cost_erased_positive_move": 0,
+          "profitable_after_base_cost": 0
+        },
+        "win_fraction_net": null
+      },
+      "adaptive_regime:30:60": {
+        "sessions": 20,
+        "trades": 0,
+        "active_days": 0,
+        "gross": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "low": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "base": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "stress": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "mean_trade_gross_bps": null,
+        "mean_trade_net_bps": null,
+        "worst_adverse": null,
+        "mean_beta_residual_bps": null,
+        "matched_spy_net": 0,
+        "excess_vs_matched_spy_net": 0.0,
+        "diagnostics": {
+          "adverse_direction": 0,
+          "cost_erased_positive_move": 0,
+          "profitable_after_base_cost": 0
+        },
+        "win_fraction_net": null
+      },
+      "opening_continuation:30:60": {
+        "sessions": 20,
+        "trades": 7,
+        "active_days": 5,
+        "gross": {
+          "total_return": 0.0032359857559278726,
+          "mean_daily": 0.00016285784479284915,
+          "max_drawdown": -0.0037215868218688497
+        },
+        "low": {
+          "total_return": 0.002533875213490022,
+          "mean_daily": 0.0001278287761307645,
+          "max_drawdown": -0.00392082258092874
+        },
+        "base": {
+          "total_return": 0.0017621558292093553,
+          "mean_daily": 8.930489061839686e-05,
+          "max_drawdown": -0.004139935902097047
+        },
+        "stress": {
+          "total_return": -0.0004093001679810193,
+          "mean_daily": -1.9216848525210883e-05,
+          "max_drawdown": -0.0049279008322387075
+        },
+        "mean_trade_gross_bps": 9.30616255959138,
+        "mean_trade_net_bps": 5.103136606765535,
+        "worst_adverse": -0.005964786044840631,
+        "mean_beta_residual_bps": 7.79056285899747,
+        "matched_spy_net": -0.002055433579570165,
+        "excess_vs_matched_spy_net": 0.0038175894087795204,
+        "diagnostics": {
+          "adverse_direction": 3,
+          "cost_erased_positive_move": 0,
+          "profitable_after_base_cost": 4
+        },
+        "win_fraction_net": 0.5714285714285714
+      },
+      "opening_reversal:30:60": {
+        "sessions": 20,
+        "trades": 15,
+        "active_days": 10,
+        "gross": {
+          "total_return": -0.001322024989005799,
+          "mean_daily": -6.411920118279124e-05,
+          "max_drawdown": -0.007997737937997629
+        },
+        "low": {
+          "total_return": -0.0028188388219376748,
+          "mean_daily": -0.0001390988793747161,
+          "max_drawdown": -0.008493332944838894
+        },
+        "base": {
+          "total_return": -0.004462685564010083,
+          "mean_daily": -0.00022155920871674563,
+          "max_drawdown": -0.009038190051663064
+        },
+        "stress": {
+          "total_return": -0.009080457565121103,
+          "mean_daily": -0.000453849857272412,
+          "max_drawdown": -0.011019085177220833
+        },
+        "mean_trade_gross_bps": -1.7098453648744332,
+        "mean_trade_net_bps": -5.908245565779883,
+        "worst_adverse": -0.013391796850709903,
+        "mean_beta_residual_bps": -9.657558977979706,
+        "matched_spy_net": 0.000327023403156268,
+        "excess_vs_matched_spy_net": -0.004789708967166351,
+        "diagnostics": {
+          "adverse_direction": 7,
+          "cost_erased_positive_move": 0,
+          "profitable_after_base_cost": 8
+        },
+        "win_fraction_net": 0.5333333333333333
+      },
+      "residual_strength:30:60": {
+        "sessions": 20,
+        "trades": 7,
+        "active_days": 7,
+        "gross": {
+          "total_return": -0.002745652850946967,
+          "mean_daily": -0.0001372474792678602,
+          "max_drawdown": -0.003322148189597307
+        },
+        "low": {
+          "total_return": -0.0034431773037520985,
+          "mean_daily": -0.00017221653286664528,
+          "max_drawdown": -0.003720387863571206
+        },
+        "base": {
+          "total_return": -0.004209810220786592,
+          "mean_daily": -0.0002106744156699425,
+          "max_drawdown": -0.004209810220786592
+        },
+        "stress": {
+          "total_return": -0.006366697111980901,
+          "mean_daily": -0.0003190102252615151,
+          "max_drawdown": -0.006366697111980901
+        },
+        "mean_trade_gross_bps": -7.842713101020582,
+        "mean_trade_net_bps": -12.038538038282429,
+        "worst_adverse": -0.009492638763347494,
+        "mean_beta_residual_bps": 7.8939678881954745,
+        "matched_spy_net": -0.006360582034663831,
+        "excess_vs_matched_spy_net": 0.002150771813877239,
+        "diagnostics": {
+          "adverse_direction": 5,
+          "cost_erased_positive_move": 0,
+          "profitable_after_base_cost": 2
+        },
+        "win_fraction_net": 0.2857142857142857
+      },
+      "rule_selector:30:60": {
+        "sessions": 20,
+        "trades": 9,
+        "active_days": 7,
+        "gross": {
+          "total_return": 0.005086170941266399,
+          "mean_daily": 0.00025504398242931215,
+          "max_drawdown": -0.0037215868218689607
+        },
+        "low": {
+          "total_return": 0.004181734227128864,
+          "mean_daily": 0.00020999747828325533,
+          "max_drawdown": -0.003920822580928851
+        },
+        "base": {
+          "total_return": 0.0031878517414314356,
+          "mean_daily": 0.0001604567272802504,
+          "max_drawdown": -0.004139935902097047
+        },
+        "stress": {
+          "total_return": 0.0003925247286171718,
+          "mean_daily": 2.0900491302969228e-05,
+          "max_drawdown": -0.0051211848896142165
+        },
+        "mean_trade_gross_bps": 11.335288107969427,
+        "mean_trade_net_bps": 7.131410101344462,
+        "worst_adverse": -0.005964786044840631,
+        "mean_beta_residual_bps": 10.264678973660928,
+        "matched_spy_net": -0.002312034211260472,
+        "excess_vs_matched_spy_net": 0.0054998859526919075,
+        "diagnostics": {
+          "adverse_direction": 3,
+          "cost_erased_positive_move": 0,
+          "profitable_after_base_cost": 6
+        },
+        "win_fraction_net": 0.6666666666666666
+      },
+      "same_window:30:60": {
+        "sessions": 20,
+        "trades": 40,
+        "active_days": 20,
+        "gross": {
+          "total_return": -0.012165263451009323,
+          "mean_daily": -0.0006067116890101116,
+          "max_drawdown": -0.020618536159934364
+        },
+        "low": {
+          "total_return": -0.016108710258806114,
+          "mean_daily": -0.0008065703608050867,
+          "max_drawdown": -0.022575341636392188
+        },
+        "base": {
+          "total_return": -0.020428321927162596,
+          "mean_daily": -0.0010263687421196682,
+          "max_drawdown": -0.024723312304481104
+        },
+        "stress": {
+          "total_return": -0.03250001327559937,
+          "mean_daily": -0.0016455405178625732,
+          "max_drawdown": -0.03250001327559937
+        },
+        "mean_trade_gross_bps": -6.067116890101116,
+        "mean_trade_net_bps": -10.263687421196682,
+        "worst_adverse": -0.013391796850709903,
+        "mean_beta_residual_bps": -5.402769323219491,
+        "matched_spy_net": -0.013217335985114653,
+        "excess_vs_matched_spy_net": -0.007210985942047943,
+        "diagnostics": {
+          "adverse_direction": 23,
+          "cost_erased_positive_move": 0,
+          "profitable_after_base_cost": 17
+        },
+        "win_fraction_net": 0.425
+      },
+      "stabilized_reversal:30:60": {
+        "sessions": 20,
+        "trades": 2,
+        "active_days": 2,
+        "gross": {
+          "total_return": 0.0018442173243460314,
+          "mean_daily": 9.218613763646299e-05,
+          "max_drawdown": 0.0
+        },
+        "low": {
+          "total_return": 0.0016436940979052128,
+          "mean_daily": 8.216870215249083e-05,
+          "max_drawdown": 0.0
+        },
+        "base": {
+          "total_return": 0.00142318803313346,
+          "mean_daily": 7.115183666185354e-05,
+          "max_drawdown": 0.0
+        },
+        "stress": {
+          "total_return": 0.0008021532180448876,
+          "mean_daily": 4.011733982818011e-05,
+          "max_drawdown": -0.00019424125903777512
+        },
+        "mean_trade_gross_bps": 18.4372275272926,
+        "mean_trade_net_bps": 14.230367332370708,
+        "worst_adverse": -0.001609499087953381,
+        "mean_beta_residual_bps": 18.924085374983026,
+        "matched_spy_net": -0.0002571291435663481,
+        "excess_vs_matched_spy_net": 0.0016803171766998082,
+        "diagnostics": {
+          "adverse_direction": 0,
+          "cost_erased_positive_move": 0,
+          "profitable_after_base_cost": 2
+        },
+        "win_fraction_net": 1.0
+      }
+    },
+    "validation": {
+      "adaptive_pooled:30:60": {
+        "sessions": 12,
+        "trades": 0,
+        "active_days": 0,
+        "gross": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "low": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "base": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "stress": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "mean_trade_gross_bps": null,
+        "mean_trade_net_bps": null,
+        "worst_adverse": null,
+        "mean_beta_residual_bps": null,
+        "matched_spy_net": 0,
+        "excess_vs_matched_spy_net": 0.0,
+        "diagnostics": {
+          "adverse_direction": 0,
+          "cost_erased_positive_move": 0,
+          "profitable_after_base_cost": 0
+        },
+        "win_fraction_net": null
+      },
+      "adaptive_regime:30:60": {
+        "sessions": 12,
+        "trades": 0,
+        "active_days": 0,
+        "gross": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "low": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "base": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "stress": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "mean_trade_gross_bps": null,
+        "mean_trade_net_bps": null,
+        "worst_adverse": null,
+        "mean_beta_residual_bps": null,
+        "matched_spy_net": 0,
+        "excess_vs_matched_spy_net": 0.0,
+        "diagnostics": {
+          "adverse_direction": 0,
+          "cost_erased_positive_move": 0,
+          "profitable_after_base_cost": 0
+        },
+        "win_fraction_net": null
+      },
+      "opening_continuation:30:60": {
+        "sessions": 12,
+        "trades": 0,
+        "active_days": 0,
+        "gross": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "low": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "base": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "stress": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "mean_trade_gross_bps": null,
+        "mean_trade_net_bps": null,
+        "worst_adverse": null,
+        "mean_beta_residual_bps": null,
+        "matched_spy_net": 0,
+        "excess_vs_matched_spy_net": 0.0,
+        "diagnostics": {
+          "adverse_direction": 0,
+          "cost_erased_positive_move": 0,
+          "profitable_after_base_cost": 0
+        },
+        "win_fraction_net": null
+      },
+      "opening_reversal:30:60": {
+        "sessions": 12,
+        "trades": 12,
+        "active_days": 9,
+        "gross": {
+          "total_return": 0.004360414571741078,
+          "mean_daily": 0.0003635648030033735,
+          "max_drawdown": -0.0018849974038679385
+        },
+        "low": {
+          "total_return": 0.0031560617772865562,
+          "mean_daily": 0.0002635020963134421,
+          "max_drawdown": -0.002084402082003556
+        },
+        "base": {
+          "total_return": 0.0018330110495270446,
+          "mean_daily": 0.00015345622858670602,
+          "max_drawdown": -0.0023036781741561096
+        },
+        "stress": {
+          "total_return": -0.0018858163747939027,
+          "mean_daily": -0.00015654284841303914,
+          "max_drawdown": -0.0029212491275563135
+        },
+        "mean_trade_gross_bps": 7.2712960600674705,
+        "mean_trade_net_bps": 3.0691245717341205,
+        "worst_adverse": -0.004987464563767086,
+        "mean_beta_residual_bps": -11.048702107024694,
+        "matched_spy_net": 0.004760980098637457,
+        "excess_vs_matched_spy_net": -0.0029279690491104127,
+        "diagnostics": {
+          "adverse_direction": 5,
+          "cost_erased_positive_move": 0,
+          "profitable_after_base_cost": 7
+        },
+        "win_fraction_net": 0.5833333333333334
+      },
+      "residual_strength:30:60": {
+        "sessions": 12,
+        "trades": 3,
+        "active_days": 3,
+        "gross": {
+          "total_return": 0.0017734636639676893,
+          "mean_daily": 0.00014771791513383073,
+          "max_drawdown": 0.0
+        },
+        "low": {
+          "total_return": 0.001472814343244755,
+          "mean_daily": 0.00012269087425489009,
+          "max_drawdown": 0.0
+        },
+        "base": {
+          "total_return": 0.001142238987444033,
+          "mean_daily": 9.516690932067733e-05,
+          "max_drawdown": -9.447776612259151e-05
+        },
+        "stress": {
+          "total_return": 0.0002113997260395628,
+          "mean_daily": 1.7631933212687117e-05,
+          "max_drawdown": -0.0004043231716671647
+        },
+        "mean_trade_gross_bps": 11.817433210706458,
+        "mean_trade_net_bps": 7.613352745654186,
+        "worst_adverse": -0.0015819973926181063,
+        "mean_beta_residual_bps": 18.655813427443007,
+        "matched_spy_net": -0.0016308436651228941,
+        "excess_vs_matched_spy_net": 0.002773082652566927,
+        "diagnostics": {
+          "adverse_direction": 0,
+          "cost_erased_positive_move": 1,
+          "profitable_after_base_cost": 2
+        },
+        "win_fraction_net": 0.6666666666666666
+      },
+      "rule_selector:30:60": {
+        "sessions": 12,
+        "trades": 2,
+        "active_days": 2,
+        "gross": {
+          "total_return": 0.0033104023637606783,
+          "mean_daily": 0.0002756564033725521,
+          "max_drawdown": 0.0
+        },
+        "low": {
+          "total_return": 0.003109439152072291,
+          "mean_daily": 0.00025893627743780084,
+          "max_drawdown": 0.0
+        },
+        "base": {
+          "total_return": 0.0028884492729404077,
+          "mean_daily": 0.00024054800044774152,
+          "max_drawdown": 0.0
+        },
+        "stress": {
+          "total_return": 0.0022660519351891395,
+          "mean_daily": 0.00018874824628806186,
+          "max_drawdown": 0.0
+        },
+        "mean_trade_gross_bps": 33.07876840470625,
+        "mean_trade_net_bps": 28.865760053728984,
+        "worst_adverse": -0.003189342766238279,
+        "mean_beta_residual_bps": -18.283837896993788,
+        "matched_spy_net": 0.002099434855563853,
+        "excess_vs_matched_spy_net": 0.0007890144173765545,
+        "diagnostics": {
+          "adverse_direction": 0,
+          "cost_erased_positive_move": 0,
+          "profitable_after_base_cost": 2
+        },
+        "win_fraction_net": 1.0
+      },
+      "same_window:30:60": {
+        "sessions": 12,
+        "trades": 24,
+        "active_days": 12,
+        "gross": {
+          "total_return": 0.005450050874539425,
+          "mean_daily": 0.00045529314304885993,
+          "max_drawdown": -0.003931071786817952
+        },
+        "low": {
+          "total_return": 0.003039864125394809,
+          "mean_daily": 0.00025522209152541625,
+          "max_drawdown": -0.004528533889182951
+        },
+        "base": {
+          "total_return": 0.00039533113739054215,
+          "mean_daily": 3.519014155901427e-05,
+          "max_drawdown": -0.0051853283072584855
+        },
+        "stress": {
+          "total_return": -0.007019991966240924,
+          "mean_daily": -0.0005846395967952408,
+          "max_drawdown": -0.007739142598891746
+        },
+        "mean_trade_gross_bps": 4.5529314304885995,
+        "mean_trade_net_bps": 0.35190141559014265,
+        "worst_adverse": -0.0050592866254035584,
+        "mean_beta_residual_bps": -6.957599118563482,
+        "matched_spy_net": 0.003871772672813689,
+        "excess_vs_matched_spy_net": -0.003476441535423147,
+        "diagnostics": {
+          "adverse_direction": 10,
+          "cost_erased_positive_move": 1,
+          "profitable_after_base_cost": 13
+        },
+        "win_fraction_net": 0.5416666666666666
+      },
+      "stabilized_reversal:30:60": {
+        "sessions": 12,
+        "trades": 2,
+        "active_days": 2,
+        "gross": {
+          "total_return": 0.0033104023637606783,
+          "mean_daily": 0.0002756564033725521,
+          "max_drawdown": 0.0
+        },
+        "low": {
+          "total_return": 0.003109439152072291,
+          "mean_daily": 0.00025893627743780084,
+          "max_drawdown": 0.0
+        },
+        "base": {
+          "total_return": 0.0028884492729404077,
+          "mean_daily": 0.00024054800044774152,
+          "max_drawdown": 0.0
+        },
+        "stress": {
+          "total_return": 0.0022660519351891395,
+          "mean_daily": 0.00018874824628806186,
+          "max_drawdown": 0.0
+        },
+        "mean_trade_gross_bps": 33.07876840470625,
+        "mean_trade_net_bps": 28.865760053728984,
+        "worst_adverse": -0.003189342766238279,
+        "mean_beta_residual_bps": -18.283837896993788,
+        "matched_spy_net": 0.002099434855563853,
+        "excess_vs_matched_spy_net": 0.0007890144173765545,
+        "diagnostics": {
+          "adverse_direction": 0,
+          "cost_erased_positive_move": 0,
+          "profitable_after_base_cost": 2
+        },
+        "win_fraction_net": 1.0
+      }
+    },
+    "test": {
+      "adaptive_pooled:30:60": {
+        "sessions": 11,
+        "trades": 0,
+        "active_days": 0,
+        "gross": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "low": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "base": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "stress": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "mean_trade_gross_bps": null,
+        "mean_trade_net_bps": null,
+        "worst_adverse": null,
+        "mean_beta_residual_bps": null,
+        "matched_spy_net": 0,
+        "excess_vs_matched_spy_net": 0.0,
+        "diagnostics": {
+          "adverse_direction": 0,
+          "cost_erased_positive_move": 0,
+          "profitable_after_base_cost": 0
+        },
+        "win_fraction_net": null
+      },
+      "adaptive_regime:30:60": {
+        "sessions": 11,
+        "trades": 0,
+        "active_days": 0,
+        "gross": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "low": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "base": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "stress": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "mean_trade_gross_bps": null,
+        "mean_trade_net_bps": null,
+        "worst_adverse": null,
+        "mean_beta_residual_bps": null,
+        "matched_spy_net": 0,
+        "excess_vs_matched_spy_net": 0.0,
+        "diagnostics": {
+          "adverse_direction": 0,
+          "cost_erased_positive_move": 0,
+          "profitable_after_base_cost": 0
+        },
+        "win_fraction_net": null
+      },
+      "opening_continuation:30:60": {
+        "sessions": 11,
+        "trades": 6,
+        "active_days": 5,
+        "gross": {
+          "total_return": 0.0010356228841121862,
+          "mean_daily": 9.487301102526188e-05,
+          "max_drawdown": -0.002537032036793563
+        },
+        "low": {
+          "total_return": 0.0004352259854265572,
+          "mean_daily": 4.0314037774925495e-05,
+          "max_drawdown": -0.002636514682121671
+        },
+        "base": {
+          "total_return": -0.00022474851677678487,
+          "mean_daily": -1.9688232323743605e-05,
+          "max_drawdown": -0.0027477526439545485
+        },
+        "stress": {
+          "total_return": -0.0020820755551105297,
+          "mean_daily": -0.00018871455500824534,
+          "max_drawdown": -0.003364910441758684
+        },
+        "mean_trade_gross_bps": 3.4786770709262687,
+        "mean_trade_net_bps": -0.7219018518705989,
+        "worst_adverse": -0.005642521714650295,
+        "mean_beta_residual_bps": -2.265450106520682,
+        "matched_spy_net": 0.000540704991148111,
+        "excess_vs_matched_spy_net": -0.0007654535079248959,
+        "diagnostics": {
+          "adverse_direction": 2,
+          "cost_erased_positive_move": 2,
+          "profitable_after_base_cost": 2
+        },
+        "win_fraction_net": 0.3333333333333333
+      },
+      "opening_reversal:30:60": {
+        "sessions": 11,
+        "trades": 9,
+        "active_days": 8,
+        "gross": {
+          "total_return": 0.0030036949796961032,
+          "mean_daily": 0.00027336923817238896,
+          "max_drawdown": -0.002660386687137417
+        },
+        "low": {
+          "total_return": 0.0021013203601132346,
+          "mean_daily": 0.00019150456897349853,
+          "max_drawdown": -0.0027598446640022534
+        },
+        "base": {
+          "total_return": 0.0011097268453699183,
+          "mean_daily": 0.00010147233962285148,
+          "max_drawdown": -0.0030428251484220237
+        },
+        "stress": {
+          "total_return": -0.0016790335276039015,
+          "mean_daily": -0.0001521483421481012,
+          "max_drawdown": -0.004173572302706763
+        },
+        "mean_trade_gross_bps": 6.682359155325064,
+        "mean_trade_net_bps": 2.480434968558592,
+        "worst_adverse": -0.005593692263655026,
+        "mean_beta_residual_bps": -5.67764968055868,
+        "matched_spy_net": 0.002172329432602149,
+        "excess_vs_matched_spy_net": -0.0010626025872322309,
+        "diagnostics": {
+          "adverse_direction": 2,
+          "cost_erased_positive_move": 0,
+          "profitable_after_base_cost": 7
+        },
+        "win_fraction_net": 0.7777777777777778
+      },
+      "residual_strength:30:60": {
+        "sessions": 11,
+        "trades": 7,
+        "active_days": 5,
+        "gross": {
+          "total_return": -0.0007330984790719919,
+          "mean_daily": -6.624263314975908e-05,
+          "max_drawdown": -0.0033898067436729518
+        },
+        "low": {
+          "total_return": -0.0014323212632602056,
+          "mean_daily": -0.00012985938658414836,
+          "max_drawdown": -0.003688597113107095
+        },
+        "base": {
+          "total_return": -0.002200866673807478,
+          "mean_daily": -0.0001998231229773586,
+          "max_drawdown": -0.0040171515599330965
+        },
+        "stress": {
+          "total_return": -0.0043633922462280594,
+          "mean_daily": -0.0003969108842298185,
+          "max_drawdown": -0.004942430245757468
+        },
+        "mean_trade_gross_bps": -2.0819113275638568,
+        "mean_trade_net_bps": -6.280155293574127,
+        "worst_adverse": -0.005642521714650295,
+        "mean_beta_residual_bps": 3.1931610380680877,
+        "matched_spy_net": -0.0030313939528809897,
+        "excess_vs_matched_spy_net": 0.0008305272790735119,
+        "diagnostics": {
+          "adverse_direction": 2,
+          "cost_erased_positive_move": 2,
+          "profitable_after_base_cost": 3
+        },
+        "win_fraction_net": 0.42857142857142855
+      },
+      "rule_selector:30:60": {
+        "sessions": 11,
+        "trades": 4,
+        "active_days": 4,
+        "gross": {
+          "total_return": 0.0035726427100972735,
+          "mean_daily": 0.0003246869910700072,
+          "max_drawdown": -0.0007844849138878285
+        },
+        "low": {
+          "total_return": 0.0031709567605597844,
+          "mean_daily": 0.00028826205980128893,
+          "max_drawdown": -0.0008843180335930123
+        },
+        "base": {
+          "total_return": 0.002729334227659086,
+          "mean_daily": 0.000248203047798187,
+          "max_drawdown": -0.0009941114086601255
+        },
+        "stress": {
+          "total_return": 0.0014860679772734642,
+          "mean_daily": 0.00013535685917694738,
+          "max_drawdown": -0.0013033992141412432
+        },
+        "mean_trade_gross_bps": 17.857784508850393,
+        "mean_trade_net_bps": 13.651167628900286,
+        "worst_adverse": -0.002008343568142057,
+        "mean_beta_residual_bps": -1.714571646885395,
+        "matched_spy_net": 0.0017615374525052907,
+        "excess_vs_matched_spy_net": 0.0009677967751537953,
+        "diagnostics": {
+          "adverse_direction": 1,
+          "cost_erased_positive_move": 1,
+          "profitable_after_base_cost": 2
+        },
+        "win_fraction_net": 0.5
+      },
+      "same_window:30:60": {
+        "sessions": 11,
+        "trades": 22,
+        "active_days": 11,
+        "gross": {
+          "total_return": 0.0033248250918571642,
+          "mean_daily": 0.00030478235522760837,
+          "max_drawdown": -0.005428681566325366
+        },
+        "low": {
+          "total_return": 0.0011199367358023515,
+          "mean_daily": 0.00010474140285180658,
+          "max_drawdown": -0.006621451347420537
+        },
+        "base": {
+          "total_return": -0.0012998444554991329,
+          "mean_daily": -0.0001152574450036046,
+          "max_drawdown": -0.007931846013696786
+        },
+        "stress": {
+          "total_return": -0.008087807211647036,
+          "mean_daily": -0.0007349939347510815,
+          "max_drawdown": -0.012084319518490316
+        },
+        "mean_trade_gross_bps": 3.0478235522760837,
+        "mean_trade_net_bps": -1.152574450036046,
+        "worst_adverse": -0.005642521714650295,
+        "mean_beta_residual_bps": -1.1098169308895984,
+        "matched_spy_net": -0.002417740297139037,
+        "excess_vs_matched_spy_net": 0.0011178958416399043,
+        "diagnostics": {
+          "adverse_direction": 7,
+          "cost_erased_positive_move": 3,
+          "profitable_after_base_cost": 12
+        },
+        "win_fraction_net": 0.5454545454545454
+      },
+      "stabilized_reversal:30:60": {
+        "sessions": 11,
+        "trades": 2,
+        "active_days": 2,
+        "gross": {
+          "total_return": 0.002246908023276095,
+          "mean_daily": 0.00020415151702257717,
+          "max_drawdown": 0.0
+        },
+        "low": {
+          "total_return": 0.0020462639351030987,
+          "mean_daily": 0.00018593069061999636,
+          "max_drawdown": 0.0
+        },
+        "base": {
+          "total_return": 0.0018256249689683202,
+          "mean_daily": 0.00016589198970434256,
+          "max_drawdown": 0.0
+        },
+        "stress": {
+          "total_return": 0.0012042158758138743,
+          "mean_daily": 0.00010944299333173,
+          "max_drawdown": 0.0
+        },
+        "mean_trade_gross_bps": 22.45666687248349,
+        "mean_trade_net_bps": 18.24811886747768,
+        "worst_adverse": -0.002008343568142057,
+        "mean_beta_residual_bps": -9.123820017593596,
+        "matched_spy_net": 0.0011685051679097835,
+        "excess_vs_matched_spy_net": 0.0006571198010585366,
+        "diagnostics": {
+          "adverse_direction": 0,
+          "cost_erased_positive_move": 0,
+          "profitable_after_base_cost": 2
+        },
+        "win_fraction_net": 1.0
+      }
+    },
+    "supplemental": {
+      "adaptive_pooled:30:60": {
+        "sessions": 12,
+        "trades": 0,
+        "active_days": 0,
+        "gross": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "low": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "base": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "stress": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "mean_trade_gross_bps": null,
+        "mean_trade_net_bps": null,
+        "worst_adverse": null,
+        "mean_beta_residual_bps": null,
+        "matched_spy_net": 0,
+        "excess_vs_matched_spy_net": 0.0,
+        "diagnostics": {
+          "adverse_direction": 0,
+          "cost_erased_positive_move": 0,
+          "profitable_after_base_cost": 0
+        },
+        "win_fraction_net": null
+      },
+      "adaptive_regime:30:60": {
+        "sessions": 12,
+        "trades": 0,
+        "active_days": 0,
+        "gross": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "low": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "base": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "stress": {
+          "total_return": 0.0,
+          "mean_daily": 0.0,
+          "max_drawdown": 0.0
+        },
+        "mean_trade_gross_bps": null,
+        "mean_trade_net_bps": null,
+        "worst_adverse": null,
+        "mean_beta_residual_bps": null,
+        "matched_spy_net": 0,
+        "excess_vs_matched_spy_net": 0.0,
+        "diagnostics": {
+          "adverse_direction": 0,
+          "cost_erased_positive_move": 0,
+          "profitable_after_base_cost": 0
+        },
+        "win_fraction_net": null
+      },
+      "opening_continuation:30:60": {
+        "sessions": 12,
+        "trades": 3,
+        "active_days": 3,
+        "gross": {
+          "total_return": 0.0010889425654778684,
+          "mean_daily": 9.074654670029418e-05,
+          "max_drawdown": -0.000369646524075673
+        },
+        "low": {
+          "total_return": 0.0007885670780587439,
+          "mean_daily": 6.573089895572926e-05,
+          "max_drawdown": -0.0004695626031631095
+        },
+        "base": {
+          "total_return": 0.0004582927965783856,
+          "mean_daily": 3.82194638380573e-05,
+          "max_drawdown": -0.0005794472143908491
+        },
+        "stress": {
+          "total_return": -0.0004716987840390763,
+          "mean_daily": -3.928021579178986e-05,
+          "max_drawdown": -0.0008889920320265254
+        },
+        "mean_trade_gross_bps": 7.259723736023535,
+        "mean_trade_net_bps": 3.057557107044584,
+        "worst_adverse": -0.003838402703634891,
+        "mean_beta_residual_bps": -6.276542896290562,
+        "matched_spy_net": 0.000819925771003982,
+        "excess_vs_matched_spy_net": -0.0003616329744255964,
+        "diagnostics": {
+          "adverse_direction": 1,
+          "cost_erased_positive_move": 0,
+          "profitable_after_base_cost": 2
+        },
+        "win_fraction_net": 0.6666666666666666
+      },
+      "opening_reversal:30:60": {
+        "sessions": 12,
+        "trades": 12,
+        "active_days": 9,
+        "gross": {
+          "total_return": -0.00541548223535826,
+          "mean_daily": -0.00045160136808773216,
+          "max_drawdown": -0.006420726633711182
+        },
+        "low": {
+          "total_return": -0.0066079788661429495,
+          "mean_daily": -0.0005515010578451227,
+          "max_drawdown": -0.007115695722748838
+        },
+        "base": {
+          "total_return": -0.007918005094464942,
+          "mean_daily": -0.0006613676445951187,
+          "max_drawdown": -0.007918005094464942
+        },
+        "stress": {
+          "total_return": -0.01160022428784413,
+          "mean_daily": -0.0009708616872989526,
+          "max_drawdown": -0.01160022428784413
+        },
+        "mean_trade_gross_bps": -9.032027361754643,
+        "mean_trade_net_bps": -13.227352891902374,
+        "worst_adverse": -0.007972779765634819,
+        "mean_beta_residual_bps": -1.6713962692352615,
+        "matched_spy_net": -0.0055853144829139945,
+        "excess_vs_matched_spy_net": -0.002332690611550947,
+        "diagnostics": {
+          "adverse_direction": 7,
+          "cost_erased_positive_move": 1,
+          "profitable_after_base_cost": 4
+        },
+        "win_fraction_net": 0.3333333333333333
+      },
+      "residual_strength:30:60": {
+        "sessions": 12,
+        "trades": 4,
+        "active_days": 3,
+        "gross": {
+          "total_return": -0.003161243312538309,
+          "mean_daily": -0.00026331342646992995,
+          "max_drawdown": -0.0038754361767964207
+        },
+        "low": {
+          "total_return": -0.0035599236597170236,
+          "mean_daily": -0.0002965907693836765,
+          "max_drawdown": -0.0041741869227215345
+        },
+        "base": {
+          "total_return": -0.003998264881104219,
+          "mean_daily": -0.0003331881611365513,
+          "max_drawdown": -0.0045026977662830925
+        },
+        "stress": {
+          "total_return": -0.005232423588060753,
+          "mean_daily": -0.0004362829696772745,
+          "max_drawdown": -0.005427853472209865
+        },
+        "mean_trade_gross_bps": -15.798805588195798,
+        "mean_trade_net_bps": -19.99128966819308,
+        "worst_adverse": -0.007907602002837244,
+        "mean_beta_residual_bps": -8.682842885006263,
+        "matched_spy_net": -0.0019728325975914007,
+        "excess_vs_matched_spy_net": -0.002025432283512818,
+        "diagnostics": {
+          "adverse_direction": 3,
+          "cost_erased_positive_move": 0,
+          "profitable_after_base_cost": 1
+        },
+        "win_fraction_net": 0.25
+      },
+      "rule_selector:30:60": {
+        "sessions": 12,
+        "trades": 5,
+        "active_days": 4,
+        "gross": {
+          "total_return": 0.002751212715351059,
+          "mean_daily": 0.00022903397990954588,
+          "max_drawdown": 0.0
+        },
+        "low": {
+          "total_return": 0.0022497797957981014,
+          "mean_daily": 0.00018732567727716698,
+          "max_drawdown": 0.0
+        },
+        "base": {
+          "total_return": 0.0016985278869585674,
+          "mean_daily": 0.00014145617697655655,
+          "max_drawdown": 0.0
+        },
+        "stress": {
+          "total_return": 0.00014682563251877667,
+          "mean_daily": 1.2241849811402602e-05,
+          "max_drawdown": -0.00027072584333720506
+        },
+        "mean_trade_gross_bps": 10.993631035658202,
+        "mean_trade_net_bps": 6.789896494874714,
+        "worst_adverse": -0.003838402703634891,
+        "mean_beta_residual_bps": 0.8916709354038321,
+        "matched_spy_net": 0.0013072241848199884,
+        "excess_vs_matched_spy_net": 0.000391303702138579,
+        "diagnostics": {
+          "adverse_direction": 1,
+          "cost_erased_positive_move": 0,
+          "profitable_after_base_cost": 4
+        },
+        "win_fraction_net": 0.8
+      },
+      "same_window:30:60": {
+        "sessions": 12,
+        "trades": 24,
+        "active_days": 12,
+        "gross": {
+          "total_return": -0.01306270861937131,
+          "mean_daily": -0.0010930237721754517,
+          "max_drawdown": -0.013311664985820704
+        },
+        "low": {
+          "total_return": -0.015428518019701798,
+          "mean_daily": -0.001292785191279085,
+          "max_drawdown": -0.015428518019701798
+        },
+        "base": {
+          "total_return": -0.018024358779646477,
+          "mean_daily": -0.0015124766170938146,
+          "max_drawdown": -0.018024358779646477
+        },
+        "stress": {
+          "total_return": -0.025303147907206114,
+          "mean_daily": -0.00213134709932232,
+          "max_drawdown": -0.025303147907206114
+        },
+        "mean_trade_gross_bps": -10.930237721754517,
+        "mean_trade_net_bps": -15.124766170938146,
+        "worst_adverse": -0.007972779765634819,
+        "mean_beta_residual_bps": -4.00718666065168,
+        "matched_spy_net": -0.012311966874994917,
+        "excess_vs_matched_spy_net": -0.005712391904651559,
+        "diagnostics": {
+          "adverse_direction": 15,
+          "cost_erased_positive_move": 1,
+          "profitable_after_base_cost": 8
+        },
+        "win_fraction_net": 0.3333333333333333
+      },
+      "stabilized_reversal:30:60": {
+        "sessions": 12,
+        "trades": 2,
+        "active_days": 2,
+        "gross": {
+          "total_return": 0.0016600385807021834,
+          "mean_daily": 0.00013828743320925171,
+          "max_drawdown": 0.0
+        },
+        "low": {
+          "total_return": 0.0014595705891982114,
+          "mean_daily": 0.00012159477832143772,
+          "max_drawdown": 0.0
+        },
+        "base": {
+          "total_return": 0.0012391252616004156,
+          "mean_daily": 0.00010323671313849925,
+          "max_drawdown": 0.0
+        },
+        "stress": {
+          "total_return": 0.000618261495187733,
+          "mean_daily": 5.152206560319247e-05,
+          "max_drawdown": -5.2795768956670486e-06
+        },
+        "mean_trade_gross_bps": 16.594491985110203,
+        "mean_trade_net_bps": 12.38840557661991,
+        "worst_adverse": -0.002181744834850896,
+        "mean_beta_residual_bps": 11.643991682945424,
+        "matched_spy_net": 0.0004869612399793777,
+        "excess_vs_matched_spy_net": 0.0007521640216210379,
+        "diagnostics": {
+          "adverse_direction": 0,
+          "cost_erased_positive_move": 0,
+          "profitable_after_base_cost": 2
+        },
+        "win_fraction_net": 1.0
+      }
+    }
+  },
+  "reversal_horizon_sensitivity": {
+    "stabilized_reversal:30:120": {
+      "sessions": 11,
+      "trades": 2,
+      "active_days": 2,
+      "gross": {
+        "total_return": 0.004234020590722309,
+        "mean_daily": 0.0003845068784450052,
+        "max_drawdown": 0.0
+      },
+      "low": {
+        "total_return": 0.004032780147857684,
+        "mean_daily": 0.000366249984576885,
+        "max_drawdown": 0.0
+      },
+      "base": {
+        "total_return": 0.003811485421196137,
+        "mean_daily": 0.00034617161777897564,
+        "max_drawdown": 0.0
+      },
+      "stress": {
+        "total_return": 0.003188229569005774,
+        "mean_daily": 0.0002896108826637812,
+        "max_drawdown": 0.0
+      },
+      "mean_trade_gross_bps": 42.29575662895058,
+      "mean_trade_net_bps": 38.07887795568732,
+      "worst_adverse": -0.002008343568142057,
+      "mean_beta_residual_bps": 6.884846359033713,
+      "matched_spy_net": 0.0013518306638897748,
+      "excess_vs_matched_spy_net": 0.002459654757306362,
+      "diagnostics": {
+        "adverse_direction": 0,
+        "cost_erased_positive_move": 0,
+        "profitable_after_base_cost": 2
+      },
+      "win_fraction_net": 1.0
+    },
+    "stabilized_reversal:30:30": {
+      "sessions": 11,
+      "trades": 2,
+      "active_days": 2,
+      "gross": {
+        "total_return": 0.0027442872469967128,
+        "mean_daily": 0.0002493581012428954,
+        "max_drawdown": 0.0
+      },
+      "low": {
+        "total_return": 0.0025434939592454686,
+        "mean_daily": 0.00023112823442751238,
+        "max_drawdown": 0.0
+      },
+      "base": {
+        "total_return": 0.0023226909310047894,
+        "mean_daily": 0.00021107959114566562,
+        "max_drawdown": 0.0
+      },
+      "stress": {
+        "total_return": 0.0017008198044652367,
+        "mean_daily": 0.0001546025871394771,
+        "max_drawdown": 0.0
+      },
+      "mean_trade_gross_bps": 27.429391136718493,
+      "mean_trade_net_bps": 23.218755026023217,
+      "worst_adverse": -0.002008343568142057,
+      "mean_beta_residual_bps": 1.4729258859561,
+      "matched_spy_net": 0.0008427337861482975,
+      "excess_vs_matched_spy_net": 0.0014799571448564919,
+      "diagnostics": {
+        "adverse_direction": 0,
+        "cost_erased_positive_move": 0,
+        "profitable_after_base_cost": 2
+      },
+      "win_fraction_net": 1.0
+    },
+    "stabilized_reversal:30:60": {
+      "sessions": 11,
+      "trades": 2,
+      "active_days": 2,
+      "gross": {
+        "total_return": 0.002246908023276095,
+        "mean_daily": 0.00020415151702257717,
+        "max_drawdown": 0.0
+      },
+      "low": {
+        "total_return": 0.0020462639351030987,
+        "mean_daily": 0.00018593069061999636,
+        "max_drawdown": 0.0
+      },
+      "base": {
+        "total_return": 0.0018256249689683202,
+        "mean_daily": 0.00016589198970434256,
+        "max_drawdown": 0.0
+      },
+      "stress": {
+        "total_return": 0.0012042158758138743,
+        "mean_daily": 0.00010944299333173,
+        "max_drawdown": 0.0
+      },
+      "mean_trade_gross_bps": 22.45666687248349,
+      "mean_trade_net_bps": 18.24811886747768,
+      "worst_adverse": -0.002008343568142057,
+      "mean_beta_residual_bps": -9.123820017593596,
+      "matched_spy_net": 0.0011685051679097835,
+      "excess_vs_matched_spy_net": 0.0006571198010585366,
+      "diagnostics": {
+        "adverse_direction": 0,
+        "cost_erased_positive_move": 0,
+        "profitable_after_base_cost": 2
+      },
+      "win_fraction_net": 1.0
+    },
+    "stabilized_reversal:90:120": {
+      "sessions": 11,
+      "trades": 4,
+      "active_days": 4,
+      "gross": {
+        "total_return": 0.00047306837551630565,
+        "mean_daily": 4.3140553045323774e-05,
+        "max_drawdown": -0.0012001717849858817
+      },
+      "low": {
+        "total_return": 7.293203530966963e-05,
+        "mean_daily": 6.771925433847091e-06,
+        "max_drawdown": -0.0012999217756297643
+      },
+      "base": {
+        "total_return": -0.0003669869293596584,
+        "mean_daily": -3.322516554971067e-05,
+        "max_drawdown": -0.0014096237279281887
+      },
+      "stress": {
+        "total_return": -0.001605457856259207,
+        "mean_daily": -0.00014589692273335325,
+        "max_drawdown": -0.001785224592520951
+      },
+      "mean_trade_gross_bps": 2.3727304174928077,
+      "mean_trade_net_bps": -1.8273841052340867,
+      "worst_adverse": -0.003600515354957423,
+      "mean_beta_residual_bps": -4.762697401262752,
+      "matched_spy_net": 0.0018212462651077121,
+      "excess_vs_matched_spy_net": -0.0021882331944673705,
+      "diagnostics": {
+        "adverse_direction": 2,
+        "cost_erased_positive_move": 0,
+        "profitable_after_base_cost": 2
+      },
+      "win_fraction_net": 0.5
+    },
+    "stabilized_reversal:90:30": {
+      "sessions": 11,
+      "trades": 4,
+      "active_days": 4,
+      "gross": {
+        "total_return": 0.0014649848403192056,
+        "mean_daily": 0.00013316911435439833,
+        "max_drawdown": -0.000565814704108325
+      },
+      "low": {
+        "total_return": 0.0010643525205531468,
+        "mean_daily": 9.678248283104515e-05,
+        "max_drawdown": -0.0006656915534826169
+      },
+      "base": {
+        "total_return": 0.0006238882991274064,
+        "mean_daily": 5.676559170247897e-05,
+        "max_drawdown": -0.0007755330210860167
+      },
+      "stress": {
+        "total_return": -0.0006161174545560311,
+        "mean_daily": -5.596194246589152e-05,
+        "max_drawdown": -0.0010849563031845033
+      },
+      "mean_trade_gross_bps": 7.324301289491908,
+      "mean_trade_net_bps": 3.1221075436363432,
+      "worst_adverse": -0.0024175053253764345,
+      "mean_beta_residual_bps": 1.7818468240609442,
+      "matched_spy_net": 0.0010326347639055822,
+      "excess_vs_matched_spy_net": -0.0004087464647781758,
+      "diagnostics": {
+        "adverse_direction": 1,
+        "cost_erased_positive_move": 0,
+        "profitable_after_base_cost": 3
+      },
+      "win_fraction_net": 0.75
+    },
+    "stabilized_reversal:90:60": {
+      "sessions": 11,
+      "trades": 4,
+      "active_days": 4,
+      "gross": {
+        "total_return": 0.001055436201522042,
+        "mean_daily": 9.5990332309776e-05,
+        "max_drawdown": -0.0006172476478977229
+      },
+      "low": {
+        "total_return": 0.0006550086569214741,
+        "mean_daily": 5.9611135799341284e-05,
+        "max_drawdown": -0.0007171142117117224
+      },
+      "base": {
+        "total_return": 0.0002147695557499496,
+        "mean_daily": 1.960242146782264e-05,
+        "max_drawdown": -0.000826944367574578
+      },
+      "stress": {
+        "total_return": -0.0010246025137027326,
+        "mean_daily": -9.310207867302411e-05,
+        "max_drawdown": -0.0012799323342430613
+      },
+      "mean_trade_gross_bps": 5.2794682770376795,
+      "mean_trade_net_bps": 1.0781331807302452,
+      "worst_adverse": -0.0024175053253764345,
+      "mean_beta_residual_bps": -0.5175943934319688,
+      "matched_spy_net": 0.0014346227699169045,
+      "excess_vs_matched_spy_net": -0.001219853214166955,
+      "diagnostics": {
+        "adverse_direction": 2,
+        "cost_erased_positive_move": 0,
+        "profitable_after_base_cost": 2
+      },
+      "win_fraction_net": 0.5
+    }
+  },
+  "conclusion": "No validated net edge: short revised-price sample, modeled costs and multiple comparisons.",
+  "options": "Unavailable: no historical synchronized entry/exit bid-ask, IV, theta or liquidity records."
+}

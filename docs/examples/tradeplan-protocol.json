@@ -1,0 +1,53 @@
+{
+  "schema": "tradeplan-alpha-v1",
+  "base_commit": "d4170b994412dd2f12134fcbbaddc853958129a0",
+  "symbols": [
+    "QQQ",
+    "IWM"
+  ],
+  "benchmark": "SPY",
+  "source": "Yahoo public chart 5m 60d; historical revised indicative OHLCV, not executable quotes",
+  "decision_minutes_after_open": [
+    30,
+    90
+  ],
+  "holding_minutes": [
+    30,
+    60,
+    120
+  ],
+  "entry_delay_minutes": 5,
+  "families": [
+    "opening_continuation",
+    "stabilized_reversal",
+    "residual_strength"
+  ],
+  "controls": [
+    "opening_momentum",
+    "opening_reversal",
+    "same_window",
+    "cash"
+  ],
+  "threshold": "max(10bp, 0.5 opening realized volatility)",
+  "beta": "20 prior session opening returns, minimum 10, clipped [0,3]; default 1",
+  "costs_per_side_bps": {
+    "low": 1,
+    "base": 2.1,
+    "stress": 5.2
+  },
+  "train_end": "2026-08-14",
+  "validation_end": "2026-09-01",
+  "test_end": "2026-09-19",
+  "supplemental_end": "2026-10-08",
+  "known_consumed_period": [
+    "2026-09-21",
+    "2026-10-07"
+  ],
+  "selection": "choose validation mean daily net at base cost, minimum 5 active days, cash if nonpositive; freeze before holdout",
+  "adaptive": "weekly refit using only strictly prior resolved days; pooled or regime-specific daily net, shrunk mean minus one standard error; minimum 10 active daily clusters; no-trade if nonpositive",
+  "plan_gate": "at least 20 prior active days; positive mean minus 1.96 SE after stress cost; historical remains research-only",
+  "independence": "all comparisons descriptive; no retuning on final test; 18 configurations and 12 simple controls disclosed; prior published sample not independent",
+  "options": "no historical bid/ask chains available; scenario math only; no synthetic profitability",
+  "data_eligibility": "Exclude any QQQ/IWM/SPY dividend or split session; no point-in-time action reference. Corrected after metadata inspection, not parameter retuning.",
+  "timing_contract": "Prediction horizon includes 5-minute delay + holding minutes. Entry and exit at later bar opens."
+}
