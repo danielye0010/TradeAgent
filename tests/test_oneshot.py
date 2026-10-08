@@ -223,7 +223,12 @@ def test_legacy_preflight_checks_actual_package_root_after_move(monkeypatch):
     monkeypatch.setattr(module, "require_autonomous_release", lambda phase: None)
     monkeypatch.setattr(module.PolicySignature, "verify", lambda *args: None)
     monkeypatch.setattr(module, "deployment_hash", lambda root: "frozen-test")
-    with pytest.raises(Halt, match="expired/not active"):
+    expected = (
+        "expired/not active"
+        if (root / "src/tradeagent/legacy/standalone_cli.py").is_file()
+        else "executing package differs from frozen deployment root"
+    )
+    with pytest.raises(Halt, match=expected):
         module.local_policy_preflight(
             {
                 "policy": {

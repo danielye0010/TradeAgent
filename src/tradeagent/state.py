@@ -42,6 +42,14 @@ class State:
         self.db = sqlite3.connect(self.path, timeout=5)
         self.db.row_factory = sqlite3.Row
         self.db.execute("PRAGMA foreign_keys=ON")
+        version = self.db.execute("PRAGMA user_version").fetchone()[0]
+        if version not in {0, 1}:
+            raise Halt(
+                "incompatible execution state schema; preserve the journal and use a supported migration"
+            )
+        if version == 0:
+            with self.db:
+                self.db.execute("PRAGMA user_version=1")
         self.db.executescript("""
         PRAGMA synchronous=FULL;
         CREATE TABLE IF NOT EXISTS runs(
@@ -57,6 +65,7 @@ class State:
           account_key TEXT NOT NULL, day TEXT NOT NULL, nav TEXT NOT NULL,
           PRIMARY KEY(account_key, day));
         """)
+        self.observer = None
         if self.db.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
             raise Halt("state integrity failure")
 
@@ -86,6 +95,9 @@ class State:
                 "INSERT INTO events(run_id,time,kind,payload) VALUES(?,?,?,?)",
                 (run_id, time.time(), kind, dumps(payload)),
             )
+
+        if self.observer is not None:
+            self.observer(kind, payload)
 
     def start(self, c, r):
         run_id = str(uuid.uuid4())
@@ -257,7 +269,7 @@ class State:
         )
 
     @contextmanager
-    def lock(self, seconds):
+    def lock(self, seconds, *, local_owner=False):
         path = self.directory / "process.lock"
         with path.open("a+b") as handle:
             handle.seek(0)
@@ -276,6 +288,11 @@ class State:
                     fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
             except OSError as exc:
                 raise Halt("another run holds the process lock") from exc
+            if local_owner:
+                # The local owner holds flock for the complete operation. A crash releases
+                # it immediately; preserve historical leases without waiting on them.
+                yield lambda: None
+                return
             lease_path = str(self.directory / "lease.sqlite3")
             lease = run_lock.acquire(lease_path, lease_seconds=seconds)
             if not lease["ok"]:

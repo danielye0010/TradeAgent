@@ -14,7 +14,7 @@ from an existing SHADOW environment:
 ```bash
 python3 -m venv ~/tradeagent-owner-venv
 source ~/tradeagent-owner-venv/bin/activate
-pip install /absolute/path/tradeagent-0.2.3-py3-none-any.whl
+pip install /absolute/path/tradeagent-0.3.0-py3-none-any.whl
 umask 077
 mkdir -p ~/.config/tradeagent
 cd ~/.config/tradeagent
@@ -136,63 +136,83 @@ at most three attempts; authentication errors and malformed evidence do not retr
 
 ## Recovery and automatic exit
 
-One configuration and state directory own one lifecycle. The application creates
-`tradeagent.toml.run.json` beside the configuration and `live-run.json` in the
-state directory. These are durable recovery receipts, not signatures or separate
-owner setup. Preserve the config, receipts and journal together. Repeating the
-same LIVE command resumes/reconciles that run and never creates a second entry.
-For a failed review, inspect the prior run with a transport incapable of broker writes:
+One configuration and local Linux state directory own one lifecycle. Preserve its
+`live-run.json`, SQLite journal and reports. New lifecycles use a single marker;
+legacy external receipts remain readable and are preserved. Owners do not manage
+hashes or signing material. Repeating a launch never creates another entry.
 
 ```bash
-tradeagent reconcile-once --config tradeagent.toml
+tradeagent status --config tradeagent.toml
+tradeagent recover --config tradeagent.toml
 ```
 
-This opens SQLite read-only and writes a separate timestamped reconciliation report.
-It preserves the original report, journal, markers and receipt. It can read across a
-wheel update while retaining the original config, account, risk and contract bindings;
-LIVE execution still refuses a changed package. `HALTED` plus `NOT_SUBMITTED` and
-`RECONCILED` identifies a failed attempt with no broker order or bot exposure.
-`SUBMISSION_UNKNOWN` retains the strict missing-order blocker after an uncertain send.
-`BROKER_CONFIRMED` requires broker identity and final accounting still checks terminal
-orders, fills, fees, cash and holdings. Attempt timestamps are separate from actual
-network-send timestamps. Neither diagnosis nor repeating an abandoned run replays entry.
+`status` reads broker orders, holdings, exposure and reconciliation without modifying
+execution evidence or invoking review/place/cancel. `reconcile-once` performs the same
+checks and saves a separate timestamped report. `recover` manages only the existing
+lifecycle. It reconciles uncertain submissions by durable client reference and broker
+ID before any write, polls existing orders and resumes exit management. It never
+creates a new entry or blindly retries placement.
 
-Missing markers/journal, changed config/package/contracts/account or unexplained
-positions halt. Do not delete state to rearm. Once the old round trip is closed,
-use the explicit read-only archive operation with the same configuration:
+`HALTED`, `NOT_SUBMITTED` and `RECONCILED` identify a resolved pre-submission failure.
+`SUBMISSION_UNKNOWN` remains blocked until broker identity and accounting are proven.
+Confirmed partial entry fills exit only their actual quantity after the entry is
+terminal. A terminal rejected or partial exit remains visible; a separate owner
+`recover` may submit a new exit after reconciling every previous order, fills, fees,
+cash and exact remaining bot-owned sellable quantity. Unrelated holdings cannot be
+sold. Ambiguous or open prior orders block another exit. Optional `max_exit_attempts`
+can limit recovery; the default has no arbitrary permanent one-exit ceiling.
+
+After verified closure or a no-submission failure:
 
 ```bash
 tradeagent new-run --config tradeagent.toml
 tradeagent live-check --config tradeagent.toml
-# A separate explicit owner launch is required for any subsequent round trip:
+# Explicit owner launch, after readiness succeeds:
 tradeagent run-once --live --config tradeagent.toml
 ```
 
-`new-run` checks the previous durable completion, authenticated account, all order
-identities, exact bot-owned residual, current holdings and cash before moving its
-journal, report and receipt into a private sibling `.history` directory. It also permits an explicitly requested archive after fresh proof that an abandoned
-entry is `NOT_SUBMITTED`, with unchanged cash/holdings and no broker orders. This permits
-recovery after a wheel correction without deleting evidence or weakening the LIVE code
-pin. It refuses submitted unfinished or ambiguous runs and uses a stable configuration
-lock shared with LIVE.
-It never places orders. A crash while archiving fails closed with preserved evidence.
-Each explicitly launched lifecycle remains limited to one entry and one exit.
+`new-run` verifies the recorded account, terminal order identities, fills, fees, cash
+and zero bot-owned residual before archiving all journal/report/legacy receipt evidence
+in a private sibling `.history` directory. It never places orders or deletes evidence.
+Missing state, unresolved identities or unexplained movements require recovery, never
+a reset. A finished lifecycle suppresses repeated launches until `new-run`.
 
-Pending entries receive bounded polls and at most one durably reserved cancellation
-attempt. Lost acknowledgments are reconciled without resubmission. A partial entry
-exits only the exact confirmed quantity, including fractional shares, after the
-remainder is terminal. No exit quantity is rounded or derived from buy dollars. A rejected or
-partially filled exit remains a visible incident; the runner never submits another
-exit to hide unresolved exposure. Unknown broker orders always halt safely.
+Application/build identity is historical metadata. Compatible application upgrades do
+not invalidate execution. State schema, execution protocol and broker contracts are
+checked independently; incompatible state produces an actionable error and is retained.
+The first schema migration records version 1 without removing any existing journal data.
+Semantic TOML comparison accepts comments and formatting. Active lifecycle risk,
+entry/exit parameters, account and ownership remain frozen; edited economic parameters
+apply after `new-run`. Meaningful edits during a placement operation halt before send.
+
+Use `broker.account_number` to select one accessible eligible account. Unrelated
+equities and reliably valued assets contribute to account NAV and concentration;
+unknown valuation, permissions, leverage or accounting still block execution. Execution
+remains US long equity/ETF only. The default entry symbol is the first configured
+symbol. `entry.symbol` fixes it; an explicit ordered `entry.preferred_symbols` permits
+fallback and records each rejection. There is no cheapest-symbol selection.
+
+Owner settings support positive entry/max-order amounts, position count, concentration,
+new and total exposure, cash reserve (including zero), daily loss/turnover, liquidity,
+spread, hold duration and polling/recovery behavior without development ceilings.
+Broker eligibility and available unleveraged funds still bound every entry. An exact
+owned-position exit may bypass loss/turnover entry gates with
+`exit.risk_reduction_on_limits = true`; data freshness, ownership, permissions,
+sellability and accounting checks always apply.
+
+The library's `validated_plan_entry` accepts an explicit matching, fresh long underlying
+TradePlan/Prediction plus owner-configured sizing and preserves strategy/version,
+snapshot and decision provenance. It shares execution risk checks. Research and SHADOW
+do not invoke this boundary automatically.
 
 The exit deadline is the earlier of the configured hold time after the latest
 confirmed fill or `session_buffer_seconds` before regular close. The example uses
 30 seconds of holding and a 60-second closing buffer. New exposure requires an
 additional cancellation/poll window of at least one minute. The hold duration is
 an execution-test setting, not a permanent strategy rule.
-The LIVE runner waits while renewing its lease and monitoring ownership/cash.
+The LIVE runner waits while holding its process lock and monitoring ownership/cash.
 Create `KILL` in the configured state directory to stop new exposure and request
-the single risk-reducing exit. Fresh data, broker permissions and risk checks still
+a risk-reducing exit. Fresh data, broker permissions and risk checks still
 apply to that exit. Host/broker/market availability and fills cannot be guaranteed.
 Do not stop a process holding a position without arranging owner recovery.
 
@@ -202,8 +222,8 @@ exit and P&L when fully closed. `COMPLETED` requires both broker orders to be fi
 and fresh final reconciliation. A cancelled partial entry that was fully exited is
 `CLOSED_PARTIAL`; a partial/rejected/unknown exit is `HALTED`, with residual and
 incident evidence. Estimated prices, ACKs and terminal orders without fills are
-never labeled successful real trading. LIVE stdout retains status,
-reason and reconciliation flags. Local incident records require owner attention;
+never labeled successful real trading. LIVE stderr emits timestamped observed execution transitions. Stdout returns the full
+JSON report with order IDs, quantities, costs, fees, P&L and reconciliation flags. Local incident records require owner attention;
 no remote notification channel or recurring schedule is installed. Real broker
 commissioning is separate from controlled-broker tests.
 

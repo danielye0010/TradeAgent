@@ -679,6 +679,7 @@ class SupervisedLifecycle:
             q * snapshot.option_quotes[k].mark * snapshot.option_quotes[k].contract.multiplier
             for k, q in options.items()
         )
+        marked += sum((dec(v) for v in snapshot.other_asset_values.values()), dec(0))
         if abs(snapshot.nav - snapshot.cash - marked) > max(dec(".01"), snapshot.nav * dec(".01")):
             raise Halt("reconciled portfolio NAV mismatch")
         status = order["state"] if order["state"] in TERMINAL else "pending"

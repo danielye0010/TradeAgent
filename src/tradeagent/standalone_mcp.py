@@ -136,7 +136,9 @@ class StandaloneMCP:
             seen.add(cursor)
         else:
             raise Halt("official catalog pagination limit")
-        self.contracts.check_current(self.tools, self.server_info.get("version"))
+        self.contracts.check_current(
+            self.tools, self.server_info.get("version"), require_version=False
+        )
         self.auth_status = "external OAuth token; authenticated catalog validated"
         return self
 
@@ -481,7 +483,7 @@ class StandaloneExecutionTransport:
         ):
             raise Halt("standalone policy permits equity review/place only; no cancellation")
         self.bridge.contracts.check_current(
-            self.bridge.tools, self.bridge.server_info.get("version")
+            self.bridge.tools, self.bridge.server_info.get("version"), require_version=False
         )
         self.bridge.contracts.validate(name, arguments)
         rows = self.state.db.execute(
@@ -503,15 +505,24 @@ class StandaloneExecutionTransport:
         if len(matches) != 1:
             raise Halt("broker call is not an exact durable lifecycle intent")
         row, intent = matches[0]
-        snapshot = self.broker.snapshot()
-        day = (
-            datetime.fromtimestamp(self.guard.clock(), ZoneInfo("America/New_York"))
-            .date()
-            .isoformat()
+        cached = (
+            getattr(self, "review_snapshot", None)
+            if owner and name == "review_equity_order"
+            else None
         )
-        from .accounting import Accounting
+        if cached:
+            snapshot, baseline = cached
+            self.review_snapshot = None
+        else:
+            snapshot = self.broker.snapshot()
+            day = (
+                datetime.fromtimestamp(self.guard.clock(), ZoneInfo("America/New_York"))
+                .date()
+                .isoformat()
+            )
+            from .accounting import Accounting
 
-        baseline = Accounting(self.state).observe(row["run_id"], snapshot, day)
+            baseline = Accounting(self.state).observe(row["run_id"], snapshot, day)
         if name == "place_equity_order":
             plan = self.state.db.execute(
                 "SELECT packet FROM plans WHERE key=?", (row["key"],)

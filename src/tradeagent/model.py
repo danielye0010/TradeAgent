@@ -42,6 +42,7 @@ class Config:
     supervised_enabled: bool = False
     live_enabled: bool = False
     strategy_version: str = "oft3r-trend-test-v1"
+    account_selector: str | None = None
     target_fraction: str = "0.05"
     lease_seconds: int = 1200
     request_timeout_seconds: int = 60
@@ -69,7 +70,6 @@ class Config:
         if (
             not isinstance(self.allowed_symbols, list)
             or not self.allowed_symbols
-            or len(self.allowed_symbols) > 100
             or any(
                 not isinstance(s, str)
                 or not s.isascii()
@@ -88,6 +88,7 @@ class Config:
 @dataclass(frozen=True)
 class Risk:
     version: str = "1"
+    max_total_exposure_fraction: str = "1"
     max_positions: int = 5
     max_position_fraction: str = "0.20"
     max_new_exposure_fraction: str = "0.10"
@@ -114,6 +115,7 @@ class Risk:
         if not isinstance(self.version, str) or not self.version:
             raise Halt("missing risk configuration identity")
         for name in (
+            "max_total_exposure_fraction",
             "max_position_fraction",
             "max_new_exposure_fraction",
             "min_cash_fraction",
@@ -126,7 +128,9 @@ class Risk:
             "max_total_option_premium_fraction",
             "max_option_spread_fraction",
         ):
-            if not 0 < dec(getattr(self, name)) <= 1:
+            value = dec(getattr(self, name))
+            valid = value >= 0 if name == "min_cash_fraction" else value > 0
+            if not valid or (name != "max_daily_turnover_fraction" and value > 1):
                 raise Halt(f"invalid risk configuration: {name}")
         for name in (
             "max_positions",
@@ -192,6 +196,7 @@ class Snapshot:
     liquidity: dict[str, dict] = field(default_factory=dict)
     fractional_tradable: dict[str, bool] = field(default_factory=dict)
     countries: dict[str, str] = field(default_factory=dict)
+    other_asset_values: dict[str, Decimal] = field(default_factory=dict)
 
 
 # Immutable allowance for the observed official equity price-book clock skew.

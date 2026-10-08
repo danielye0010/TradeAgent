@@ -8,16 +8,20 @@ max_notional = "25"
 [broker]
 oauth_helper = "/absolute/external/robinhood-mcp-oauth-helper"
 timeout_seconds = 20
-# Optional account pin: use the full digest from live-check before the first run.
-# account_sha256 = "OWNER_VERIFIED_ACCOUNT_SHA256"
+# Select an eligible account explicitly when multiple accounts are visible.
+# account_number = "YOUR_BROKER_ACCOUNT_NUMBER"
 
 [risk]
 max_positions = 5
 max_position_fraction = "0.20"
 max_new_exposure_fraction = "0.10"
+max_total_exposure_fraction = "1"
 min_cash_fraction = "0.20"
 
 [entry]
+# Defaults to the first allowed symbol. Use symbol or ordered preferred_symbols.
+# symbol = "QQQ"
+# preferred_symbols = ["QQQ", "IWM"]
 order_type = "market"
 dollar_amount = "5"
 
@@ -26,3 +30,8 @@ order_type = "market"
 hold_seconds = 30
 polls = 3
 session_buffer_seconds = 60
+
+# Optional recovery controls; no permanent exit-attempt ceiling by default.
+poll_interval_seconds = 5
+risk_reduction_on_limits = true
+# max_exit_attempts = 3

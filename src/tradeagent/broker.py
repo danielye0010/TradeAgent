@@ -75,8 +75,13 @@ class Broker:
             for a in accounts
         ]
         choices = [a for a in accounts if a.get("agentic_allowed") is True]
+        selector = self.config.account_selector
+        if selector:
+            choices = [a for a in choices if digest(a["account_number"]) == selector]
         if len(choices) != 1:
-            raise Halt("exactly one account accessible to this agent is required")
+            raise Halt(
+                "select one eligible account (exactly one) with broker.account_number; visible accounts are ambiguous or selected account is inaccessible"
+            )
         selected = choices[0]
         if (
             selected.get("state") != "active"
@@ -130,12 +135,21 @@ class Broker:
             "fixed_income_value",
             "pending_deposits",
         )
-        if any(
+        other_values = {
+            k: dec(p.get(k))
+            for k in unsupported
+            if k != "pending_deposits" and (k != "options_value" or not self.options_enabled)
+        }
+        if any(value < 0 for value in other_values.values()):
+            raise Halt("negative or uncertain unrelated asset valuation")
+        if self.config.mode != "LIVE" and any(
             dec(p.get(k)) != 0
             for k in unsupported
             if k != "options_value" or not self.options_enabled
         ):
             raise Halt("unsupported holdings or unsettled deposit in account")
+        if self.config.mode != "LIVE":
+            other_values = {}
         pos_rows = self.paged("get_equity_positions", "positions")
         pos = unique(pos_rows, "symbol")
         positions, available = {}, {}
@@ -294,6 +308,7 @@ class Broker:
                 s: r.get("fractional_tradability") == "tradable" for s, r in trade_rows.items()
             },
             countries={s: r.get("country", "") for s, r in trade_rows.items()},
+            other_asset_values={k: v for k, v in other_values.items() if v},
             bid_times=bid_times,
             ask_times=ask_times,
             regular_session=False,
