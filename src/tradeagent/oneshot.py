@@ -147,8 +147,57 @@ class OneShotRun:
     def rows(self):
         return self.state.db.execute("SELECT * FROM intents ORDER BY rowid").fetchall()
 
+    def submissions(self):
+        records = []
+        for row in self.rows():
+            consumed = self.state.db.execute(
+                "SELECT consumed FROM approvals WHERE key=?", (row["key"],)
+            ).fetchone()
+
+            def event(kind, key=row["key"]):
+                return self.state.db.execute(
+                    "SELECT time FROM events WHERE kind=? AND json_extract(payload, '$.key')=? ORDER BY seq LIMIT 1",
+                    (kind, key),
+                ).fetchone()
+
+            sent = event("placement_send_started")
+            not_sent = event("submission_not_sent")
+            pre_submission = (
+                row["status"] in {"prepared", "reviewed", "abandoned", "risk_rejected"}
+                and not row["broker_id"]
+                and not sent
+                and (not consumed or (row["status"] == "abandoned" and not_sent))
+            )
+            status = (
+                "NOT_SUBMITTED"
+                if pre_submission
+                else "BROKER_CONFIRMED"
+                if row["broker_id"]
+                else "SUBMISSION_UNKNOWN"
+            )
+            records.append(
+                {
+                    "key": row["key"],
+                    "ref_id": row["ref_id"],
+                    "side": intent_from_row(row).side,
+                    "submission_status": status,
+                    "sent_at": sent[0] if sent else None,
+                }
+            )
+        return records
+
+    def submission_status(self):
+        statuses = {r["submission_status"] for r in self.submissions()}
+        return (
+            "SUBMISSION_UNKNOWN"
+            if "SUBMISSION_UNKNOWN" in statuses
+            else "BROKER_CONFIRMED"
+            if "BROKER_CONFIRMED" in statuses
+            else "NOT_SUBMITTED"
+        )
+
     def submit(self, intent):
-        self.put(intent.side + "_submission_time", self.clock())
+        self.put(intent.side + "_attempt_time", self.clock())
         plan = self.engine.prepare(
             intent,
             f"{self.config.strategy_version}:{intent.side}",
@@ -199,25 +248,39 @@ class OneShotRun:
         """Whole-round-trip cash/holdings proof from the core's normalized fills."""
         initial = self.get("initial")
         snapshot = self.broker.snapshot()
-        orders, seen = [], set()
+        orders, seen, submissions = [], set(), []
         expected_cash = dec(initial["cash"])
         positions = {s: dec(q) for s, q in initial["positions"].items()}
         spent, proceeds, fees = dec(0), dec(0), dec(0)
         bought, sold = dec(0), dec(0)
         for row in self.rows():
             intent = intent_from_row(row)
-            matches = [o for o in snapshot.orders if o.get("ref_id") == row["ref_id"]]
+            matches = [
+                o
+                for o in snapshot.orders
+                if o.get("ref_id") == row["ref_id"]
+                or (row["broker_id"] and o["id"] == row["broker_id"])
+            ]
+            record = next(item for item in self.submissions() if item["key"] == row["key"])
+            submissions.append(record)
+            pre_submission = record["submission_status"] == "NOT_SUBMITTED"
+            if pre_submission:
+                if matches:
+                    raise Halt("broker order contradicts pre-submission intent")
+                continue
             if len(matches) != 1:
                 raise Halt("unknown order identity; cannot prove final reconciliation")
             order = matches[0]
             if (
                 order["id"] in seen
                 or (row["broker_id"] and row["broker_id"] != order["id"])
+                or order.get("ref_id") != row["ref_id"]
                 or not intent.matches_order(order)
                 or row["status"] != order["state"]
                 or order["state"] not in TERMINAL
             ):
                 raise Halt("order/intent identity or terminal status mismatch")
+            record["submission_status"] = "BROKER_CONFIRMED"
             seen.add(order["id"])
             quantity = sum((dec(f["quantity"]) for f in order["executions"]), dec(0))
             if (
@@ -257,6 +320,14 @@ class OneShotRun:
         check_state(snapshot, self.risk, self.clock())
         return {
             "orders": orders,
+            "broker_order_count": len(orders),
+            "submissions": submissions,
+            "submission_status": "SUBMISSION_UNKNOWN"
+            if any(s["submission_status"] == "SUBMISSION_UNKNOWN" for s in submissions)
+            else "BROKER_CONFIRMED"
+            if orders
+            else "NOT_SUBMITTED",
+            "reconciliation_status": "RECONCILED",
             "initial_cash": initial["cash"],
             "final_cash": str(snapshot.cash),
             "expected_final_cash": str(expected_cash),
@@ -335,6 +406,15 @@ class OneShotRun:
             self.submit(intent)
             entries = [r for r in self.rows() if intent_from_row(r).side == "buy"]
         entry = entries[0]
+        if entry["status"] in {"prepared", "reviewed", "abandoned", "risk_rejected"}:
+            audit = self.audit()
+            if audit["submission_status"] != "NOT_SUBMITTED":
+                raise Halt("entry submission is ambiguous; never replay")
+            return self.finish(
+                "HALTED",
+                reason="entry was not submitted; reserved side cannot be replayed",
+                outstanding_incident=False,
+            )
         if not exits:
             self.settle(entry)
             snapshot = self.broker.snapshot()
@@ -686,11 +766,21 @@ def _run_live(settings):
                     result.update(status="HALTED", reason=str(exc), outstanding_incident=True)
                     try:
                         result.update(controller.audit())
+                        if result["submission_status"] == "NOT_SUBMITTED":
+                            result["outstanding_incident"] = False
                     except Halt as audit_error:
                         result["reconciliation_blocker"] = str(audit_error)
                 finally:
+                    result["submissions"] = controller.submissions()
+                    result["submission_status"] = controller.submission_status()
                     result["submission_times"] = {
-                        side: controller.get(side + "_submission_time") for side in ("buy", "sell")
+                        side: next(
+                            (r["sent_at"] for r in result["submissions"] if r["side"] == side), None
+                        )
+                        for side in ("buy", "sell")
+                    }
+                    result["attempt_times"] = {
+                        side: controller.get(side + "_attempt_time") for side in ("buy", "sell")
                     }
                     result["exit_due"] = controller.get("exit_due")
                     result["exit_reason"] = controller.get("exit_reason")
@@ -711,6 +801,68 @@ def _run_live(settings):
     return result
 
 
+def reconcile_live(settings):
+    """Read-only diagnosis across a code update; preserve the original report and DB."""
+    import hashlib
+    import sqlite3
+    import time
+    from types import SimpleNamespace
+
+    from .broker import Broker
+    from .execution_policy import check_run_state, owner_file, owner_run_lock
+    from .standalone_mcp import ExternalOAuthToken, ReadOnlyMCP
+
+    with owner_run_lock(settings):
+        check_run_state(settings, reconciliation_only=True)
+        if not settings.receipt.exists():
+            raise Halt("no existing owner run to reconcile")
+        marker = json.loads(owner_file(settings.directory / "live-run.json").read_text())
+        db = sqlite3.connect(f"file:{settings.directory / 'agent/state.sqlite3'}?mode=ro", uri=True)
+        db.row_factory = sqlite3.Row
+        try:
+            audit = OneShotRun.__new__(OneShotRun)
+            audit.state, audit.risk, audit.clock = SimpleNamespace(db=db), settings.risk, time.time
+            original = settings.directory / "report.json"
+            previous = json.loads(original.read_text())
+            result = {
+                "status": "HALTED",
+                "original_status": previous["status"],
+                "submission_status": audit.submission_status(),
+                "reconciliation_status": "BLOCKED",
+                "outstanding_incident": True,
+                "original_report_sha256": hashlib.sha256(original.read_bytes()).hexdigest(),
+                "reason": previous.get("reason"),
+                "real_review_place_cancel_calls": 0,
+                "execution_state_modified": False,
+            }
+            with ReadOnlyMCP(
+                ExternalOAuthToken(settings.oauth_helper, Path(__file__).parent), settings.timeout
+            ) as bridge:
+                broker = Broker(bridge, settings.config, settings.risk)
+                broker.snapshot()
+                if digest(broker.account["account_number"]) != marker["policy"]["account_digest"]:
+                    raise Halt("reconciliation account differs from existing owner run")
+                audit.broker = broker
+                try:
+                    result.update(audit.audit())
+                    if result["submission_status"] == "NOT_SUBMITTED":
+                        result["outstanding_incident"] = False
+                    elif audit.get("finished"):
+                        result["status"] = audit.get("finished")
+                        result["outstanding_incident"] = not result["flat_bot_position"]
+                except Halt as exc:
+                    result["reconciliation_blocker"] = str(exc)
+                    if "contradicts" in str(exc):
+                        result["submission_status"] = "SUBMISSION_UNKNOWN"
+                result["broker_calls"] = bridge.calls
+            target = settings.directory / f"reconciliation-{time.time_ns()}.json"
+            result["report_path"] = str(target)
+            atomic_json(target, result)
+            return result
+        finally:
+            db.close()
+
+
 def new_live_run(settings):
     """Explicit owner reset only after fresh read-only proof that the old run is closed."""
     import time
@@ -721,7 +873,7 @@ def new_live_run(settings):
     from .standalone_mcp import ExternalOAuthToken, ReadOnlyMCP
 
     with owner_run_lock(settings):
-        check_run_state(settings)
+        check_run_state(settings, reconciliation_only=True)
         if not settings.receipt.exists():
             raise Halt("no completed owner run to archive")
         marker = json.loads(owner_file(settings.directory / "live-run.json").read_text())
@@ -747,9 +899,12 @@ def new_live_run(settings):
                         settings.risk,
                         time.time,
                     )
-                    if audit.get("finished") not in {"COMPLETED", "CLOSED_PARTIAL", "NO_TRADE"}:
-                        raise Halt("unfinished/incident run cannot be replaced")
                     evidence = audit.audit()
+                    if (
+                        audit.get("finished") not in {"COMPLETED", "CLOSED_PARTIAL", "NO_TRADE"}
+                        and evidence["submission_status"] != "NOT_SUBMITTED"
+                    ):
+                        raise Halt("unfinished/incident run cannot be replaced")
                     if not evidence["flat_bot_position"]:
                         raise Halt("residual bot-owned position prevents a new run")
                     check_state(snapshot, settings.risk, time.time())

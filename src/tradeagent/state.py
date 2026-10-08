@@ -135,10 +135,22 @@ class State:
         transitions = {
             "prepared": {"reviewed", "shadow_recorded", "abandoned", "risk_rejected"},
             "reviewed": {"submitting", "abandoned"},
-            "submitting": {"pending", "unknown"} | TERMINAL,
+            "submitting": {"pending", "unknown", "abandoned"} | TERMINAL,
             "unknown": {"pending"} | TERMINAL,
             "pending": {"pending"} | TERMINAL,
         }
+        if row and row["status"] == "submitting" and status == "abandoned":
+            if (
+                not self.db.execute(
+                    "SELECT 1 FROM events WHERE kind='submission_not_sent' AND json_extract(payload, '$.key')=?",
+                    (key,),
+                ).fetchone()
+                or self.db.execute(
+                    "SELECT 1 FROM events WHERE kind='placement_send_started' AND json_extract(payload, '$.key')=?",
+                    (key,),
+                ).fetchone()
+            ):
+                raise Halt("cannot abandon an ambiguous submission without pre-send proof")
         if row is None or status not in transitions.get(row["status"], set()):
             raise Halt("invalid intent lifecycle transition")
         with self.db:

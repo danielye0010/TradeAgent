@@ -14,7 +14,7 @@ from an existing SHADOW environment:
 ```bash
 python3 -m venv ~/tradeagent-owner-venv
 source ~/tradeagent-owner-venv/bin/activate
-pip install /absolute/path/tradeagent-0.2.2-py3-none-any.whl
+pip install /absolute/path/tradeagent-0.2.3-py3-none-any.whl
 umask 077
 mkdir -p ~/.config/tradeagent
 cd ~/.config/tradeagent
@@ -125,6 +125,12 @@ The LIVE command performs fresh checks and runs the existing direct MCP transpor
 The local `OwnerPolicy` replaces cryptographic enrollment at the same guard and
 wire boundaries. Review, exact request/state binding, review expiry, approval
 consumption and submission markers still commit before network placement.
+Separate human approvals retain their 30-second expiry. The immediate owner-operated
+path bounds broker review age by the existing `risk.max_data_age_seconds` (120 seconds),
+measured from request start and the oldest venue quote timestamp. Receiving a slow
+response never resets its age. Review quotes, current market/risk state, exact payload,
+account and permissions are checked again at the final HTTP boundary. Expired reviews
+halt before placement; the runner does not automatically obtain another review.
 No broker write is blindly retried. Classified transient idempotent reads retain
 at most three attempts; authentication errors and malformed evidence do not retry.
 
@@ -135,6 +141,22 @@ One configuration and state directory own one lifecycle. The application creates
 state directory. These are durable recovery receipts, not signatures or separate
 owner setup. Preserve the config, receipts and journal together. Repeating the
 same LIVE command resumes/reconciles that run and never creates a second entry.
+For a failed review, inspect the prior run with a transport incapable of broker writes:
+
+```bash
+tradeagent reconcile-once --config tradeagent.toml
+```
+
+This opens SQLite read-only and writes a separate timestamped reconciliation report.
+It preserves the original report, journal, markers and receipt. It can read across a
+wheel update while retaining the original config, account, risk and contract bindings;
+LIVE execution still refuses a changed package. `HALTED` plus `NOT_SUBMITTED` and
+`RECONCILED` identifies a failed attempt with no broker order or bot exposure.
+`SUBMISSION_UNKNOWN` retains the strict missing-order blocker after an uncertain send.
+`BROKER_CONFIRMED` requires broker identity and final accounting still checks terminal
+orders, fills, fees, cash and holdings. Attempt timestamps are separate from actual
+network-send timestamps. Neither diagnosis nor repeating an abandoned run replays entry.
+
 Missing markers/journal, changed config/package/contracts/account or unexplained
 positions halt. Do not delete state to rearm. Once the old round trip is closed,
 use the explicit read-only archive operation with the same configuration:
@@ -148,8 +170,11 @@ tradeagent run-once --live --config tradeagent.toml
 
 `new-run` checks the previous durable completion, authenticated account, all order
 identities, exact bot-owned residual, current holdings and cash before moving its
-journal, report and receipt into a private sibling `.history` directory. It refuses
-unfinished or incident runs and uses a stable configuration lock shared with LIVE.
+journal, report and receipt into a private sibling `.history` directory. It also permits an explicitly requested archive after fresh proof that an abandoned
+entry is `NOT_SUBMITTED`, with unchanged cash/holdings and no broker orders. This permits
+recovery after a wheel correction without deleting evidence or weakening the LIVE code
+pin. It refuses submitted unfinished or ambiguous runs and uses a stable configuration
+lock shared with LIVE.
 It never places orders. A crash while archiving fails closed with preserved evidence.
 Each explicitly launched lifecycle remains limited to one entry and one exit.
 

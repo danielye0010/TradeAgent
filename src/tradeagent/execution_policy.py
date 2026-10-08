@@ -230,7 +230,7 @@ def create_policy(
     }
 
 
-def check_run_state(settings):
+def check_run_state(settings, *, reconciliation_only=False):
     """Read-only lost-state check. The external config receipt cannot rearm a run."""
     directory, receipt = settings.directory, settings.receipt
     marker = directory / "live-run.json"
@@ -249,6 +249,9 @@ def check_run_state(settings):
             settings.options,
             owner_config_hash=settings.file_hash,
         )
+        if reconciliation_only:
+            # A corrected wheel can READ the prior run; execution keeps the exact code pin.
+            expected["package_hash"] = policy.get("package_hash")
         if policy != expected:
             raise Halt("LIVE run account/code/configuration changed; never replay")
         if settings.account_sha256 and policy.get("account_digest") != settings.account_sha256:
@@ -354,6 +357,38 @@ class OwnerPolicy:
         if intent.side == "buy" and (Path(self.config.state_dir).parent / "KILL").exists():
             raise Halt("emergency stop prevents new exposure at authorization boundary")
 
+    def check_review(self, intent, review, snapshot):
+        from .broker import utc_time
+        from .model import MAX_FUTURE_SKEW_SECONDS, timestamp_fresh
+
+        quote = review["response"]["data"].get("quote_data")
+        if (
+            not isinstance(quote, dict)
+            or quote.get("symbol") != intent.symbol
+            or quote.get("state") != "active"
+            or quote.get("has_traded") is not True
+        ):
+            raise Halt("broker review equity quote is missing/ineligible")
+        for field in ("venue_bid_time", "venue_ask_time", "venue_last_trade_time"):
+            if not timestamp_fresh(
+                utc_time(quote.get(field)),
+                self.clock(),
+                self.risk.max_data_age_seconds,
+                future_skew=MAX_FUTURE_SKEW_SECONDS,
+            ):
+                raise Halt("stale broker review quote")
+        bid, ask = dec(quote.get("bid_price")), dec(quote.get("ask_price"))
+        if bid <= 0 or ask < bid:
+            raise Halt("invalid broker review market")
+        for observed, current in (
+            (bid, snapshot.bids[intent.symbol]),
+            (ask, snapshot.asks[intent.symbol]),
+        ):
+            if abs(observed - current) / snapshot.prices[intent.symbol] > dec(
+                self.risk.review_price_tolerance_fraction
+            ):
+                raise Halt("broker review outside unchanged price tolerance")
+
     def verify(self, artifact, binding, simulation=False):
         self.validate()
         if simulation != self.simulation or artifact.get("policy_context") != self.artifact:
@@ -390,37 +425,25 @@ class StandingLifecycle(SupervisedLifecycle):
 
         return state_binding(snapshot, economic_only=True)
 
-    def _review_market(self, intent, review, snapshot):
+    def _review_deadline(self, review, now):
+        # Standing owner authorization has no human approval pause. Broker evidence
+        # still ages from request start and its actual venue timestamps, never receipt.
+        quote = review["response"]["data"]["quote_data"]
         from .broker import utc_time
-        from .model import MAX_FUTURE_SKEW_SECONDS, timestamp_fresh
 
-        quote = review["response"]["data"].get("quote_data")
-        if (
-            not isinstance(quote, dict)
-            or quote.get("symbol") != intent.symbol
-            or quote.get("state") != "active"
-            or quote.get("has_traded") is not True
-        ):
-            raise Halt("broker review equity quote is missing/ineligible")
-        for field in ("venue_bid_time", "venue_ask_time", "venue_last_trade_time"):
-            if not timestamp_fresh(
-                utc_time(quote.get(field)),
-                self.clock(),
-                self.risk.max_data_age_seconds,
-                future_skew=MAX_FUTURE_SKEW_SECONDS,
-            ):
-                raise Halt("stale broker review quote")
-        bid, ask = dec(quote.get("bid_price")), dec(quote.get("ask_price"))
-        if bid <= 0 or ask < bid:
-            raise Halt("invalid broker review market")
-        for observed, current in (
-            (bid, snapshot.bids[intent.symbol]),
-            (ask, snapshot.asks[intent.symbol]),
-        ):
-            if abs(observed - current) / snapshot.prices[intent.symbol] > dec(
-                self.risk.review_price_tolerance_fraction
-            ):
-                raise Halt("broker review outside unchanged price tolerance")
+        return (
+            min(
+                review["asof"],
+                *(
+                    utc_time(quote[k])
+                    for k in ("venue_bid_time", "venue_ask_time", "venue_last_trade_time")
+                ),
+            )
+            + self.risk.max_data_age_seconds
+        )
+
+    def _review_market(self, intent, review, snapshot):
+        self.guard.check_review(intent, review, snapshot)
 
     def _risk(self, intent, snapshot, baseline, fees=0):
         self.guard.check(intent, snapshot, baseline)

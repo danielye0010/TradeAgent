@@ -12,7 +12,7 @@ from zoneinfo import ZoneInfo
 
 from .accounting import Accounting
 from .broker import Broker, data, utc_time
-from .model import Halt, dec, digest, timestamp_fresh
+from .model import Halt, SubmissionNotSent, dec, digest, timestamp_fresh
 from .options import OptionIntent, check_option_order, normalize_order
 from .risk import TERMINAL, check_order
 from .schema import Contracts
@@ -147,6 +147,7 @@ class OfficialExecutionAdapter:
         name, args = self.arguments(intent, review=True)
         started = self.clock()
         response = self.transport.invoke(name, args)
+        received = self.clock()
         self.contracts.validate(name, response, "outputSchema")
         self.last_review = redact(response)
         reviewed = data(response)
@@ -186,6 +187,7 @@ class OfficialExecutionAdapter:
             "payload": redact(args),
             "response": redact(response),
             "asof": started,
+            "received_at": received,
             "checks_passed": True,
             "fees": str(fees),
             "ref_id": ref_id,
@@ -401,6 +403,34 @@ class SupervisedLifecycle:
         if any(dec(quote.get(k)) != v for k, v in expected.items()):
             raise Halt("broker review and refreshed market data disagree")
 
+    def _review_deadline(self, review, now):
+        # Separate human approval remains bounded to 30 seconds from evidence creation.
+        return min(now + 30, review["asof"] + 30)
+
+    def _check_review_expiry(self, key, packet, intent=None, snapshot=None):
+        now = self.clock()
+        review = packet["review"]
+        deadline = min(packet["binding"]["expires"], self._review_deadline(review, now))
+        if now >= deadline or not timestamp_fresh(
+            review["asof"], now, self.risk.max_data_age_seconds
+        ):
+            self.state.update(key, "abandoned")
+            self.state.event(
+                self.run,
+                "review_expired",
+                {
+                    "key": key,
+                    "submission_status": "NOT_SUBMITTED",
+                    "review_started": review["asof"],
+                    "checked_at": now,
+                    "elapsed_seconds": now - review["asof"],
+                    "expires": packet["binding"]["expires"],
+                },
+            )
+            raise Halt("approval/review expired")
+        if snapshot is not None:
+            self._review_market(intent, review, snapshot)
+
     def prepare(self, intent, bar_time, normalized_signal=None):
         initial = self.broker.snapshot(intent)
         day = datetime.fromtimestamp(self.clock(), ZoneInfo("America/New_York")).date().isoformat()
@@ -475,7 +505,7 @@ class SupervisedLifecycle:
             "schema_hash": self.broker.contracts.hash,
             "review_hash": digest(review),
             "state_hash": self._state_binding(fresh),
-            "expires": now + 30,
+            "expires": self._review_deadline(review, now),
             "simulation": self.broker.is_simulation,
             "instrument": asdict(intent.contract)
             if isinstance(intent, OptionIntent)
@@ -502,12 +532,7 @@ class SupervisedLifecycle:
         packet = json.loads(plan["packet"])
         binding = packet["binding"]
         (verifier or HumanApproval()).verify(artifact, binding, self.broker.is_simulation)
-        if (
-            not timestamp_fresh(packet["review"]["asof"], self.clock(), 30)
-            or self.clock() > binding["expires"]
-        ):
-            self.state.update(key, "abandoned")
-            raise Halt("approval/review expired")
+        self._check_review_expiry(key, packet)
         _, args = self.broker.arguments(intent, row["ref_id"])
         if (
             digest(args) != binding["submission_hash"]
@@ -526,15 +551,21 @@ class SupervisedLifecycle:
         try:
             fresh = self.broker.snapshot(intent)
             self._risk(intent, fresh, packet["baseline"], packet["review"]["fees"])
+            self._check_review_expiry(key, packet, intent, fresh)
             if self._state_binding(fresh) != binding["state_hash"]:
                 raise Halt("account/market changed after approval; approval invalidated")
         except Exception:
-            self.state.update(key, "abandoned")
+            if (
+                self.state.db.execute("SELECT status FROM intents WHERE key=?", (key,)).fetchone()[
+                    0
+                ]
+                == "reviewed"
+            ):
+                self.state.update(key, "abandoned")
             raise
         self.state.event(self.run, "risk_pass", {"key": key, "phase": "after_approval_refresh"})
         self.fence()
-        if self.clock() > binding["expires"]:
-            raise Halt("approval expired before submit")
+        self._check_review_expiry(key, packet)
         # Approval consumption + submitting marker committed in ONE transaction
         # BEFORE network send. A crash at any later point is reconciled, not replayed.
         with self.state.db:
@@ -551,6 +582,19 @@ class SupervisedLifecycle:
         self.state.event(self.run, "submission_started", {"key": key, "ref_id": row["ref_id"]})
         try:
             order = self.broker.submit(intent, row["ref_id"])
+        except SubmissionNotSent as exc:
+            self.state.event(
+                self.run,
+                "submission_not_sent",
+                {
+                    "key": key,
+                    "reason": str(exc),
+                    "submission_status": "NOT_SUBMITTED",
+                    "retry": False,
+                },
+            )
+            self.state.update(key, "abandoned")
+            raise
         except Exception as exc:
             self.state.update(key, "unknown")
             self.state.event(

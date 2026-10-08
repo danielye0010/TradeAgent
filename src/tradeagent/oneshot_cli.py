@@ -9,7 +9,7 @@ from pathlib import Path
 from .broker import Broker
 from .execution_policy import check_run_state, load_live_config
 from .model import Config, Halt, Risk, digest
-from .oneshot import atomic_json, choose_entry, new_live_run, run_live, run_paper
+from .oneshot import atomic_json, choose_entry, new_live_run, reconcile_live, run_live, run_paper
 from .risk import check_state
 from .schema import Contracts, structural
 from .simulator import SCENARIOS
@@ -190,6 +190,10 @@ def main(argv=None):
         "new-run", help="archive a broker-reconciled completed run; never orders"
     )
     fresh.add_argument("--config", type=Path, required=True)
+    reconcile = commands.add_parser(
+        "reconcile-once", help="read-only reconciliation of an existing owner run; never orders"
+    )
+    reconcile.add_argument("--config", type=Path, required=True)
     once = commands.add_parser("run-once", help="one owner-launched entry and automatic exit")
     modes = once.add_mutually_exclusive_group(required=True)
     modes.add_argument("--paper", action="store_true")
@@ -217,6 +221,9 @@ def main(argv=None):
                 args.output.parent.mkdir(parents=True, exist_ok=True)
                 atomic_json(args.output, result)
             code = 0 if result["live_ready"] else 2
+        elif args.command == "reconcile-once":
+            result = reconcile_live(load_live_config(args.config))
+            code = 0 if result["reconciliation_status"] == "RECONCILED" else 2
         elif args.command == "new-run":
             result = new_live_run(load_live_config(args.config))
             code = 0
@@ -247,6 +254,9 @@ def main(argv=None):
                     "cash_reconciled",
                     "flat_bot_position",
                     "reconciliation_blocker",
+                    "submission_status",
+                    "reconciliation_status",
+                    "broker_order_count",
                 )
                 if k in result
             }

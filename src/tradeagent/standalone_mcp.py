@@ -172,6 +172,19 @@ class StandaloneMCP:
                 before_send()  # AFTER token refresh, immediately before the only network send.
             if method == "tools/call":
                 self.calls.append(params["name"])
+            if before_send is not None and before_send.name == "place_equity_order":
+                row = before_send.state.db.execute(
+                    "SELECT run_id,ref_id FROM intents WHERE key=?", (before_send.key,)
+                ).fetchone()
+                before_send.state.event(
+                    row["run_id"],
+                    "placement_send_started",
+                    {
+                        "key": before_send.key,
+                        "ref_id": row["ref_id"],
+                        "submission_status": "SUBMISSION_UNKNOWN",
+                    },
+                )
             conn.request(
                 "POST", PATH, body=json.dumps(message, allow_nan=False).encode(), headers=headers
             )
@@ -413,6 +426,17 @@ class WireAuthorization:
             ).fetchone()
             if not plan or self.guard.clock() >= json.loads(plan[0])["binding"]["expires"]:
                 raise Halt("review expired immediately before network send")
+            if type(self.guard) is OwnerPolicy:
+                packet = json.loads(plan[0])
+                from .model import timestamp_fresh
+
+                if not timestamp_fresh(
+                    packet["review"]["asof"],
+                    self.guard.clock(),
+                    self.guard.risk.max_data_age_seconds,
+                ):
+                    raise Halt("stale broker review immediately before network send")
+                self.guard.check_review(self.intent, packet["review"], self.snapshot)
 
 
 class StandaloneExecutionTransport:
@@ -424,6 +448,28 @@ class StandaloneExecutionTransport:
         self.bridge, self.state, self.broker, self.guard = bridge, state, broker, guard
 
     def invoke(self, name, arguments):
+        if name != "place_equity_order":
+            return self._invoke(name, arguments)
+        from .model import SubmissionNotSent
+
+        row = self.state.db.execute(
+            "SELECT key FROM intents WHERE ref_id=? AND status='submitting'",
+            (arguments.get("ref_id"),),
+        ).fetchone()
+        try:
+            return self._invoke(name, arguments)
+        except Exception as exc:
+            if (
+                row
+                and not self.state.db.execute(
+                    "SELECT 1 FROM events WHERE kind='placement_send_started' AND json_extract(payload, '$.key')=?",
+                    (row["key"],),
+                ).fetchone()
+            ):
+                raise SubmissionNotSent(str(exc)) from exc
+            raise
+
+    def _invoke(self, name, arguments):
         from .execution_policy import OwnerPolicy
         from .legacy.standalone import intent_from_row
         from .model import digest

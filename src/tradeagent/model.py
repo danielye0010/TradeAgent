@@ -13,6 +13,10 @@ class Halt(ValueError):
     """Uncertain or unsafe state: no further execution."""
 
 
+class SubmissionNotSent(Halt):
+    """Transport proved placement stopped before the network-send boundary."""
+
+
 def dec(value: Any) -> Decimal:
     if isinstance(value, bool) or value is None:
         raise Halt("missing/invalid numeric value")
