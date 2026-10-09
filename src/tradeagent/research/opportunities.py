@@ -44,12 +44,14 @@ def latest_session(now):
     raise ValueError("no recent XNYS session available")
 
 
-def capture(symbols, provider="robinhood", oauth_helper=None, *, clock=time.time):
+def capture(symbols, provider="robinhood", oauth_helper=None, *, clock=time.time, session=None):
     """Reuse provider authentication and read transport; market tools only."""
     symbols = universe(symbols)
-    requested = list(dict.fromkeys([*symbols, "SPY"]))
+    requested = list(dict.fromkeys([*symbols, "SPY", *(["QQQ"] if "SPY" in symbols else [])]))
     started = clock()
-    bounds = latest_session(started)
+    bounds = latest_session(started) if session is None else session_bounds(session)
+    if not bounds or bounds[0] >= started:
+        raise ValueError("requested market session unavailable or future")
     end = min(started, bounds[1])
     bars, quotes, references, missing = [], {}, {}, []
     with open_provider(provider, Path(__file__).resolve().parents[3], oauth_helper) as adapter:
@@ -404,7 +406,10 @@ def research_snapshot(dataset, symbol, now):
         raise ValueError(
             "fresh contemporaneous quote unavailable; historical capture remains research-only"
         )
-    own, benchmark = histories[symbol], histories["SPY"]
+    # SPY cannot serve as its own benchmark under the existing snapshot contract.
+    # Use a fixed genuine QQQ benchmark for SPY; all other symbols retain SPY.
+    benchmark_symbol = "QQQ" if symbol == "SPY" else "SPY"
+    own, benchmark = histories[symbol], histories[benchmark_symbol]
     ends = {b.end for b in own} & {b.end for b in benchmark}
     if not ends:
         raise ValueError("symbol and SPY bars do not align")
@@ -425,7 +430,7 @@ def research_snapshot(dataset, symbol, now):
         now,
         dataset["source"],
         dataset["evidence_kind"],
-        "SPY",
+        benchmark_symbol,
         own,
         benchmark,
         q["bid"],

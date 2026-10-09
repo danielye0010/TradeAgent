@@ -26,7 +26,12 @@ Do not request a second manually typed command merely to transmit an eligible pl
 ## Complete the shared daily research
 
 1. Run `tradeagent opportunity scan --candidates 3` with the requested universe/provider,
-   or load explicitly supplied evidence using `scan --input FILE`. Keep default local
+   or load explicitly supplied evidence using `scan --input FILE`. In LIVE mode add
+   `--config` with the established private owner TOML to scan and decide. The scanner
+   keeps the full research universe but selects its at-most-three Codex candidates
+   only from the existing owner allowlist. Report `research_candidates` and
+   `excluded_live_opportunities` separately; never expand the allowlist.
+   Keep default local
    state `data/opportunities`, or put `--state-dir DIR` before the subcommand consistently.
    Read the candidate file and actual receipt/bar/quote times. Historical, synthetic,
    unavailable and current evidence are separate pools; never relabel a cached capture.
@@ -61,12 +66,23 @@ Do not request a second manually typed command merely to transmit an eligible pl
    Set requested `--hold-seconds` and `--delay-seconds` explicitly when different from
    one hour holding/five minutes delay. Existing immutable Alpha hypotheses and prior-only
    cost gates decide eligibility; do not anoint the simple regime rule as a winner.
-   Read cohort/target day counts and insufficiency reasons. Comparable evidence still
+   Decide freezes quantitative predictions for ALL configured scanner symbols with
+   valid contemporaneous snapshots, independently of shortlist, stance or economic
+   eligibility. Invalid observations remain explicit limitations, never backfilled
+   forecasts. Scan/decide automatically resolve matured forecasts from subsequently
+   observed genuine data, requesting needed prior sessions on live market captures.
+   Resolution occurs on manual invocations; it installs no schedule and waits for no
+   future endpoint. Inspect saved automatic-resolution/pending-session limitations.
+   Read total resolved days (partitioned by evidence pool), matching cohort days,
+   target-symbol days and largest exclusion categories. Comparable evidence still
    needs 20 active day clusters, 5 target days and a positive conservative stress-net
    edge; missing context or inconsistent target evidence requires abstention.
 6. Run `tradeagent opportunity show` and `tradeagent opportunity compare`. If later
    timestamped captures are available, first run `opportunity resolve --input FILE`.
    Keep pending outcomes pending; never fabricate future prices or rewrite decisions.
+   Repeated resolution is idempotent. Only the first frozen forecast per predefined
+   symbol/strategy/source/pool/horizon/delay/minute slot enters evidence; repeated or
+   overlapping slots still average within symbol/day before one pooled day vote.
 
 ## Complete an explicitly authorized LIVE invocation
 

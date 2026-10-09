@@ -26,6 +26,18 @@ from tradeagent.research.opportunity_workflow import (
 from tradeagent.research.tradeplan import build_plan, economic_evidence
 
 
+def economic_fields(result):
+    diagnostics = {
+        "total_resolved_days",
+        "resolved_days_by_pool",
+        "same_pool_resolved_days",
+        "matching_cohort_days",
+        "exclusion_categories",
+        "exclusion_counting",
+    }
+    return {k: v for k, v in result.items() if k not in diagnostics}
+
+
 def target():
     p = forecast(snapshot())
     return replace(
@@ -99,7 +111,9 @@ def test_incompatible_rows_cannot_inflate_prior_evidence(changes):
     polluted = [
         dict(r, **changes, prediction_id="bad-" + r["prediction_id"], gross=0.9) for r in rows
     ]
-    assert cohort_evidence(p, rows + polluted) == cohort_evidence(p, rows)
+    result = cohort_evidence(p, rows + polluted)
+    assert economic_fields(result) == economic_fields(cohort_evidence(p, rows))
+    assert sum(result["exclusion_categories"].values()) == len(polluted)
 
 
 def test_future_late_resolved_and_outside_lookback_are_excluded():
@@ -116,7 +130,12 @@ def test_future_late_resolved_and_outside_lookback_are_excluded():
         dict(rows[0], prediction_id="late", resolved_at=p.decision_time, gross=0.9),
         dict(rows[0], prediction_id="old", decision_time=p.decision_time - 181 * 86400, gross=0.9),
     ]
-    assert cohort_evidence(p, rows + invalid) == cohort_evidence(p, rows)
+    result = cohort_evidence(p, rows + invalid)
+    assert economic_fields(result) == economic_fields(cohort_evidence(p, rows))
+    assert result["exclusion_categories"] == {
+        "not_strictly_prior": 2,
+        "outside_180_day_lookback": 1,
+    }
     with pytest.raises(ValueError, match="duplicate"):
         cohort_evidence(p, rows + [rows[0]])
 
@@ -243,8 +262,17 @@ def test_legacy_comparability_is_read_from_frozen_forecasts_without_rewriting_hi
         decision = store.decide(report, market(), now=NOW, holding_seconds=1800, delay_seconds=300)
         outcome = store.resolve(market(end=NOW + 2100), now=NOW + 2100)["resolved"][0]
         original = copy.deepcopy(outcome)
+        original["economic_rows"] = [
+            r for o in store.records("symbol_outcomes") for r in o["economic_rows"]
+        ]
+        decision = copy.deepcopy(decision)
+        decision.pop("quantitative_observations")
+        for c in decision["ranked_candidates"]:
+            for p in c["predictions"]:
+                p["features"].pop("sampling_key")
         for r in original["economic_rows"]:
             r.pop("comparison_context")
+            r.pop("sampling_key")
         legacy.save("decisions", decision, decision["decision_id"], NOW)
         legacy.save("outcomes", original, decision["decision_id"], NOW + 2100)
         frozen = legacy.records("outcomes")

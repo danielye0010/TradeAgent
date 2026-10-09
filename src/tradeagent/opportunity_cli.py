@@ -37,6 +37,76 @@ def saved_scan_failure(directory, report):
     return failure
 
 
+def align_live_universe(report, config_path):
+    """Local allowlist only; no broker calls and no changes to owner configuration."""
+    if config_path is None:
+        return report
+    from .execution_policy import load_live_config
+    from .research.domain import identity
+
+    allowed = load_live_config(config_path).config.allowed_symbols
+    report = dict(report)
+    report["research_candidates"] = report["candidates"]
+    report["execution_universe"] = list(allowed)
+    report["research_universe"] = report["universe"]
+    opportunities = sorted(
+        (c for c in report["candidate_pool"] if c["status"] == "CANDIDATE"),
+        key=lambda c: (-c["ranking_score"], c["symbol"]),
+    )
+    report["candidates"] = [c for c in opportunities if c["symbol"] in allowed][
+        : report["candidate_count"]
+    ]
+    report["excluded_live_opportunities"] = [
+        {
+            "symbol": c["symbol"],
+            "ranking_score": c["ranking_score"],
+            "reason": "not authorized by existing owner allowlist",
+        }
+        for c in opportunities
+        if c["symbol"] not in allowed
+    ]
+    report["scan_id"] = identity(report)
+    return report
+
+
+def auto_resolve(store, dataset, args):
+    """Resolve on each invocation's reads, including older genuine session paths."""
+    from datetime import date
+
+    from .research.domain import identity, iso
+
+    now = time.time()
+    resolution = store.resolve(dataset, now)
+    summary = {
+        "resolved_decisions": len(resolution["resolved"]),
+        "resolved_symbols": len(resolution["symbol_resolved"]),
+        "limitations": [],
+    }
+    # Explicit input fixtures never cause implicit network access. Real captures
+    # request only past sessions needed by persisted prospective forecasts.
+    if not args.input:
+        current_day = iso(dataset["session_open"])[:10]
+        for request in resolution["pending_sessions"]:
+            if request["source"] != dataset["source"] or request["session_date"] == current_day:
+                continue
+            try:
+                later = capture(
+                    request["symbols"],
+                    args.provider,
+                    args.oauth_helper,
+                    session=date.fromisoformat(request["session_date"]),
+                )
+                path = args.state_dir / "captures" / (identity(later) + ".json")
+                write(path, later)
+                result = store.resolve(later, time.time())
+                summary["resolved_decisions"] += len(result["resolved"])
+                summary["resolved_symbols"] += len(result["symbol_resolved"])
+            except (Halt, ValueError, OSError, KeyError, TypeError) as error:
+                summary["limitations"].append({**request, "reason": str(error)})
+    summary["pending_sessions"] = store.pending_sessions(time.time())
+    return summary
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--state-dir", type=Path, default=Path("data/opportunities"))
@@ -45,6 +115,9 @@ def main(argv=None):
     scanner.add_argument("--symbols", nargs="+", default=UNIVERSE)
     scanner.add_argument("--provider", choices=["robinhood", "alpaca"], default="robinhood")
     scanner.add_argument("--oauth-helper", type=Path)
+    scanner.add_argument(
+        "--config", type=Path, help="existing owner allowlist for LIVE research selection only"
+    )
     scanner.add_argument("--input", type=Path, help="explicit timestamped captured market evidence")
     scanner.add_argument("--window-minutes", type=int, default=60)
     scanner.add_argument("--candidates", type=int, default=5)
@@ -62,6 +135,9 @@ def main(argv=None):
         "decide", help="quantitative evaluation and frozen paired proposals"
     )
     decide.add_argument("--scan-id")
+    decide.add_argument(
+        "--config", type=Path, help="revalidate the frozen LIVE research allowlist locally"
+    )
     decide.add_argument(
         "--input", type=Path, help="fresh capture for the same frozen candidate pool"
     )
@@ -142,6 +218,13 @@ def main(argv=None):
 
                     report["scan_id"] = identity(report)
                 if dataset:
+                    report = align_live_universe(report, args.config)
+                    report["automatic_resolution"] = auto_resolve(store, dataset, args)
+                    from .research.domain import identity
+
+                    report["scan_id"] = identity(
+                        {k: v for k, v in report.items() if k != "scan_id"}
+                    )
                     market = args.state_dir / "captures" / (report["scan_id"] + ".json")
                     write(market, dataset)
                     report["market_file"] = str(market.resolve())
@@ -198,6 +281,19 @@ def main(argv=None):
                 result = {"saved_assessments": ids, "orders_submitted": 0}
             elif args.command == "decide":
                 report = store.scan(args.scan_id)
+                if args.config:
+                    from .execution_policy import load_live_config
+
+                    if set(load_live_config(args.config).config.allowed_symbols) != set(
+                        report.get("execution_universe") or []
+                    ):
+                        raise ValueError(
+                            "owner allowlist changed or scan was not LIVE-aligned; start a new aligned scan"
+                        )
+                elif report.get("execution_universe") is not None:
+                    raise ValueError(
+                        "LIVE-aligned decide requires the same existing owner --config"
+                    )
                 dataset = (
                     read(args.input)
                     if args.input
@@ -209,6 +305,11 @@ def main(argv=None):
                 )
                 if dataset is None:
                     raise ValueError("saved market capture unavailable; run a new scan")
+                resolution = auto_resolve(store, dataset, args)
+                # Retain the actual refreshed capture used to freeze all forecasts.
+                from .research.domain import identity
+
+                write(args.state_dir / "captures" / (identity(dataset) + ".json"), dataset)
                 result = store.decide(
                     report,
                     dataset,
@@ -218,6 +319,9 @@ def main(argv=None):
                 )
                 write(args.state_dir / "decisions" / (result["decision_id"] + ".json"), result)
                 write(args.state_dir / "latest-plan.json", result)
+                write(
+                    args.state_dir / "resolutions" / (result["decision_id"] + ".json"), resolution
+                )
             elif args.command == "show":
                 result = store.decision(args.decision_id)
                 result["current_status"] = (

@@ -15,7 +15,7 @@ from .opportunities import research_snapshot
 from .store import Experience
 from .tradeplan import COSTS, build_plan, plan_dict, plan_from_dict
 
-SKILL_VERSION = "trade-opportunity-analyst-v2"
+SKILL_VERSION = "trade-opportunity-analyst-v3"
 ARMS = ("quant_only", "codex_only", "quant_codex")
 
 
@@ -98,7 +98,14 @@ class DailyResearch:
     def __init__(self, directory):
         self.experience = Experience(Path(directory))
         self.db = self.experience.db
-        for name in ("scans", "assessments", "decisions", "outcomes", "executions"):
+        for name in (
+            "scans",
+            "assessments",
+            "decisions",
+            "outcomes",
+            "executions",
+            "symbol_outcomes",
+        ):
             table = "opportunity_" + name
             self.db.execute(
                 f"CREATE TABLE IF NOT EXISTS {table}(id TEXT PRIMARY KEY, recorded_at REAL NOT NULL, payload TEXT NOT NULL)"
@@ -116,7 +123,14 @@ class DailyResearch:
         self.experience.close()
 
     def save(self, kind, item, key=None, now=None):
-        if kind not in {"scans", "assessments", "decisions", "outcomes", "executions"}:
+        if kind not in {
+            "scans",
+            "assessments",
+            "decisions",
+            "outcomes",
+            "executions",
+            "symbol_outcomes",
+        }:
             raise ValueError("unknown daily research record")
         key = key or identity(item)
         encoded = canonical(item)
@@ -137,7 +151,14 @@ class DailyResearch:
         return key
 
     def records(self, kind):
-        if kind not in {"scans", "assessments", "decisions", "outcomes", "executions"}:
+        if kind not in {
+            "scans",
+            "assessments",
+            "decisions",
+            "outcomes",
+            "executions",
+            "symbol_outcomes",
+        }:
             raise ValueError("unknown daily research record")
         return [
             json.loads(r[0])
@@ -215,7 +236,7 @@ class DailyResearch:
         frozen = {
             p["prediction_id"]: comparison_context(p["features"], c["outcome_costs"])
             for d in self.records("decisions")
-            for c in d["ranked_candidates"]
+            for c in d.get("quantitative_observations", d["ranked_candidates"])
             for p in c["predictions"]
         }
         rows = [
@@ -225,7 +246,7 @@ class DailyResearch:
                     "comparison_context", frozen.get(r["prediction_id"], {})
                 ),
             }
-            for o in self.records("outcomes")
+            for o in self.records("outcomes") + self.records("symbol_outcomes")
             for r in o.get("economic_rows", [])
         ]
         for r in self.db.execute(
@@ -243,6 +264,7 @@ class DailyResearch:
                     "resolved_at": r["resolved_at"],
                     "evidence_kind": context["evidence_kind"],
                     "source": context["source"],
+                    "benchmark": context.get("benchmark", "SPY"),
                     "decision_offset": features.get("decision_offset"),
                     "entry_delay_seconds": features.get("entry_delay_seconds", 0),
                     "regime": context.get("regime"),
@@ -251,7 +273,57 @@ class DailyResearch:
                     "gross": r["raw_return"],
                 }
             )
-        return rows
+        # A minute is a predefined sampling slot. Choose its FIRST frozen forecast
+        # before looking at outcomes, even if that first forecast is still pending.
+        first = {}
+        for raw in self.db.execute("SELECT payload FROM opportunity_decisions ORDER BY rowid"):
+            d = json.loads(raw[0])
+            for c in d.get("quantitative_observations", []):
+                for p in c["predictions"]:
+                    first.setdefault(p["features"]["sampling_key"], p["prediction_id"])
+        unique = {}
+        for row in rows:
+            key = row.get("sampling_key")
+            if key and first.get(key, row["prediction_id"]) != row["prediction_id"]:
+                continue
+            old = unique.get(row["prediction_id"])
+            if old is not None and old != row:
+                raise ValueError("conflicting frozen economic observation")
+            unique[row["prediction_id"]] = row
+        return list(unique.values())
+
+    def pending_sessions(self, now):
+        """Only genuinely prospective, already matured forecasts need later history."""
+        done = {o["decision_id"] for o in self.records("outcomes")}
+        symbol_done = {(o["decision_id"], o["symbol"]) for o in self.records("symbol_outcomes")}
+        sessions = {}
+        for d in self.records("decisions"):
+            if d["evidence_kind"] != "prospective" or now < d["outcome_exit_time"]:
+                continue
+            coverage = d.get("quantitative_observations", d["ranked_candidates"])
+            pending = [
+                c["symbol"]
+                for c in coverage
+                if c["predictions"] and (d["decision_id"], c["symbol"]) not in symbol_done
+            ]
+            if "quantitative_observations" not in d and d["decision_id"] in done:
+                continue
+            if pending:
+                from .domain import iso
+
+                day = iso(d["decision_time"])[:10]
+                group = sessions.setdefault((d["source"], day), set())
+                group.update(pending)
+                group.update(
+                    p["context"].get("benchmark", "SPY")
+                    for c in coverage
+                    if c["symbol"] in pending
+                    for p in c["predictions"]
+                )
+        return [
+            {"source": source, "session_date": day, "symbols": sorted(symbols)}
+            for (source, day), symbols in sorted(sessions.items())
+        ]
 
     def decide(self, report, dataset, *, now, holding_seconds=3600, delay_seconds=300):
         failure = scan_failure(report)
@@ -282,8 +354,11 @@ class DailyResearch:
             for r in self.records("assessments")
             if r["scan_id"] == report["scan_id"] and timestamp(r["observed_at"]) <= now
         }
-        rows, candidates = self.prior_rows(), []
-        for candidate in report["candidates"]:
+        # Newly obtained data can resolve old forecasts, never backfill new ones.
+        self.resolve(dataset, now)
+        rows, coverage = self.prior_rows(), []
+        shortlisted = {c["symbol"] for c in report["candidates"]}
+        for candidate in report["candidate_pool"]:
             symbol = candidate["symbol"]
             research = assessments.get(symbol)
             predictions, plans, errors = [], [], []
@@ -302,6 +377,20 @@ class DailyResearch:
                             {
                                 **prediction.features.plain(),
                                 "entry_delay_seconds": delay_seconds,
+                                "sampling_key": identity(
+                                    [
+                                        "opportunity-observation-minute-v1",
+                                        symbol,
+                                        prediction.strategy_id,
+                                        prediction.strategy_version,
+                                        dataset["source"],
+                                        dataset["evidence_kind"],
+                                        prediction.context.value["benchmark"],
+                                        holding_seconds + delay_seconds,
+                                        delay_seconds,
+                                        int(now // 60),
+                                    ]
+                                ),
                                 "decision_offset": int((now - dataset["session_open"]) // 60),
                                 "observed_spread_bps": (snapshot.ask - snapshot.bid)
                                 / ((snapshot.ask + snapshot.bid) / 2)
@@ -333,7 +422,7 @@ class DailyResearch:
             best = max(approved, key=lambda p: p["economics"]["lower_net_estimate"], default=None)
             support = research_support(candidate, research, now)
             combined = best if support["supported"] else None
-            candidates.append(
+            coverage.append(
                 {
                     "symbol": symbol,
                     "scanner": candidate,
@@ -361,6 +450,10 @@ class DailyResearch:
                     "exit_logic": "time exit at forecast endpoint, regular-session deadline and existing execution recovery",
                 }
             )
+        candidates = [c for c in coverage if c["symbol"] in shortlisted]
+        authorized = report.get("execution_universe")
+        if authorized is not None:
+            candidates = [c for c in candidates if c["symbol"] in authorized]
         quant = max(
             (r for r in candidates if r["quant_plan"]),
             key=lambda r: r["quant_plan"]["economics"]["lower_net_estimate"],
@@ -418,6 +511,11 @@ class DailyResearch:
             "outcome_exit_time": math.ceil((now + delay_seconds + holding_seconds) / 60) * 60,
             "candidate_pool": report["candidate_pool"],
             "ranked_candidates": candidates,
+            "quantitative_observations": coverage,
+            "research_universe": report["universe"],
+            "execution_universe": report.get("execution_universe"),
+            "excluded_live_opportunities": report.get("excluded_live_opportunities", []),
+            "sampling_policy": "first frozen forecast per symbol/strategy/version/source/pool/benchmark/horizon/delay/minute",
             "comparisons": arms,
             "final_decision": arms["quant_codex"]["decision"],
             "selected_plan": arms["quant_codex"]["plan"],
@@ -446,9 +544,12 @@ class DailyResearch:
 
         histories = grouped(dataset, now)
         done = {r["decision_id"] for r in self.records("outcomes")}
-        resolved, pending = [], []
+        resolved, pending, symbol_resolved = [], [], []
+        frozen_symbols = {
+            (o["decision_id"], o["symbol"]): o for o in self.records("symbol_outcomes")
+        }
         for decision in self.records("decisions"):
-            if decision["decision_id"] in done:
+            if decision["decision_id"] in done and "quantitative_observations" not in decision:
                 continue
             if dataset["source"] != decision["source"] or (
                 dataset["evidence_kind"] != decision["evidence_kind"]
@@ -465,8 +566,15 @@ class DailyResearch:
                 )
                 continue
             observed, economic = {}, []
-            for candidate in decision["ranked_candidates"]:
+            for candidate in decision.get(
+                "quantitative_observations", decision["ranked_candidates"]
+            ):
                 symbol = candidate["symbol"]
+                saved = frozen_symbols.get((decision["decision_id"], symbol))
+                if saved:
+                    observed[symbol] = saved["modeled_outcome"]
+                    economic.extend(saved["economic_rows"])
+                    continue
                 bars = histories.get(symbol, [])
                 entry = next(
                     (b for b in bars if b.start == decision["outcome_entry_time"]),
@@ -481,7 +589,12 @@ class DailyResearch:
                 path = [b for b in bars if entry.start <= b.start <= exit_bar.start]
                 if any(a.end != b.start for a, b in zip(path, path[1:], strict=False)):
                     continue
-                spy = histories.get("SPY", [])
+                benchmark = (
+                    candidate["predictions"][0]["context"].get("benchmark", "SPY")
+                    if candidate["predictions"]
+                    else "SPY"
+                )
+                spy = histories.get(benchmark, [])
                 spy_path = [b for b in spy if entry.start <= b.start <= exit_bar.start]
                 if [(b.start, b.end) for b in spy_path] != [(b.start, b.end) for b in path]:
                     continue
@@ -492,7 +605,9 @@ class DailyResearch:
                     continue
                 observed[symbol] = {
                     "gross": gross,
-                    "spy_gross": market_gross,
+                    "benchmark": benchmark,
+                    "benchmark_gross": market_gross,
+                    "spy_gross": market_gross if benchmark == "SPY" else None,
                     "residual_gross": gross - market_gross,
                     "entry_price": entry.open,
                     "exit_price": exit_bar.close,
@@ -509,8 +624,9 @@ class DailyResearch:
                     - 1,
                     "price_model": "first complete minute open in planned window; next complete endpoint close; frozen estimated round-trip costs, no broker fills",
                 }
+                symbol_economic = []
                 for prediction in candidate["predictions"]:
-                    economic.append(
+                    symbol_economic.append(
                         {
                             "prediction_id": prediction["prediction_id"],
                             "strategy": prediction["strategy_id"],
@@ -521,16 +637,39 @@ class DailyResearch:
                             "resolved_at": now,
                             "evidence_kind": prediction["context"]["evidence_kind"],
                             "source": prediction["context"]["source"],
+                            "benchmark": prediction["context"].get("benchmark", "SPY"),
                             "decision_offset": prediction["features"].get("decision_offset"),
                             "entry_delay_seconds": prediction["features"].get(
                                 "entry_delay_seconds", 0
                             ),
                             "regime": prediction["context"].get("regime"),
                             "comparison_context": comparison_context(prediction["features"], costs),
+                            "sampling_key": prediction["features"].get("sampling_key"),
                             "active": prediction["direction"] > 0,
                             "gross": gross,
                         }
                     )
+                if candidate["predictions"] and "quantitative_observations" in decision:
+                    item = {
+                        "decision_id": decision["decision_id"],
+                        "symbol": symbol,
+                        "resolved_at": now,
+                        "modeled_outcome": observed[symbol],
+                        "economic_rows": symbol_economic,
+                        "source": decision["source"],
+                        "evidence_kind": decision["evidence_kind"],
+                        "observation_evidence_kind": dataset["evidence_kind"],
+                        "capture_id": identity(dataset),
+                        "capture_observed_at": dataset["observed_at"],
+                    }
+                    self.save(
+                        "symbol_outcomes", item, identity([decision["decision_id"], symbol]), now
+                    )
+                    symbol_resolved.append(item)
+                    frozen_symbols[(decision["decision_id"], symbol)] = item
+                economic.extend(symbol_economic)
+            if decision["decision_id"] in done:
+                continue
             required = {r["symbol"] for r in decision["ranked_candidates"] if r["predictions"]}
             required |= {
                 arm["symbol"] for arm in decision["comparisons"].values() if arm["shadow_direction"]
@@ -554,14 +693,20 @@ class DailyResearch:
                 "resolved_at": now,
                 "candidate_outcomes": observed,
                 "comparisons": arms,
-                "economic_rows": economic,
+                "economic_rows": [] if "quantitative_observations" in decision else economic,
                 "evidence_kind": decision["evidence_kind"],
                 "observation_evidence_kind": dataset["evidence_kind"],
                 "source": decision["source"],
             }
             self.save("outcomes", item, decision["decision_id"], now)
             resolved.append(item)
-        return {"resolved": resolved, "pending": pending, "orders_submitted": 0}
+        return {
+            "resolved": resolved,
+            "symbol_resolved": symbol_resolved,
+            "pending": pending,
+            "pending_sessions": self.pending_sessions(now),
+            "orders_submitted": 0,
+        }
 
     def performance(self):
         outcomes = self.records("outcomes")
@@ -608,6 +753,11 @@ class DailyResearch:
                     decision.get("skill_version", "unspecified")
                     + "/"
                     + decision.get("economic_evidence_policy", "exact-v1")
+                    + (
+                        "/live-universe:" + identity(sorted(decision["execution_universe"]))[:12]
+                        if decision.get("execution_universe") is not None
+                        else "/research-universe"
+                    )
                 )
                 protocols.setdefault(protocol, []).append(outcome)
             pools[pool] = {

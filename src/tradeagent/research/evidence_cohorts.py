@@ -2,7 +2,7 @@
 
 import math
 import statistics
-from collections import defaultdict
+from collections import Counter, defaultdict
 
 from .domain import finite, identity, iso
 
@@ -94,37 +94,62 @@ def cohort_evidence(prediction, rows):
     key = cohort_key(prediction.symbol, f.get("decision_offset"), context.get("regime"), f)
     delay = f.get("entry_delay_seconds")
     matched, ids = [], set()
-    if key is not None and delay is not None:
-        for row in rows:
-            if (
-                not prediction.decision_time - LOOKBACK_SECONDS
-                <= row["decision_time"]
-                < prediction.decision_time
-                or row["resolved_at"] >= prediction.decision_time
-                or row["strategy"] != prediction.strategy_id
-                or row["version"] != prediction.strategy_version
-                or row.get("source") != context["source"]
-                or row["evidence_kind"] != context["evidence_kind"]
-                or row["horizon"] != prediction.horizon
-                or row.get("entry_delay_seconds") != delay
-                or not row["active"]
-                or cohort_key(
-                    row["symbol"],
-                    row.get("decision_offset"),
-                    row.get("regime"),
-                    row.get("comparison_context", {}),
-                )
-                != key
-            ):
-                continue
-            if row["prediction_id"] in ids:
-                raise ValueError("duplicate economic observation")
-            if row["resolved_at"] < row["decision_time"] + row["horizon"]:
-                raise ValueError("outcome resolved before horizon")
-            if finite(row["gross"]) <= -1:
-                raise ValueError("invalid return")
-            ids.add(row["prediction_id"])
-            matched.append(row)
+    exclusions = Counter()
+    resolved_days, pool_days = set(), defaultdict(set)
+    for row in rows:
+        prior = (
+            row["decision_time"] < prediction.decision_time
+            and row["resolved_at"] < prediction.decision_time
+        )
+        if prior:
+            day = iso(row["decision_time"])[:10]
+            resolved_days.add(day)
+            pool_days[row["evidence_kind"]].add(day)
+        checks = [
+            (not prior, "not_strictly_prior"),
+            (
+                row["decision_time"] < prediction.decision_time - LOOKBACK_SECONDS,
+                "outside_180_day_lookback",
+            ),
+            (
+                row["strategy"] != prediction.strategy_id
+                or row["version"] != prediction.strategy_version,
+                "strategy_or_version",
+            ),
+            (row.get("source") != context["source"], "source"),
+            (row["evidence_kind"] != context["evidence_kind"], "evidence_pool"),
+            (row.get("benchmark", "SPY") != context.get("benchmark", "SPY"), "benchmark"),
+            (row["horizon"] != prediction.horizon, "horizon"),
+            (row.get("entry_delay_seconds") != delay, "entry_delay"),
+            (not row["active"], "inactive_or_short"),
+            (key is None or delay is None, "missing_target_comparability"),
+        ]
+        reason = next((name for failed, name in checks if failed), None)
+        if reason is None:
+            other = cohort_key(
+                row["symbol"],
+                row.get("decision_offset"),
+                row.get("regime"),
+                row.get("comparison_context", {}),
+            )
+            reason = (
+                "missing_observation_comparability"
+                if other is None
+                else "cohort_stratum"
+                if other != key
+                else None
+            )
+        if reason:
+            exclusions[reason] += 1
+            continue
+        if row["prediction_id"] in ids:
+            raise ValueError("duplicate economic observation")
+        if row["resolved_at"] < row["decision_time"] + row["horizon"]:
+            raise ValueError("outcome resolved before horizon")
+        if finite(row["gross"]) <= -1:
+            raise ValueError("invalid return")
+        ids.add(row["prediction_id"])
+        matched.append(row)
     days = defaultdict(lambda: defaultdict(list))
     for row in matched:
         days[iso(row["decision_time"])[:10]][row["symbol"]].append(row["gross"])
@@ -161,6 +186,12 @@ def cohort_evidence(prediction, rows):
         "grouping_policy": POLICY,
         "cohort": key,
         "days": cohort["days"],
+        "total_resolved_days": len(resolved_days),
+        "resolved_days_by_pool": {pool: len(days) for pool, days in sorted(pool_days.items())},
+        "same_pool_resolved_days": len(pool_days.get(context["evidence_kind"], set())),
+        "matching_cohort_days": cohort["days"],
+        "exclusion_categories": dict(exclusions.most_common()),
+        "exclusion_counting": "first failing filter per observation; counts are observations, not independent days",
         "target_days": local["days"],
         "observations": len(matched),
         "symbols": sorted(symbol_days),

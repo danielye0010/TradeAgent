@@ -43,7 +43,7 @@
     "src/tradeagent/model.py": "f42fa78c2cf72659bfad725b6efbb8f6871309f3cb19cf01ae836367cb4c5a4f",
     "src/tradeagent/oneshot.py": "c287b568da2f5d3a3fe8ef952702f076d452660d6cc2bc40056b92a5dfb6d853",
     "src/tradeagent/oneshot_cli.py": "f9068706a8ae942063d0a872e575bed25aeae14023e983068f969f583779a26f",
-    "src/tradeagent/opportunity_cli.py": "32d9ea37619363b362f1d98c92d21427f6141f36c6ffa95e889071291ae100e2",
+    "src/tradeagent/opportunity_cli.py": "0f9027774e148245daf80c585fea3adfb6391da6372916d4d6e7be1016bb74ee",
     "src/tradeagent/opportunity_live.py": "825d52197b2ba1fa79dacda7730e3eb33a14af0641398bd59b1274bf45528b91",
     "src/tradeagent/options.py": "871947f678384fd7863dc0847932a3f1d3db4643dfe70f54230f994c65ec7e30",
     "src/tradeagent/prospective/__init__.py": "ec6da6bc1a0b0d491b3deb49ab9ffb0f967de702e9cd2ce560c2132b98399d9b",
@@ -59,7 +59,7 @@
     "src/tradeagent/research/attribution.py": "29f6844442b8b1bc29072ee904203a311d7b8f3b092e2f2d7a18297390b604f0",
     "src/tradeagent/research/demo.py": "daa19c16f9eb2bcaece2019e7f77c7f03a16566c332e2d81842aa77cdf9f9af2",
     "src/tradeagent/research/domain.py": "4225a9c92f6e050a9a9ecc062d032c977b99b43f0dac08e4d057e08686520ebc",
-    "src/tradeagent/research/evidence_cohorts.py": "0e7d9f08f29c82ccbdd6570d83d7108458dd195c3420e3556846f9dfc4417ce2",
+    "src/tradeagent/research/evidence_cohorts.py": "debd8e9990c1912c1ef1394c230c3966446ea3038085597362dd91e6293b0062",
     "src/tradeagent/research/evolution.py": "097f76735f54a3d463727d302c3653dcc45a93a1f62bc283dbbdccfa363fd426",
     "src/tradeagent/research/expressions.py": "b8d1d93958b71a2405646cda47dc3ac8f86a3b67365107f86b9106c3fe7914d6",
     "src/tradeagent/research/feedback.py": "9f2200e4a14572e4c1029189d81d6e8c5d7d5b8206bd941e88a518c2c0016c36",
@@ -67,8 +67,8 @@
     "src/tradeagent/research/lab.py": "43929e3fbfc0059c7ca362033da263628c446ed8cb5adceda8ff95dcce902935",
     "src/tradeagent/research/learning.py": "e3ab8458ae14850fb1dfd4039640ec25d366673a2ba9a9044a4ebe63d5b22f62",
     "src/tradeagent/research/market.py": "b616f8cab65a13378eac1a7fef97f24e957b2d242ce18b879aa14616f0909060",
-    "src/tradeagent/research/opportunities.py": "8d60f7ad523cc01db243961829b97bacd30b8ad40c4686ff2256c2c92dc83b27",
-    "src/tradeagent/research/opportunity_workflow.py": "6fc07204eb88201156c081cc56f70a81fed603a9043ee4e487bb6dcc70bd3bfb",
+    "src/tradeagent/research/opportunities.py": "26e064d780a081760a16f48ba85c53f2cf3b0f5fb579022ee34cadc34376b65e",
+    "src/tradeagent/research/opportunity_workflow.py": "42a67dbe54d898be81f74ae3dad3be4aa6d342b1f931849509dca2b664f410aa",
     "src/tradeagent/research/option_economics.py": "8904dc1219011568e6876a07dd9f25289f67be0a5f220895e6498d94a2aea13b",
     "src/tradeagent/research/outcomes.py": "e2b5d5fc5e8c09d50608b9579a6d5004cb7bbed835ad2eef526d99061bcb451a",
     "src/tradeagent/research/replay.py": "7397361fd85539bf86afd9cbab3fbc5726d8bc04c5cd52dbdb100898f56d77a4",
@@ -98,7 +98,7 @@
     "tests/test_commissioning.py": "83b54169dd739c0f8653d4a1d63a28cb184892cf6038277ef8a4a4e6c0d922da",
     "tests/test_contract_pins.py": "7438394b0b0305529caba04cfbb79baab6b2dc5c0368b9d0fafc93a4c059ec5a",
     "tests/test_daily_signal_timing.py": "9a6a876884a3d99081a39131bee4458087b1f7f5b1f837a3d13a60354dd79919",
-    "tests/test_evidence_cohorts.py": "99c98c85ee0cae9e6f1d97cd401af0265f6528a576d91d87888f1cde74c00aa0",
+    "tests/test_evidence_cohorts.py": "3c9b35eb2e056ebd6c5898f49dae454054d2a52eb96b1848cb33869ecf4d0dcf",
     "tests/test_execution_lifecycle.py": "22de96fb9b5572edd75470e97cdf54a05902a76e3999e9cf1382f34102ae7df2",
     "tests/test_fractional_live.py": "9a837968a0e8c8192d3424de77ecb34eaf50924f2856ba908379363a3db6c8bf",
     "tests/test_history_auth.py": "fc5a37aef6c236b7768d4ac7b9232cf052175cdf00caf108e427562645fa6048",
@@ -107,6 +107,7 @@
     "tests/test_onboarding.py": "dc4ba00657f8c2000771d389cf31fe77136434c91ee796b6e49f3cb161bb4583",
     "tests/test_oneshot.py": "f8b3f48513404dd092444f6504d49b622500f738bd0b540916dff1602b4a36df",
     "tests/test_opportunities.py": "dfb829835d426ac8efb5c49247c59d3838197f9eae80a8da4d69b2e57db25b29",
+    "tests/test_opportunity_coverage.py": "825a3da3bd85287a584a547ab316648253aff415346803b730450c22e7e7935a",
     "tests/test_opportunity_live.py": "7ca4e5207e88179952b9e18b39e0c7e2f8b56098a43054212c326cf39b9b7988",
     "tests/test_owner_recovery.py": "8c72be1c10f33c556c5d4d9e56b241d046b0e6f6c04c78e6350f7ef129c018c7",
     "tests/test_production_oneshot.py": "57ca82e1c85c7e99c8f05011142494f962b475c62ae8dc09b4426f88e5e5a77a",
@@ -120,5 +121,5 @@
     "tests/test_supervised_contract.py": "b17692ea76ef0653e92215103a4dc459478601cfc17c7fb3df17697e37c92d44",
     "tests/test_tradeplan_engine.py": "8cb9735d0e593cfa49bb6d4ddb33093ef8e76d33d6cd06752ab18cb10dd5e80f"
   },
-  "framework_sha256": "ccb8ee5d998b4750ec1ab6f94e05dbbe0efe01f281a5e295c977a43b1de02a24"
+  "framework_sha256": "639259c478ce4a30bd5d08e42fb3e1815235b81c4351fc68ab0e65aa82c13bb2"
 }

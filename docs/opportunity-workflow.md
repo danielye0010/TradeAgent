@@ -65,7 +65,27 @@ title/claim, publication time or null, actual observation time and role. Only ex
 event-driven claims require a supporting publication within 24 hours or the scanner's
 fresh verified event. Undated/old news is context, not a new catalyst.
 
-`decide` evaluates the three immutable price-based Alpha hypotheses on each shortlist.
+`decide` freezes the three immutable price-based Alpha hypotheses for EVERY symbol
+in the configured scanner universe with a valid contemporaneous snapshot. The full
+`quantitative_observations` collection is separate from the at-most-three
+`ranked_candidates` used for the paired Quant/Codex comparison. Scanner rejection,
+missing Codex assessment and economic NO_TRADE do not remove quantitative coverage.
+SPY uses a predefined genuine QQQ benchmark because the immutable snapshot contract
+forbids self-benchmarking; every other symbol retains SPY. Benchmark identity is
+persisted and must match in comparable evidence, so SPY/QQQ-benchmarked observations
+cannot contaminate ordinary SPY-benchmarked estimates. No benchmark is fabricated.
+Missing/stale/invalid signal paths remain explicit per-symbol limitations; historical
+captures never become prospective forecasts. No prior session is forecast retroactively.
+
+For LIVE, the Skill passes the existing owner `--config` to scan and decide. Scan reads
+only the local allowlist and ranks Codex candidates within it; it retains all broad
+research observations plus `research_candidates` and `excluded_live_opportunities`.
+Decide locally revalidates the frozen allowlist; a change requires a new aligned scan.
+No account reads, TOML writes, symbol expansion or order operations occur here. The
+existing execution engine independently checks current authorization and risk.
+All paired arms use the same frozen shortlist. Performance partitions LIVE allowlists
+and the new Skill protocol from older or broader research comparisons.
+
 Quant Only ranks eligible measured economics independently of assessments. Codex Only
 records independently frozen directional hypotheses, research-only with executable
 NO_TRADE; it does not inherit the quant plan or calibrated return. Quant + Codex can
@@ -121,13 +141,43 @@ dispersion erases the stress-net edge, or a prospective pool has only historical
 synthetic samples. A price anomaly and an enthusiastic assessment do not change this.
 Supported total horizons remain 30/35/60/65/120/125 minutes (delay plus holding).
 
-The existing Experience SQLite database gains append-only daily scan, assessment,
-decision, outcome and execution tables. Local ignored `data/opportunities/` holds
+The existing Experience SQLite database retains append-only daily scan, assessment,
+decision, outcome and execution tables and adds append-only per-symbol modeled outcomes. Local ignored `data/opportunities/` holds
 the database, captured evidence, `latest-candidates.json`, `latest-plan.json` and
 immutable `decisions/<id>.json`. Latest files are views; SQLite history is frozen.
 The decision records all scanned/rejected candidates, forecasts/versions, sources,
 economic reasons, entry cap/window, invalidation and exit logic. No SHADOW state is
 changed. Keep this state on local Linux storage.
+
+Scan and decide automatically attempt pending resolution using their actual later
+captures. When real provider reads are enabled, they also fetch the original past
+sessions required by matured prospective forecasts; each later capture is retained
+under `captures/`. Explicit input files cause no implicit network access. An unavailable
+provider, missing path or mismatched source stays pending with diagnostics. This is
+invocation-driven collection, not a timer: another daily invocation (or explicit
+resolution with a genuine later capture) is needed after maturity. Resolution does
+not invent bars or relabel retrospective predictions as prospective.
+
+Each symbol resolves independently so one incomplete instrument does not block
+usable peer evidence. Original decision/source/receipt times, exact entry/exit prices,
+frozen costs and later observation-kind/capture identity remain recorded; paired
+comparison outcomes wait for all required shortlist paths. Older decision records
+remain immutable and continue through their existing resolution semantics.
+
+Only the first frozen forecast in a predefined symbol/strategy/version/source/pool/
+benchmark/horizon/delay/minute slot contributes economic evidence, chosen BEFORE knowing its
+outcome. If that first forecast is unresolved, later repeats cannot substitute for
+it. Unique prediction IDs deduplicate storage paths, and symbol-day/day clustering
+prevents intraday repeats or many peer symbols from inflating active-day counts.
+Losses and inactive predictions remain recorded; only prior long-active observations
+meeting the existing outcome-blind cohort rules enter profitability estimates.
+
+Each economic plan shows `total_resolved_days`, `resolved_days_by_pool`,
+`same_pool_resolved_days`, `matching_cohort_days`, `target_days` and ranked
+`exclusion_categories`. Exclusions count the first failed filter per observation,
+not independent days. Historical/synthetic evidence can explain coverage but cannot
+satisfy a prospective gate. Twenty total research days need not mean twenty matching
+active cohort days, and one invocation cannot create twenty independent days.
 
 `resolve` requires subsequently observed, contiguous completed bars from the same
 source. Prospective decisions may resolve from a later after-close historical-market
