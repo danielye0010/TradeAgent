@@ -92,17 +92,17 @@ The economic gate needs 20 prior active daily clusters, fresh evidence, and posi
 mean minus 1.96 daily standard errors after stress costs. This is a conservative
 screen, not a calibrated confidence guarantee; serial dependence and model search
 are not corrected by that formula. Historical and synthetic plans remain research-only.
-Delayed entry beyond quote freshness requires a fresh decision/quote; proxy history
-quotes cannot authorize an order. Rejected, stale, bearish and unselected plans
-produce NO_TRADE.
+Signal validity and the planned entry window are independent of quote freshness.
+A delayed plan requires a newly observed quote at execution, without renewing the
+initial quote's timestamp. Rejected, stale, bearish and unselected plans abstain.
 
-The pure to_execution_intent adapter accepts only an eligible prospective
-underlying plan and an externally sized whole-share quantity. It emits the
-existing cent-priced limit Intent, rounded down to preserve its cap. It refuses
-research plans, expired entries and fractional sizing. The caller must use the
-existing risk, approval and durable execution paths; this adapter performs none
-of those actions. Exit time is a plan requirement, not an installed exit scheduler.
-No risk or execution core files are changed.
+The pure `to_execution_intent` adapter supports externally sized whole-share limit,
+fractional market and dollar-denominated market entries accepted by the existing
+Intent contract. Fresh ask must respect the original cap. The interactive daily
+workflow uses `validated_plan_entry` for owner account/risk sizing and the existing
+one-shot lifecycle for submission, time exit and recovery. See
+[Daily Trading Research](opportunity-workflow.md). Frozen experiment results remain
+historical evidence, independently of this later execution integration.
 
 ## Equity and options evidence
 

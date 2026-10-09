@@ -45,6 +45,23 @@ tradeagent inspect --state-dir data/demo              # strategy scores and sele
 tradeagent run-once --paper --state-dir data/paper    # full entry/exit against a simulated broker
 ```
 
+## Daily Trading Research
+
+Open Codex in this checkout and invoke:
+
+```text
+$trade-opportunity-analyst 分析今天的交易机会，生成 TradePlan。
+```
+
+The Skill scans a configurable universe, researches up to three candidates with
+dated sources, and runs the existing quantitative forecasts and economic gates.
+It saves a machine-readable TradePlan or NO_TRADE under ignored `data/opportunities/`.
+Quant Only, Codex Only and Quant + Codex share the same pool, timestamps, horizon
+and cost assumptions; later observations resolve their frozen decisions.
+Execution requires a separate explicit owner command using fresh market/account
+evidence and the established execution engine. No broker writes occur in research.
+See [workflow commands and owner handoff](docs/opportunity-workflow.md).
+
 ## How it works
 
 ```text

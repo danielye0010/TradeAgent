@@ -72,7 +72,9 @@ def evidence(p, count=25, gross=0.004):
             "decision_time": p.decision_time - (i + 1) * 86400,
             "resolved_at": p.decision_time - (i + 1) * 86400 + p.horizon + 300,
             "evidence_kind": p.context.value["evidence_kind"],
+            "source": p.context.value["source"],
             "decision_offset": p.features.value.get("decision_offset"),
+            "entry_delay_seconds": p.features.value.get("entry_delay_seconds", 0),
             "regime": p.context.value["regime"],
             "active": True,
             "gross": gross,
@@ -159,13 +161,23 @@ def test_snapshot_identity_and_bearish_rejected():
     assert build_plan(bearish, snap, evidence(bearish)).decision.kind == "NO_TRADE"
 
 
-def test_planned_delay_requires_quote_refresh():
+def test_planned_delay_preserves_signal_but_requires_real_quote_refresh():
     snap = snapshot()
     p = forecast(snap)
     p = replace(p, features=Payload.of({**p.features.plain(), "entry_delay_seconds": 300}))
     plan = build_plan(p, snap, evidence(p))
-    assert plan.decision.kind == "NO_TRADE"
-    assert any("fresh quote" in r for r in plan.rejection_reasons)
+    assert plan.decision.kind == "UNDERLYING"
+    assert plan.entry_after == snap.decision_time + 300
+    with pytest.raises(Halt, match="fresh quote"):
+        to_execution_intent(plan, 1, plan.entry_after)
+    quote = {
+        "asof": plan.entry_after,
+        "observed_at": plan.entry_after,
+        "ask": plan.decision.entry_limit,
+    }
+    assert to_execution_intent(
+        plan, "0.5", plan.entry_after, order_type="market", quote=quote
+    ).quantity == Decimal("0.5")
 
 
 def test_regime_selector_uses_prior_active_evidence_and_abstains():
@@ -246,14 +258,14 @@ def test_final_test_returns_cannot_change_validation_choice():
         )
 
 
-def test_entry_quote_age_shortens_plan_lifetime():
+def test_quote_age_does_not_shorten_signal_window():
     snap = snapshot()
     snap = replace(
         snap, quote_time=snap.decision_time - 100, quote_available_at=snap.decision_time - 100
     )
     p = forecast(snap)
     plan = build_plan(p, snap, evidence(p))
-    assert plan.entry_deadline == snap.decision_time + 20
+    assert plan.entry_deadline == snap.decision_time + 120
     with pytest.raises(Halt):
         to_execution_intent(plan, 1, snap.decision_time + 21)
 

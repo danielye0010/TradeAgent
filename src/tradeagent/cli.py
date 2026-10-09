@@ -18,6 +18,10 @@ from .research.store import Experience
 
 def main(argv=None):
     supplied = list(sys.argv[1:] if argv is None else argv)
+    if supplied and supplied[0] == "opportunity":
+        from .opportunity_cli import main as opportunity_main
+
+        return opportunity_main(supplied[1:])
     if supplied and supplied[0] in {
         "live-check",
         "run-once",
@@ -55,6 +59,7 @@ def main(argv=None):
             "retire-lesson",
             "import-execution",
             "replay-history",
+            "opportunity",
             "live-check",
             "run-once",
             "status",

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Trade Opportunity Analyst"
+  short_description: "Research market candidates and save cost-aware TradePlans"
+  default_prompt: "Use $trade-opportunity-analyst to analyze today's trading opportunities and save a TradePlan or NO_TRADE."

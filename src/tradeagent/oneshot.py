@@ -94,9 +94,30 @@ def choose_entry(snapshot, config, risk, now, limit, entry=None):
 
 
 def validated_plan_entry(plan, prediction, snapshot, config, risk, now, limit, entry):
-    """Explicit library boundary; neither research nor SHADOW calls this function."""
+    """Explicit owner handoff; SHADOW does not call this execution boundary."""
     from .model import timestamp_fresh
     from .research.expressions import TradePlan
+
+    economic = None
+    economic_payload = None
+    if type(plan) is not TradePlan:
+        from .research.tradeplan import EconomicPlan, plan_dict, validate_execution_plan
+
+        if type(plan) is not EconomicPlan:
+            raise Halt("execution requires a validated TradePlan")
+        economic = plan
+        economic_payload = plan_dict(economic)
+        validate_execution_plan(economic, now)
+        if (
+            economic.forecast.value["strategy"] != prediction.strategy_id
+            or economic.forecast.value["version"] != prediction.strategy_version
+            or economic.forecast.value["decision_time"] != prediction.decision_time
+            or economic.forecast.value["horizon"] != prediction.horizon
+            or economic.forecast.value["symbol"] != prediction.symbol
+        ):
+            raise Halt("economic plan and prediction provenance differ")
+        plan = economic.decision
+    strategy_version = getattr(prediction, "strategy_version", getattr(prediction, "version", None))
 
     if (
         type(plan) is not TradePlan
@@ -106,12 +127,14 @@ def validated_plan_entry(plan, prediction, snapshot, config, risk, now, limit, e
     ):
         raise Halt("execution requires a matching validated underlying TradePlan and prediction")
     if (
-        not timestamp_fresh(prediction.decision_time, now, risk.max_data_age_seconds)
-        or prediction.direction != 1
-    ):
+        economic is None
+        and not timestamp_fresh(prediction.decision_time, now, risk.max_data_age_seconds)
+    ) or prediction.direction != 1:
         raise Halt("strategy plan is stale or not a long equity decision")
-    if not prediction.strategy_id or not prediction.version or not prediction.snapshot_id:
+    if not prediction.strategy_id or not strategy_version or not prediction.snapshot_id:
         raise Halt("strategy decision provenance is incomplete")
+    if economic is not None and snapshot.asks.get(plan.instrument, dec(0)) > dec(plan.entry_limit):
+        raise Halt("entry price condition is no longer met")
     requested = dict(entry or {})
     if not ("quantity" in requested or "dollar_amount" in requested):
         raise Halt("validated plan requires explicit owner-configured entry sizing")
@@ -125,10 +148,11 @@ def validated_plan_entry(plan, prediction, snapshot, config, risk, now, limit, e
     return intent, {
         "prediction_id": prediction.prediction_id,
         "strategy_id": prediction.strategy_id,
-        "strategy_version": prediction.version,
+        "strategy_version": strategy_version,
         "snapshot_id": prediction.snapshot_id,
         "decision_time": prediction.decision_time,
         "plan": asdict(plan),
+        "economic_plan": economic_payload,
     }
 
 
@@ -254,7 +278,9 @@ class OneShotRun:
                 "execution_canary": not bool((self.get("decision") or {}).get("provenance")),
                 "decision_provenance": (self.get("decision") or {}).get("provenance"),
                 "synthetic_fixture": self.engine.broker.is_simulation,
-                "excluded_from_strategy_performance": True,
+                "excluded_from_strategy_performance": not bool(
+                    (self.get("decision") or {}).get("provenance")
+                ),
             },
         )
         if plan["status"] != "approval_required":
@@ -448,6 +474,14 @@ class OneShotRun:
                 >= bounds[1] - self.options.get("session_buffer_seconds", 600) - minimum_window
             ):
                 return self.finish("NO_TRADE", reason="insufficient regular-session exit window")
+            if (
+                plan is not None
+                and hasattr(plan, "exit_at")
+                and (plan.exit_at > bounds[1] - self.options.get("session_buffer_seconds", 600))
+            ):
+                return self.finish(
+                    "NO_TRADE", reason="planned horizon exceeds regular-session exit window"
+                )
             check_state(initial, self.risk, self.clock())
             self.state.recover(self.run_id, initial)
             provenance = None
@@ -536,7 +570,11 @@ class OneShotRun:
             )
             if not bounds:
                 raise Halt("holding window has no regular session")
-            requested_due = fill_time + self.options["hold_seconds"]
+            decision = self.get("decision") or {}
+            proposed = (decision.get("provenance") or {}).get("economic_plan")
+            requested_due = (
+                proposed["exit_at"] if proposed else fill_time + self.options["hold_seconds"]
+            )
             deadline = min(
                 requested_due, bounds[1] - self.options.get("session_buffer_seconds", 600)
             )
@@ -762,14 +800,16 @@ def run_paper(
     return result
 
 
-def run_live(settings, *, recover=False, observer=None):
+def run_live(settings, *, recover=False, observer=None, plan=None, prediction=None):
     from .execution_policy import owner_run_lock
 
     with owner_run_lock(settings):
-        return _run_live(settings, recover=recover, observer=observer)
+        return _run_live(
+            settings, recover=recover, observer=observer, plan=plan, prediction=prediction
+        )
 
 
-def _run_live(settings, *, recover=False, observer=None):
+def _run_live(settings, *, recover=False, observer=None, plan=None, prediction=None):
     """Explicit owner-launched LIVE command; not called by read-only live-check."""
     import time
 
@@ -793,8 +833,8 @@ def _run_live(settings, *, recover=False, observer=None):
     result = {
         "mode": "LIVE",
         "status": "HALTED",
-        "execution_canary": True,
-        "excluded_from_strategy_performance": True,
+        "execution_canary": plan is None,
+        "excluded_from_strategy_performance": plan is None,
         "outstanding_incident": True,
     }
     state, run_id = None, None
@@ -877,7 +917,14 @@ def _run_live(settings, *, recover=False, observer=None):
                     engine,
                 )
                 try:
-                    result.update(controller.execute(allow_entry=not recover, recover_exit=recover))
+                    result.update(
+                        controller.execute(
+                            allow_entry=not recover,
+                            recover_exit=recover,
+                            plan=plan,
+                            prediction=prediction,
+                        )
+                    )
                     result["outstanding_incident"] = not result.get(
                         "cash_reconciled", False
                     ) or not result.get("flat_bot_position", False)
@@ -901,6 +948,10 @@ def _run_live(settings, *, recover=False, observer=None):
                     result["attempt_times"] = {
                         side: controller.get(side + "_attempt_time") for side in ("buy", "sell")
                     }
+                    result["decision"] = controller.get("decision")
+                    if result["decision"]:
+                        result["execution_canary"] = not bool(result["decision"].get("provenance"))
+                        result["excluded_from_strategy_performance"] = result["execution_canary"]
                     result["exit_due"] = controller.get("exit_due")
                     result["exit_reason"] = controller.get("exit_reason")
                     result["broker_calls"] = bridge.calls
