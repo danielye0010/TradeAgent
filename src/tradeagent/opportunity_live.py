@@ -13,7 +13,7 @@ from .model import Halt, dec
 from .oneshot import atomic_json, new_live_run, run_live
 from .research.domain import identity
 from .research.opportunity_workflow import selected_execution
-from .research.tradeplan import plan_dict, validate_execution_plan
+from .research.tradeplan import EVIDENCE_GATED, EXPERIMENTAL, plan_dict, validate_execution_plan
 
 
 def display(kind, payload):
@@ -112,7 +112,9 @@ def execution_result(report):
 
 def purchase_plan(decision, plan, settings, *, mode="quant_codex", validated=None):
     candidate = next(
-        c for c in decision["ranked_candidates"] if c["symbol"] == plan.decision.instrument
+        c
+        for c in decision.get("quantitative_observations", decision["ranked_candidates"])
+        if c["symbol"] == plan.decision.instrument
     )
     economics = plan.economics.plain()
     entry = settings.options.get("entry", {})
@@ -129,7 +131,11 @@ def purchase_plan(decision, plan, settings, *, mode="quant_codex", validated=Non
         if plan.decision.instrument
         in {"SPY", "QQQ", "IWM", "DIA", "XLF", "XLK", "XLE", "XLV", "TLT", "GLD"}
         else "US_EQUITY_OR_ETF",
-        "selection_reason": decision["comparisons"][mode]["reason"],
+        "selection_reason": (
+            decision["experimental"] if mode == "experimental" else decision["comparisons"][mode]
+        )["reason"],
+        "execution_policy": plan.execution_policy,
+        "profitability_established": False if mode == "experimental" else None,
         "quantitative_evidence": {
             k: economics.get(k)
             for k in (
@@ -187,22 +193,75 @@ def purchase_plan(decision, plan, settings, *, mode="quant_codex", validated=Non
     return value
 
 
+def reserve_experimental_day(settings, decision, plan, now):
+    """One conservative new-entry attempt per owner/session, shared across research dirs.
+
+    Exclusive creation is the cross-process claim. Unknown/failed attempts retain it;
+    only the existing active-lifecycle recovery can proceed without a new reservation.
+    """
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    entry = settings.options["entry"]
+    if "quantity" in entry or dec(entry.get("dollar_amount", "0")) != dec("5"):
+        raise Halt("Experimental LIVE requires the existing owner $5 dollar sizing")
+    day = datetime.fromtimestamp(now, ZoneInfo("America/New_York")).date().isoformat()
+    if (
+        day
+        != datetime.fromtimestamp(plan.entry_after, ZoneInfo("America/New_York")).date().isoformat()
+    ):
+        raise Halt("experimental entry belongs to a different trading day")
+    # new_live_run archives the WHOLE lifecycle directory. Keep the daily claim
+    # beside it so a closed lifecycle or a different research dir cannot reset n.
+    directory = settings.directory.with_name(settings.directory.name + ".experimental-days")
+    directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+    path = directory / (day + ".json")
+    value = {
+        "execution_policy": EXPERIMENTAL,
+        "session_date": day,
+        "decision_id": decision["decision_id"],
+        "prediction_id": plan.decision.prediction_id,
+        "reserved_at": now,
+        "status": "NEW_ENTRY_ATTEMPT_RESERVED",
+    }
+    try:
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    except FileExistsError as error:
+        raise Halt(
+            "experimental daily new-entry allowance already reserved; recovery only"
+        ) from error
+    with os.fdopen(fd, "w") as stream:
+        json.dump(value, stream, allow_nan=False)
+        stream.flush()
+        os.fsync(stream.fileno())
+    fd = os.open(directory, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    return str(path)
+
+
 def execute_opportunity(
     store, decision_id, config_path, *, live=False, mode="quant_codex", emit=display
 ):
     """One invocation, no selector fallback, no broker implementation or timers."""
     if live is not True:
         raise Halt("explicit owner LIVE invocation required")
-    if mode not in {"quant_codex", "quant_only"}:
+    if mode not in {"quant_codex", "quant_only", "experimental"}:
         raise Halt("Codex Only cannot authorize LIVE execution")
     decision = store.decision(decision_id)
     decision_id = decision["decision_id"]
+    policy = decision.get("execution_policy", EVIDENCE_GATED)
+    if (mode == "experimental") != (policy == EXPERIMENTAL):
+        raise Halt("explicit execution mode must match frozen decision policy")
     root = store.experience.directory / "live" / decision_id / str(uuid4())
     root.mkdir(parents=True, mode=0o700)
     result = {
         "decision_id": decision_id,
         "mode": "LIVE",
         "research_arm": mode,
+        "execution_policy": policy,
         "status": "NO_TRADE",
         "submission_status": "NOT_SUBMITTED",
         "broker_order_count": 0,
@@ -280,7 +339,8 @@ def execute_opportunity(
             event("POSITION_OPEN", {"planned_exit_at": payload["due"]})
 
     try:
-        if not decision["comparisons"][mode]["plan"]:
+        arm = decision["experimental"] if mode == "experimental" else decision["comparisons"][mode]
+        if not arm["plan"]:
             result["reason"] = f"{mode} selected NO_TRADE; no selector fallback"
             return result
         plan, prediction = selected_execution(decision, mode)
@@ -320,6 +380,10 @@ def execute_opportunity(
         atomic_json(path, value)
         result["purchase_plan_path"] = str(path)
         event("PLAN_CREATED", {"purchase_plan": value, "path": str(path)}, critical=True)
+        if mode == "experimental" and not resume:
+            result["experimental_day_receipt"] = reserve_experimental_day(
+                settings, decision, plan, time.time()
+            )
         if previous and not resume:
             # The established routine proves closure using fresh broker evidence and
             # archives the complete old journal/receipt. It cannot replace open exposure.
@@ -392,6 +456,7 @@ def execute_opportunity(
                 record = {
                     "decision_id": decision_id,
                     "research_arm": mode,
+                    "execution_policy": policy,
                     "recorded_at": time.time(),
                     "report": report,
                     "verification": "existing production engine observations; reconciliation status retained",

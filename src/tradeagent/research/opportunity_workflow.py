@@ -13,9 +13,17 @@ from .domain import Payload, Prediction, canonical, identity, timestamp
 from .evidence_cohorts import POLICY, comparison_context
 from .opportunities import research_snapshot
 from .store import Experience
-from .tradeplan import COSTS, build_plan, plan_dict, plan_from_dict
+from .tradeplan import (
+    COSTS,
+    EVIDENCE_GATED,
+    EXPERIMENTAL,
+    build_experimental_plan,
+    build_plan,
+    plan_dict,
+    plan_from_dict,
+)
 
-SKILL_VERSION = "trade-opportunity-analyst-v3"
+SKILL_VERSION = "trade-opportunity-analyst-v4"
 ARMS = ("quant_only", "codex_only", "quant_codex")
 
 
@@ -105,6 +113,7 @@ class DailyResearch:
             "outcomes",
             "executions",
             "symbol_outcomes",
+            "resolution_failures",
         ):
             table = "opportunity_" + name
             self.db.execute(
@@ -130,6 +139,7 @@ class DailyResearch:
             "outcomes",
             "executions",
             "symbol_outcomes",
+            "resolution_failures",
         }:
             raise ValueError("unknown daily research record")
         key = key or identity(item)
@@ -158,6 +168,7 @@ class DailyResearch:
             "outcomes",
             "executions",
             "symbol_outcomes",
+            "resolution_failures",
         }:
             raise ValueError("unknown daily research record")
         return [
@@ -239,6 +250,7 @@ class DailyResearch:
             for c in d.get("quantitative_observations", d["ranked_candidates"])
             for p in c["predictions"]
         }
+        invalid_decisions = {r["decision_id"] for r in self.records("resolution_failures")}
         rows = [
             {
                 **r,
@@ -247,6 +259,7 @@ class DailyResearch:
                 ),
             }
             for o in self.records("outcomes") + self.records("symbol_outcomes")
+            if o["decision_id"] not in invalid_decisions
             for r in o.get("economic_rows", [])
         ]
         for r in self.db.execute(
@@ -292,13 +305,84 @@ class DailyResearch:
             unique[row["prediction_id"]] = row
         return list(unique.values())
 
+    def terminal_windows(self, now):
+        """Append terminal timing evidence; never edit a frozen decision/outcome."""
+        failed = {r["decision_id"]: r for r in self.records("resolution_failures")}
+        scans = {r["scan_id"]: r for r in self.records("scans")}
+        for d in self.records("decisions"):
+            did = d["decision_id"]
+            if did in failed:
+                continue
+            bounds = (d.get("session_open"), d.get("session_close"))
+            if None in bounds:
+                path = scans.get(d["scan_id"], {}).get("market_file")
+                if path and Path(path).resolve().is_relative_to(
+                    self.experience.directory.resolve()
+                ):
+                    try:
+                        capture = json.loads(Path(path).read_text())
+                        bounds = (capture["session_open"], capture["session_close"])
+                    except (OSError, KeyError, ValueError):
+                        pass
+            if None in bounds and d["evidence_kind"] == "prospective":
+                from datetime import datetime
+                from zoneinfo import ZoneInfo
+
+                from ..calendar import session_bounds
+
+                bounds = session_bounds(
+                    datetime.fromtimestamp(d["decision_time"], ZoneInfo("America/New_York")).date()
+                ) or (None, None)
+            declared_invalid = d.get("research_window", {}).get("valid") is False
+            explicit_old_failure = any(
+                "forecast horizon exceeds regular session" in p["rejection_reasons"]
+                for c in d["ranked_candidates"]
+                for p in c["economic_plans"]
+            )
+            invalid = declared_invalid or explicit_old_failure
+            if None not in bounds and d.get("outcome_entry_time") is not None:
+                invalid |= (
+                    not bounds[0]
+                    <= d["decision_time"]
+                    <= d["outcome_entry_time"]
+                    < d["outcome_exit_time"]
+                    <= bounds[1]
+                )
+            if not invalid:
+                continue
+            has_forecasts = any(
+                c["predictions"] for c in d.get("quantitative_observations", d["ranked_candidates"])
+            )
+            item = {
+                "decision_id": did,
+                "recorded_at": now,
+                "status": "UNRESOLVABLE_SESSION_WINDOW"
+                if has_forecasts
+                else "NO_FORECAST_SESSION_WINDOW",
+                "reason": "frozen entry/endpoint cannot occur within its regular session; not missing market data",
+                "session_open": bounds[0],
+                "session_close": bounds[1],
+                "frozen_outcome_entry_time": d.get("outcome_entry_time"),
+                "frozen_outcome_exit_time": d.get("outcome_exit_time"),
+                "economic_rows": [],
+            }
+            self.save("resolution_failures", item, did, now)
+            failed[did] = item
+        return list(failed.values())
+
     def pending_sessions(self, now):
         """Only genuinely prospective, already matured forecasts need later history."""
         done = {o["decision_id"] for o in self.records("outcomes")}
+        terminal = {r["decision_id"] for r in self.terminal_windows(now)}
         symbol_done = {(o["decision_id"], o["symbol"]) for o in self.records("symbol_outcomes")}
         sessions = {}
         for d in self.records("decisions"):
-            if d["evidence_kind"] != "prospective" or now < d["outcome_exit_time"]:
+            if (
+                d["decision_id"] in terminal
+                or d["evidence_kind"] != "prospective"
+                or d.get("outcome_exit_time") is None
+                or now < d["outcome_exit_time"]
+            ):
                 continue
             coverage = d.get("quantitative_observations", d["ranked_candidates"])
             pending = [
@@ -325,10 +409,23 @@ class DailyResearch:
             for (source, day), symbols in sorted(sessions.items())
         ]
 
-    def decide(self, report, dataset, *, now, holding_seconds=3600, delay_seconds=300):
+    def decide(
+        self,
+        report,
+        dataset,
+        *,
+        now,
+        holding_seconds=3600,
+        delay_seconds=300,
+        execution_policy=EVIDENCE_GATED,
+    ):
         failure = scan_failure(report)
         if failure:
             return failure
+        if execution_policy not in {EVIDENCE_GATED, EXPERIMENTAL}:
+            raise ValueError("unknown execution policy")
+        if execution_policy == EXPERIMENTAL and report.get("execution_universe") is None:
+            raise ValueError("Experimental LIVE requires an owner-aligned scan")
         if (
             type(holding_seconds) is not int
             or holding_seconds <= 0
@@ -357,12 +454,26 @@ class DailyResearch:
         # Newly obtained data can resolve old forecasts, never backfill new ones.
         self.resolve(dataset, now)
         rows, coverage = self.prior_rows(), []
+        entry_endpoint = math.ceil((now + delay_seconds) / 60) * 60
+        exit_endpoint = math.ceil((now + delay_seconds + holding_seconds) / 60) * 60
+        window_valid = (
+            dataset["session_open"]
+            <= now
+            <= entry_endpoint
+            < exit_endpoint
+            <= dataset["session_close"]
+            and entry_endpoint < now + delay_seconds + 120 < now + delay_seconds + holding_seconds
+        )
         shortlisted = {c["symbol"] for c in report["candidates"]}
         for candidate in report["candidate_pool"]:
             symbol = candidate["symbol"]
             research = assessments.get(symbol)
-            predictions, plans, errors = [], [], []
+            predictions, plans, experimental_plans, errors = [], [], [], []
             try:
+                if not window_valid:
+                    raise ValueError(
+                        "no realizable regular-session entry/exit window; no forecast created"
+                    )
                 snapshot = research_snapshot(dataset, symbol, now)
                 for family in FAMILIES:
                     prediction = AlphaStrategy(family, holding_seconds + delay_seconds).predict(
@@ -399,20 +510,17 @@ class DailyResearch:
                         ),
                     )
                     plan = build_plan(prediction, snapshot, rows, evidence_policy=POLICY)
-                    if plan.exit_at > dataset["session_close"]:
-                        plan = replace(
-                            plan,
-                            decision=replace(
-                                plan.decision,
-                                kind="NO_TRADE",
-                                instrument=None,
-                                entry_limit=None,
-                                reason="forecast horizon exceeds regular session",
-                            ),
-                            rejection_reasons=(
-                                *plan.rejection_reasons,
-                                "forecast horizon exceeds regular session",
-                            ),
+                    if execution_policy == EXPERIMENTAL:
+                        experimental_plans.append(
+                            plan_dict(
+                                build_experimental_plan(
+                                    prediction,
+                                    snapshot,
+                                    rows,
+                                    session_open=dataset["session_open"],
+                                    session_close=dataset["session_close"],
+                                )
+                            )
                         )
                     predictions.append(prediction_dict(prediction))
                     plans.append(plan_dict(plan))
@@ -437,6 +545,15 @@ class DailyResearch:
                         "stress_side_cost": COSTS["stress"].side,
                         "provenance": "fixed research cost assumptions; contemporaneous spread unavailable",
                     },
+                    "experimental_plans": experimental_plans,
+                    "experimental_plan": max(
+                        (p for p in experimental_plans if p["decision"]["kind"] == "UNDERLYING"),
+                        key=lambda p: (
+                            p["forecast"]["raw_expected_return"],
+                            p["forecast"]["strategy"],
+                        ),
+                        default=None,
+                    ),
                     "quant_plan": best,
                     "combined_plan": combined,
                     "limitations": errors,
@@ -493,10 +610,48 @@ class DailyResearch:
                 if name == "codex_only" and chosen
                 else "insufficient supported net edge",
             }
+        experimental = (
+            max(
+                (c for c in coverage if c["experimental_plan"] and c["symbol"] in authorized),
+                key=lambda c: (
+                    c["experimental_plan"]["forecast"]["raw_expected_return"],
+                    c["symbol"],
+                ),
+                default=None,
+            )
+            if execution_policy == EXPERIMENTAL
+            else None
+        )
+        experimental_arm = (
+            {
+                "symbol": experimental["symbol"] if experimental else None,
+                "decision": "UNDERLYING" if experimental else "NO_TRADE",
+                "plan": experimental["experimental_plan"] if experimental else None,
+                "shadow_direction": 1 if experimental else 0,
+                "research_only": bool(
+                    experimental and experimental["experimental_plan"]["research_only"]
+                ),
+                "reason": "predefined quantitative long signal; profitability unestablished; no economic promotion"
+                if experimental
+                else "no valid predefined long signal in the authorized universe/session",
+            }
+            if execution_policy == EXPERIMENTAL
+            else None
+        )
+        selected = experimental_arm if experimental_arm is not None else arms["quant_codex"]
         result = {
             "schema_version": 1,
             "skill_version": SKILL_VERSION,
             "economic_evidence_policy": POLICY,
+            "execution_policy": execution_policy,
+            "experimental": experimental_arm,
+            "session_open": dataset["session_open"],
+            "session_close": dataset["session_close"],
+            "research_window": {
+                "valid": window_valid,
+                "requested_horizon": holding_seconds + delay_seconds,
+                "requested_exit_at": now + delay_seconds + holding_seconds,
+            },
             "recorded_at": now,
             "decision_time": now,
             "scan_id": report["scan_id"],
@@ -504,11 +659,11 @@ class DailyResearch:
             "source": dataset["source"],
             "evidence_kind": dataset["evidence_kind"],
             "holding_seconds": holding_seconds,
-            "entry_after": now + delay_seconds,
-            "entry_deadline": now + delay_seconds + 120,
-            "exit_at": now + delay_seconds + holding_seconds,
-            "outcome_entry_time": math.ceil((now + delay_seconds) / 60) * 60,
-            "outcome_exit_time": math.ceil((now + delay_seconds + holding_seconds) / 60) * 60,
+            "entry_after": now + delay_seconds if window_valid else None,
+            "entry_deadline": now + delay_seconds + 120 if window_valid else None,
+            "exit_at": now + delay_seconds + holding_seconds if window_valid else None,
+            "outcome_entry_time": entry_endpoint if window_valid else None,
+            "outcome_exit_time": exit_endpoint if window_valid else None,
             "candidate_pool": report["candidate_pool"],
             "ranked_candidates": candidates,
             "quantitative_observations": coverage,
@@ -517,11 +672,9 @@ class DailyResearch:
             "excluded_live_opportunities": report.get("excluded_live_opportunities", []),
             "sampling_policy": "first frozen forecast per symbol/strategy/version/source/pool/benchmark/horizon/delay/minute",
             "comparisons": arms,
-            "final_decision": arms["quant_codex"]["decision"],
-            "selected_plan": arms["quant_codex"]["plan"],
-            "decision_status": "AWAITING_ENTRY_WINDOW"
-            if arms["quant_codex"]["plan"]
-            else "NO_TRADE",
+            "final_decision": selected["decision"],
+            "selected_plan": selected["plan"],
+            "decision_status": "AWAITING_ENTRY_WINDOW" if selected["plan"] else "NO_TRADE",
             "orders_submitted": 0,
             "news_is_calibrated_return_prediction": False,
         }
@@ -544,11 +697,15 @@ class DailyResearch:
 
         histories = grouped(dataset, now)
         done = {r["decision_id"] for r in self.records("outcomes")}
+        terminal = self.terminal_windows(now)
+        terminal_ids = {r["decision_id"] for r in terminal}
         resolved, pending, symbol_resolved = [], [], []
         frozen_symbols = {
             (o["decision_id"], o["symbol"]): o for o in self.records("symbol_outcomes")
         }
         for decision in self.records("decisions"):
+            if decision["decision_id"] in terminal_ids:
+                continue
             if decision["decision_id"] in done and "quantitative_observations" not in decision:
                 continue
             if dataset["source"] != decision["source"] or (
@@ -674,6 +831,8 @@ class DailyResearch:
             required |= {
                 arm["symbol"] for arm in decision["comparisons"].values() if arm["shadow_direction"]
             }
+            if decision.get("experimental") and decision["experimental"]["shadow_direction"]:
+                required.add(decision["experimental"]["symbol"])
             if not required <= set(observed) or now < decision["exit_at"]:
                 pending.append(
                     {
@@ -693,6 +852,10 @@ class DailyResearch:
                 "resolved_at": now,
                 "candidate_outcomes": observed,
                 "comparisons": arms,
+                "experimental": observed.get(decision["experimental"]["symbol"])
+                if decision.get("experimental") and decision["experimental"]["shadow_direction"]
+                else None,
+                "execution_policy": decision.get("execution_policy", EVIDENCE_GATED),
                 "economic_rows": [] if "quantitative_observations" in decision else economic,
                 "evidence_kind": decision["evidence_kind"],
                 "observation_evidence_kind": dataset["evidence_kind"],
@@ -704,12 +867,20 @@ class DailyResearch:
             "resolved": resolved,
             "symbol_resolved": symbol_resolved,
             "pending": pending,
+            "terminal_unresolvable": terminal,
             "pending_sessions": self.pending_sessions(now),
             "orders_submitted": 0,
         }
 
     def performance(self):
-        outcomes = self.records("outcomes")
+        all_outcomes = self.records("outcomes")
+        terminal_ids = {r["decision_id"] for r in self.records("resolution_failures")}
+        outcomes = [
+            o
+            for o in all_outcomes
+            if o.get("execution_policy", EVIDENCE_GATED) == EVIDENCE_GATED
+            and o["decision_id"] not in terminal_ids
+        ]
 
         def paired_stats(subset):
             arm_stats = {
@@ -765,30 +936,53 @@ class DailyResearch:
                 "mixed_protocols": len(protocols) > 1,
                 "protocols": {p: paired_stats(rows) for p, rows in sorted(protocols.items())},
             }
+        actual_performance = [
+            {
+                "decision_id": r["decision_id"],
+                "research_arm": r["research_arm"],
+                "execution_policy": decisions[r["decision_id"]].get(
+                    "execution_policy", EVIDENCE_GATED
+                ),
+                "realized_pnl": r["report"].get("realized_pnl"),
+                "entry_executed_notional": r["report"].get("entry_executed_notional"),
+                "known_fees": r["report"].get("known_fees"),
+                "verification": r["verification"],
+                "engine_status": r["report"].get("status"),
+                "submission_status": r["report"].get("submission_status"),
+                "broker_order_count": r["report"].get("broker_order_count"),
+                "bought": r["report"].get("bought"),
+                "sold": r["report"].get("sold"),
+                "final_positions": r["report"].get("final_positions"),
+                "reconciliation_status": r["report"].get("reconciliation_status"),
+                "execution_report_path": r.get("execution_report_path"),
+            }
+            for r in actual.values()
+        ]
         return {
             "evidence_pools": pools,
-            "pending_decisions": len(self.records("decisions")) - len(outcomes),
+            "pending_decisions": len(
+                {d["decision_id"] for d in self.records("decisions")}
+                - {o["decision_id"] for o in all_outcomes}
+                - terminal_ids
+            ),
+            "terminal_unresolvable": self.records("resolution_failures"),
+            "experimental_modeled_outcomes": [
+                {
+                    "decision_id": o["decision_id"],
+                    "evidence_kind": o["evidence_kind"],
+                    "modeled_outcome": o.get("experimental"),
+                }
+                for o in all_outcomes
+                if o.get("execution_policy") == EXPERIMENTAL
+                and o["decision_id"] not in terminal_ids
+            ],
             "actual_execution_records": len(actual),
             "execution_report_records": len(execution_reports),
-            "actual_performance": [
-                {
-                    "decision_id": r["decision_id"],
-                    "research_arm": r["research_arm"],
-                    "realized_pnl": r["report"].get("realized_pnl"),
-                    "entry_executed_notional": r["report"].get("entry_executed_notional"),
-                    "known_fees": r["report"].get("known_fees"),
-                    "verification": r["verification"],
-                    "engine_status": r["report"].get("status"),
-                    "submission_status": r["report"].get("submission_status"),
-                    "broker_order_count": r["report"].get("broker_order_count"),
-                    "bought": r["report"].get("bought"),
-                    "sold": r["report"].get("sold"),
-                    "final_positions": r["report"].get("final_positions"),
-                    "reconciliation_status": r["report"].get("reconciliation_status"),
-                    "execution_report_path": r.get("execution_report_path"),
-                }
-                for r in actual.values()
-            ],
+            "actual_performance": actual_performance,
+            "actual_performance_by_policy": {
+                policy: [r for r in actual_performance if r["execution_policy"] == policy]
+                for policy in (EVIDENCE_GATED, EXPERIMENTAL)
+            },
             "interpretation": "paired fixed-pool/horizon/cost shadow comparisons; no established AI uplift or independence claim",
         }
 
@@ -810,15 +1004,20 @@ def prediction_from_dict(value):
 
 
 def selected_execution(decision, mode="quant_codex"):
-    if mode not in ARMS or mode == "codex_only":
+    policy = decision.get("execution_policy", EVIDENCE_GATED)
+    if (mode == "experimental") != (policy == EXPERIMENTAL):
+        raise ValueError("explicit execution mode must match frozen decision policy")
+    if mode not in (*ARMS, "experimental") or mode == "codex_only":
         raise ValueError("uncalibrated Codex-only hypotheses cannot authorize execution")
-    arm = decision["comparisons"][mode]
+    arm = decision["experimental"] if mode == "experimental" else decision["comparisons"][mode]
     if not arm["plan"]:
         raise ValueError("decision is NO_TRADE")
     plan = plan_from_dict(arm["plan"])
+    if plan.execution_policy != policy:
+        raise ValueError("selected plan policy differs from frozen decision")
     prediction = next(
         p
-        for c in decision["ranked_candidates"]
+        for c in decision.get("quantitative_observations", decision["ranked_candidates"])
         for p in c["predictions"]
         if p["prediction_id"] == plan.decision.prediction_id
     )

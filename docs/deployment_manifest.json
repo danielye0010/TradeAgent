@@ -43,8 +43,8 @@
     "src/tradeagent/model.py": "f42fa78c2cf72659bfad725b6efbb8f6871309f3cb19cf01ae836367cb4c5a4f",
     "src/tradeagent/oneshot.py": "c287b568da2f5d3a3fe8ef952702f076d452660d6cc2bc40056b92a5dfb6d853",
     "src/tradeagent/oneshot_cli.py": "f9068706a8ae942063d0a872e575bed25aeae14023e983068f969f583779a26f",
-    "src/tradeagent/opportunity_cli.py": "0f9027774e148245daf80c585fea3adfb6391da6372916d4d6e7be1016bb74ee",
-    "src/tradeagent/opportunity_live.py": "825d52197b2ba1fa79dacda7730e3eb33a14af0641398bd59b1274bf45528b91",
+    "src/tradeagent/opportunity_cli.py": "0396fd79e7ea32840bafd2e47f76d2bcd121eb90ed6ee46b4414a279ba0e657e",
+    "src/tradeagent/opportunity_live.py": "51fb4b55756b1de18ab9e0612bf495a4e3e86996dac5d74a615ddfbed29302ce",
     "src/tradeagent/options.py": "871947f678384fd7863dc0847932a3f1d3db4643dfe70f54230f994c65ec7e30",
     "src/tradeagent/prospective/__init__.py": "ec6da6bc1a0b0d491b3deb49ab9ffb0f967de702e9cd2ce560c2132b98399d9b",
     "src/tradeagent/prospective/access.py": "8a2e79855862bc8123a28f85f4227dc05c8fae55ee39853eb10bce3df6360f0e",
@@ -68,14 +68,14 @@
     "src/tradeagent/research/learning.py": "e3ab8458ae14850fb1dfd4039640ec25d366673a2ba9a9044a4ebe63d5b22f62",
     "src/tradeagent/research/market.py": "b616f8cab65a13378eac1a7fef97f24e957b2d242ce18b879aa14616f0909060",
     "src/tradeagent/research/opportunities.py": "26e064d780a081760a16f48ba85c53f2cf3b0f5fb579022ee34cadc34376b65e",
-    "src/tradeagent/research/opportunity_workflow.py": "42a67dbe54d898be81f74ae3dad3be4aa6d342b1f931849509dca2b664f410aa",
+    "src/tradeagent/research/opportunity_workflow.py": "45f0bb17f9380dbedbbbd71c8575ddefdde6739fcf64aba0fec8724d34274ed5",
     "src/tradeagent/research/option_economics.py": "8904dc1219011568e6876a07dd9f25289f67be0a5f220895e6498d94a2aea13b",
     "src/tradeagent/research/outcomes.py": "e2b5d5fc5e8c09d50608b9579a6d5004cb7bbed835ad2eef526d99061bcb451a",
     "src/tradeagent/research/replay.py": "7397361fd85539bf86afd9cbab3fbc5726d8bc04c5cd52dbdb100898f56d77a4",
     "src/tradeagent/research/reporting.py": "e5bdacf2e4e66a6e25c9d667fd84ca2f7e93da5c0c51c62636d64f747edb1ffa",
     "src/tradeagent/research/selector.py": "33b2862b7b2a64d1783bf2c76ec9e3c9b2e067793eff56d548f3f5c36838a023",
     "src/tradeagent/research/store.py": "9d1bf8b714381efd438cbadd82705c69e68a174d137730f026206284e6558454",
-    "src/tradeagent/research/tradeplan.py": "5e40af9f2c48845521ab2293fecdfb3c7ec62398d585e34b07269ee253aeb81b",
+    "src/tradeagent/research/tradeplan.py": "3ef151293e3c95935d354764b7036eb386e8b45e7c47dff12e56ac42a3fb3584",
     "src/tradeagent/risk.py": "f833a547e590d45de80f2c7bccfc251bcb3a2f93f4ad3af2af8ea8a8acd0873b",
     "src/tradeagent/schema.py": "0c420f42a3ae508454d74796a29fe44fa022cfb85056a03760a5298816c7a5a0",
     "src/tradeagent/simulator.py": "27acc00fb081c13a21e883e320a7100a2c0e367dce6d22989f095d630e118aa8",
@@ -109,6 +109,7 @@
     "tests/test_opportunities.py": "dfb829835d426ac8efb5c49247c59d3838197f9eae80a8da4d69b2e57db25b29",
     "tests/test_opportunity_coverage.py": "825a3da3bd85287a584a547ab316648253aff415346803b730450c22e7e7935a",
     "tests/test_opportunity_live.py": "7ca4e5207e88179952b9e18b39e0c7e2f8b56098a43054212c326cf39b9b7988",
+    "tests/test_opportunity_policies.py": "d646a1ae8c9a125cfb1a66185fc840f869df752f9cd123e600b0855ce91f0aa4",
     "tests/test_owner_recovery.py": "8c72be1c10f33c556c5d4d9e56b241d046b0e6f6c04c78e6350f7ef129c018c7",
     "tests/test_production_oneshot.py": "57ca82e1c85c7e99c8f05011142494f962b475c62ae8dc09b4426f88e5e5a77a",
     "tests/test_prospective.py": "596505f0c76bd3ca1f60d49255e01c228bf5dd99101d36ea0e5fdd225b8275e3",
@@ -121,5 +122,5 @@
     "tests/test_supervised_contract.py": "b17692ea76ef0653e92215103a4dc459478601cfc17c7fb3df17697e37c92d44",
     "tests/test_tradeplan_engine.py": "8cb9735d0e593cfa49bb6d4ddb33093ef8e76d33d6cd06752ab18cb10dd5e80f"
   },
-  "framework_sha256": "639259c478ce4a30bd5d08e42fb3e1815235b81c4351fc68ab0e65aa82c13bb2"
+  "framework_sha256": "494f088599a7a26084c127ec75f810b14e4787bc3add7c064337f294153d3893"
 }

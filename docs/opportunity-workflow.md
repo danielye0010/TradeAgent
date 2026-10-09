@@ -261,3 +261,87 @@ read-only account/risk check when explicitly requested. `feedback --decision-id 
 --input existing-execution-report.json` still imports a previously broker-confirmed,
 cash-reconciled, flat LIVE report carrying the matching prediction identity; it
 does not make a fresh broker query or submit anything.
+
+## Realizable late-session research
+
+Before issuing predictions, decide checks the captured regular-session open/close,
+original entry window and rounded modeled entry/exit endpoints. A forecast ending
+past close is not created; the decision records NO_TRADE and an unavailable research
+window without reducing the chosen frozen horizon. An endpoint exactly at close can
+resolve from a genuine completed final bar. Early closes follow the provider's session
+bounds; experimental execution also verifies the pinned XNYS calendar.
+
+`tradeagent opportunity resolution-status` performs no market/account reads. It appends
+`UNRESOLVABLE_SESSION_WINDOW` evidence for old impossible forecasts, preserving their
+original decisions, files and predictions. New late requests are marked
+`NO_FORECAST_SESSION_WINDOW`. These records contribute no economic rows, paired
+performance or pending-session requests. Genuine missing synchronized data remains
+pending. Classification also runs during normal manual resolution/scan invocations.
+
+## Owner-controlled execution universe
+
+The default 31-symbol research universe remains unchanged. The larger LIVE universe
+already comes from the existing owner TOML `[live].symbols` array, not a code constant.
+Only the owner may explicitly approve and edit that array. Include only desired
+supported equities/ETFs also in the research universe; adding an allowed symbol does
+not by itself add research coverage outside those 31. Keep `[entry].dollar_amount = "5"`
+and all current risk settings. If an existing `[entry].symbol` or `preferred_symbols`
+list is present, it must remain a valid subset of the owner allowlist. The plan handoff
+uses the selected allowed symbol and the unchanged owner size.
+
+After an approved allowlist edit, start a new scan with `--config CONFIG` and pass
+that same config to decide/execute. Old frozen scans cannot silently adopt new
+permissions. The Skill ranks its Codex shortlist only inside the allowlist and retains
+all research coverage and exclusions; it never edits private settings itself.
+
+## Explicit experimental policy
+
+Ordinary LIVE retains `evidence-gated-v1` and the unchanged `opportunity-cohorts-v1`
+net-edge gates. Experimental LIVE is a different, explicitly requested policy,
+`experimental-live-v1`. It can explore unvalidated signals without claiming edge.
+
+It selects positive long signals from the three frozen Alpha families across the
+current authorized research universe, with deterministic raw quantitative signal
+ranking and symbol/family tie breaks. It never ranks by AI confidence, realized
+future performance or scanner anomaly score. The ordinary Quant Only, Codex Only
+and Quant + Codex arms remain independent Evidence-Gated comparisons; they do not
+become experimental orders. The Codex shortlist stays at most three.
+
+An experimental plan must retain prospective signal provenance, exact frozen Alpha
+version/horizon, a valid XNYS session and complete exit endpoint, fresh executable
+quotes, and its original cap/window. It uses the SAME production plan-entry, broker
+authorization, risk/notional/spread/exposure/ownership/duplicate, reconciliation and
+exit/recovery boundaries. It requires the owner's existing $5 dollar sizing and
+cannot create a new position when the quantitative hypotheses abstain or are bearish.
+No paid API, new broker implementation, timer or SHADOW policy is added.
+
+A durable exclusive daily reservation beside the existing owner lifecycle directory
+(`STATE_DIR.experimental-days/YYYY-MM-DD.json`, America/New_York dates) admits at most
+one new experimental entry attempt. It survives whole-lifecycle archival and is shared
+by all research directories using that owner state. Failed/unknown attempts retain
+the reservation; this is deliberately stricter than one filled position. Receipts
+are never automatically deleted or released. Existing same-lifecycle recovery makes
+no new entry and does not consume another allowance. A new day does not override
+unresolved exposure or any existing broker protection. Keep the same established
+owner state directory; creating a new owner state is not a daily-limit reset workflow.
+
+Decisions, purchase plans and actual execution feedback carry their policy identity.
+`compare` separates experimental modeled outcomes and actual performance by policy;
+ordinary paired aggregates exclude experimental decisions. Modeled quantitative
+observations from either invocation remain eligible only under the original outcome-blind
+research sampling rules; actual experimental fills never turn into economic eligibility
+or an automatic promotion. There is no established profitable Alpha in either policy.
+
+Manual modes:
+
+```text
+$trade-opportunity-analyst 分析今天的交易机会，生成 TradePlan。
+$trade-opportunity-analyst LIVE：分析今天的市场机会，输出购买计划，符合全部条件就通过 Robinhood 真实下单，并完成退出和盈亏记录。
+$trade-opportunity-analyst EXPERIMENTAL LIVE：使用预定义量化假设分析今天的市场机会；仅在信号、行情、时段和全部执行保护通过时，以现有 $5 配置最多新开一个实验仓位，并完成退出和独立盈亏记录。不宣称盈利能力已验证。
+```
+
+The Skill supplies `decide --policy experimental --config CONFIG` and
+`execute --mode experimental --live --config CONFIG` only for the third request.
+Plain LIVE keeps the existing CLI defaults. Quoted examples and development requests
+are not operational authorization. See [the separate v2 experiment](opportunity-research-v2.md)
+for future research; it does not replace Evidence-Gated LIVE.

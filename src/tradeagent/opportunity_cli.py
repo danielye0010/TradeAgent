@@ -8,6 +8,7 @@ from pathlib import Path
 from .model import Halt
 from .research.opportunities import UNIVERSE, capture, scan
 from .research.opportunity_workflow import DailyResearch, scan_failure, selected_execution
+from .research.tradeplan import EVIDENCE_GATED, EXPERIMENTAL
 
 
 def read(path):
@@ -81,6 +82,7 @@ def auto_resolve(store, dataset, args):
         "resolved_decisions": len(resolution["resolved"]),
         "resolved_symbols": len(resolution["symbol_resolved"]),
         "limitations": [],
+        "terminal_unresolvable": resolution["terminal_unresolvable"],
     }
     # Explicit input fixtures never cause implicit network access. Real captures
     # request only past sessions needed by persisted prospective forecasts.
@@ -136,6 +138,12 @@ def main(argv=None):
     )
     decide.add_argument("--scan-id")
     decide.add_argument(
+        "--policy",
+        choices=["evidence-gated", "experimental"],
+        default="evidence-gated",
+        help="experimental requires an explicit owner request; never a LIVE fallback",
+    )
+    decide.add_argument(
         "--config", type=Path, help="revalidate the frozen LIVE research allowlist locally"
     )
     decide.add_argument(
@@ -152,13 +160,19 @@ def main(argv=None):
     show.add_argument("--decision-id")
     resolve = commands.add_parser("resolve", help="resolve against later actual observations")
     resolve.add_argument("--input", type=Path, required=True)
+    commands.add_parser(
+        "resolution-status",
+        help="append terminal impossible-window evidence without market/broker reads",
+    )
     commands.add_parser("compare", help="paired Quant/Codex/combined performance by evidence pool")
     feedback = commands.add_parser(
         "feedback", help="link an existing reconciled owner execution report"
     )
     feedback.add_argument("--decision-id", required=True)
     feedback.add_argument("--input", type=Path, required=True)
-    feedback.add_argument("--mode", choices=["quant_only", "quant_codex"], default="quant_codex")
+    feedback.add_argument(
+        "--mode", choices=["quant_only", "quant_codex", "experimental"], default="quant_codex"
+    )
     for name in ("handoff", "execute"):
         command = commands.add_parser(
             name,
@@ -167,7 +181,9 @@ def main(argv=None):
             else "explicit owner execution using existing LIVE engine",
         )
         command.add_argument("--decision-id")
-        command.add_argument("--mode", choices=["quant_only", "quant_codex"], default="quant_codex")
+        command.add_argument(
+            "--mode", choices=["quant_only", "quant_codex", "experimental"], default="quant_codex"
+        )
         command.add_argument("--config", type=Path, required=True)
         if name == "execute":
             command.add_argument("--live", action="store_true", required=True)
@@ -316,6 +332,9 @@ def main(argv=None):
                     now=time.time(),
                     holding_seconds=args.hold_seconds,
                     delay_seconds=args.delay_seconds,
+                    execution_policy=EXPERIMENTAL
+                    if args.policy == "experimental"
+                    else EVIDENCE_GATED,
                 )
                 write(args.state_dir / "decisions" / (result["decision_id"] + ".json"), result)
                 write(args.state_dir / "latest-plan.json", result)
@@ -338,6 +357,12 @@ def main(argv=None):
                 result["follow_up"] = store.performance()
             elif args.command == "resolve":
                 result = store.resolve(read(args.input), now)
+            elif args.command == "resolution-status":
+                result = {
+                    "terminal_unresolvable": store.terminal_windows(now),
+                    "pending_sessions": store.pending_sessions(now),
+                    "orders_submitted": 0,
+                }
             elif args.command == "compare":
                 result = store.performance()
             elif args.command == "feedback":
@@ -352,7 +377,10 @@ def main(argv=None):
                     raise ValueError(
                         "feedback requires an existing broker-confirmed reconciled LIVE report"
                     )
-                selected = decision["comparisons"][args.mode]["plan"]
+                selected_plan, _ = selected_execution(decision, args.mode)
+                from .research.tradeplan import plan_dict
+
+                selected = plan_dict(selected_plan)
                 if not selected:
                     raise ValueError("selected research arm has no executable plan")
                 if not any(
@@ -366,6 +394,7 @@ def main(argv=None):
                 item = {
                     "decision_id": args.decision_id,
                     "research_arm": args.mode,
+                    "execution_policy": decision.get("execution_policy", EVIDENCE_GATED),
                     "recorded_at": now,
                     "report": report,
                     "verification": "owner-imported existing reconciled execution report; not a fresh broker query",

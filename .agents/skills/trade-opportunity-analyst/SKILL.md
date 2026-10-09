@@ -23,6 +23,19 @@ The explicit LIVE request authorizes this one invocation, including the existing
 entry/exit lifecycle. Preserve broker, platform and tool confirmation requirements.
 Do not request a second manually typed command merely to transmit an eligible plan.
 
+Plain LIVE means Evidence-Gated LIVE (`evidence-gated-v1`), with the existing
+20 comparable/5 target prior-day and positive conservative stress-net requirements.
+Only an explicit owner request saying `EXPERIMENTAL LIVE` selects
+`experimental-live-v1`. Never infer experimental authorization from a NO_TRADE,
+low evidence, scanner ranking or a development request. Both modes retain the full
+31-symbol research universe and the existing owner allowlist and $5 sizing.
+For experimental mode pass `decide --policy experimental --config CONFIG` and
+`execute --mode experimental --live --config CONFIG`. It selects a predefined
+quantitative long signal across authorized research symbols, independently of the
+at-most-three Codex narratives. Those narratives are retained as research, never
+estimated returns or an experimental buy gate. The normal paired arms remain
+Evidence-Gated comparisons. Report experimental records separately.
+
 ## Complete the shared daily research
 
 1. Run `tradeagent opportunity scan --candidates 3` with the requested universe/provider,
@@ -68,7 +81,12 @@ Do not request a second manually typed command merely to transmit an eligible pl
    cost gates decide eligibility; do not anoint the simple regime rule as a winner.
    Decide freezes quantitative predictions for ALL configured scanner symbols with
    valid contemporaneous snapshots, independently of shortlist, stance or economic
-   eligibility. Invalid observations remain explicit limitations, never backfilled
+   eligibility. A realizable regular-session window, including the exact rounded
+   outcome endpoints, is required before issuing any forecast. Late requests save
+   NO_TRADE without forecasts; do not shorten the frozen horizon or retry a shorter
+   horizon to force a trade. `resolution-status` appends terminal timing evidence
+   for previously impossible forecasts separately from missing-data pending records.
+   Invalid observations remain explicit limitations, never backfilled
    forecasts. Scan/decide automatically resolve matured forecasts from subsequently
    observed genuine data, requesting needed prior sessions on live market captures.
    Resolution occurs on manual invocations; it installs no schedule and waits for no
@@ -87,15 +105,27 @@ Do not request a second manually typed command merely to transmit an eligible pl
 ## Complete an explicitly authorized LIVE invocation
 
 After the shared research, continue in this same invocation; do not stop at a plan.
-Use Quant + Codex and the immutable decision ID. Codex Only never authorizes orders;
+For ordinary LIVE use Quant + Codex and the immutable decision ID. Codex Only never authorizes orders;
 do not fall back to Quant Only when the combined arm abstains. NO_TRADE, unsupported
 options, historical/synthetic captures and insufficient economic evidence remain
-non-executable. Never lower thresholds or substitute an execution canary.
+non-executable in Evidence-Gated mode. Never lower those thresholds or substitute
+an execution canary. Explicit Experimental LIVE instead requires a frozen predefined
+long Alpha signal, prospective completed market evidence, original entry cap/window,
+fresh executable quote and complete in-session exit plan; profitability remains
+unestablished. It retains ALL shared broker/risk/notional/spread/exposure/ownership/
+duplicate/reconciliation/recovery checks. Its durable owner-scoped daily receipt
+allows at most one new-entry attempt per New York trading day, even across research
+directories and closed-run archival. Unknown/pre-submission failed attempts consume
+the allowance conservatively; never remove receipts to retry. Recovery of the same
+active lifecycle remains exit-only and can proceed after expiration. There is no
+automatic promotion, mode fallback or additional position on that day.
 
 Use the owner's existing private Linux TOML path from the user's established context.
 If its location is unavailable, obtain the path; do not ask for credentials, rewrite
 the TOML, change account selection, sizing or risk limits, or create a replacement.
-For an eligible plan invoke the existing interface yourself:
+For an eligible plan invoke the existing interface yourself. For explicit Experimental
+LIVE append `--mode experimental`; its frozen decision cannot execute under the
+ordinary default mode:
 
 ```bash
 tradeagent opportunity execute --decision-id ID --config /path/to/private.toml --live
@@ -151,3 +181,13 @@ Exact LIVE invocation:
 ```text
 $trade-opportunity-analyst LIVE：分析今天的市场机会，输出购买计划，符合全部条件就通过 Robinhood 真实下单，并完成退出和盈亏记录。
 ```
+
+Exact explicit experimental invocation (no profitability claim):
+
+```text
+$trade-opportunity-analyst EXPERIMENTAL LIVE：使用预定义量化假设分析今天的市场机会；仅在信号、行情、时段和全部执行保护通过时，以现有 $5 配置最多新开一个实验仓位，并完成退出和独立盈亏记录。不宣称盈利能力已验证。
+```
+
+The RESEARCH invocation stays read-only. For the future v2 research experiment,
+read `docs/opportunity-research-v2.md`; it is a fixed future experiment design, not a LIVE
+selector, and cannot promote experimental results automatically.

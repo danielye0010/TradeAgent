@@ -48,7 +48,7 @@ There is no always-on model process or embedded inference endpoint. The agent ru
 
 ## Run the agent
 
-Open Codex in the checkout. The same Skill supports two modes.
+Open Codex in the checkout. The same Skill supports three explicit modes.
 
 **RESEARCH** — scan, investigate, and record a trading decision without placing orders.
 
@@ -63,6 +63,12 @@ $trade-opportunity-analyst LIVE: Analyze today's market; show the purchase plan;
 ```
 
 LIVE uses the owner's existing private configuration and authorized symbols. If economic or execution requirements are not met, it returns `NO_TRADE`. The LIVE invocation is interactive and owner-initiated, not an unattended trading schedule.
+
+**EXPERIMENTAL LIVE** — explore predefined quantitative long signals with the owner's
+existing $5 sizing and at most one new entry attempt per trading day. It retains all
+broker/risk/recovery protection and records unvalidated results separately. Ordinary
+LIVE retains its evidence gates; experimental mode requires an explicit owner request.
+See the [policy and exact invocation](docs/opportunity-workflow.md#explicit-experimental-policy).
 
 ## Quick start
 

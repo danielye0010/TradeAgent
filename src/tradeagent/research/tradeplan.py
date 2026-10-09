@@ -3,7 +3,7 @@
 import math
 import statistics
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from decimal import ROUND_DOWN
 
 from ..model import Halt, Intent, dec
@@ -34,6 +34,9 @@ class Costs:
             raise ValueError("invalid gross return")
         return (1 + gross) * (1 - self.side) / (1 + self.side) - 1
 
+
+EVIDENCE_GATED = "evidence-gated-v1"
+EXPERIMENTAL = "experimental-live-v1"
 
 COSTS = {"low": Costs(0.5, 0.5, 0), "base": Costs(), "stress": Costs(2, 3, 0.2)}
 
@@ -107,12 +110,16 @@ class EconomicPlan:
     quote_time: float | None = None
     quote_max_age_seconds: int = 120
     schema_version: int = 2
+    execution_policy: str = EVIDENCE_GATED
 
     @property
     def plan_id(self):
         from dataclasses import asdict
 
-        return identity(asdict(self))
+        value = asdict(self)
+        if self.execution_policy == EVIDENCE_GATED:
+            value.pop("execution_policy")
+        return identity(value)
 
 
 def build_plan(prediction, snapshot, rows, *, selected=True, evidence_policy="exact-v1"):
@@ -198,6 +205,53 @@ def build_plan(prediction, snapshot, rows, *, selected=True, evidence_policy="ex
     )
 
 
+def build_experimental_plan(prediction, snapshot, rows, *, session_open, session_close):
+    """A predefined signal, not a proven edge; execution risk gates remain shared."""
+    from .alpha_signals import FAMILIES
+
+    plan = build_plan(prediction, snapshot, rows, evidence_policy="opportunity-cohorts-v1")
+    reasons = []
+    if prediction.strategy_id not in FAMILIES or prediction.direction != 1:
+        reasons.append("no predefined long quantitative signal")
+    if prediction.expected_return <= 0:
+        reasons.append("nonpositive predefined quantitative signal")
+    if (
+        not session_open
+        <= prediction.decision_time
+        <= plan.entry_after
+        < plan.entry_deadline
+        < plan.exit_at
+        <= session_close
+    ):
+        reasons.append("forecast horizon exceeds regular session or invalid entry window")
+    if math.ceil(plan.exit_at / 60) * 60 > session_close:
+        reasons.append("modeled endpoint exceeds regular session")
+    decision = TradePlan(
+        prediction.prediction_id,
+        "NO_TRADE" if reasons else "UNDERLYING",
+        None if reasons else snapshot.symbol,
+        None if reasons else snapshot.ask,
+        "; ".join(reasons)
+        if reasons
+        else "experimental predefined signal; profitability unestablished",
+    )
+    return replace(
+        plan,
+        decision=decision,
+        rejection_reasons=tuple(reasons),
+        execution_policy=EXPERIMENTAL,
+        forecast=Payload.of(
+            {
+                **plan.forecast.plain(),
+                "direction": prediction.direction,
+                "session_open": session_open,
+                "session_close": session_close,
+            }
+        ),
+        economics=Payload.of({**plan.economics.plain(), "profitability_established": False}),
+    )
+
+
 def validate_execution_plan(plan, now):
     """Signal and entry window only. Transaction-time quotes remain independently fresh."""
     finite(now)
@@ -211,14 +265,49 @@ def validate_execution_plan(plan, now):
         or horizon <= 0
     ):
         raise Halt("plan timing/provenance is inconsistent")
+    if plan.execution_policy not in {EVIDENCE_GATED, EXPERIMENTAL}:
+        raise Halt("unknown execution policy")
+    if plan.execution_policy == EXPERIMENTAL:
+        from pathlib import Path
+
+        from . import alpha_signals
+        from .alpha_signals import FAMILIES
+
+        forecast = plan.forecast.value
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+
+        from ..calendar import session_bounds
+
+        bounds = session_bounds(
+            datetime.fromtimestamp(decision_time, ZoneInfo("America/New_York")).date()
+        )
+        if bounds != (forecast.get("session_open"), forecast.get("session_close")):
+            raise Halt("experimental plan session differs from XNYS calendar")
+        if (
+            forecast.get("strategy") not in FAMILIES
+            or forecast.get("version") != identity(Path(alpha_signals.__file__).read_text())[:16]
+            or horizon not in (1800, 2100, 3600, 3900, 7200, 7500)
+            or forecast.get("direction") != 1
+            or forecast.get("raw_expected_return", 0) <= 0
+            or not forecast.get("session_open", math.inf) <= decision_time <= plan.entry_after
+            or not plan.entry_deadline < plan.exit_at <= forecast.get("session_close", -math.inf)
+            or math.ceil(plan.exit_at / 60) * 60 > forecast.get("session_close", -math.inf)
+            or plan.economics.value.get("profitability_established") is not False
+        ):
+            raise Halt("experimental plan lacks a frozen signal or realizable session window")
     if (
         plan.research_only
         or plan.decision.kind != "UNDERLYING"
         or plan.rejection_reasons
         or not plan.entry_after <= now < plan.entry_deadline
         or now >= plan.exit_at
-        or plan.economics.value["days"] < 20
-        or plan.economics.value["lower_net_estimate"] <= 0
+        or (
+            plan.execution_policy == EVIDENCE_GATED
+            and (
+                plan.economics.value["days"] < 20 or plan.economics.value["lower_net_estimate"] <= 0
+            )
+        )
         or plan.economics.value["pool"] != "prospective"
     ):
         raise Halt("plan is rejected, expired, awaiting its entry window or research-only")
@@ -262,8 +351,12 @@ def to_execution_intent(plan, quantity, now, *, order_type="limit", dollar_amoun
 def plan_dict(plan):
     from dataclasses import asdict
 
+    value = asdict(plan)
+    # Preserve serialization of existing frozen evidence-gated plans for recovery.
+    if plan.execution_policy == EVIDENCE_GATED:
+        value.pop("execution_policy")
     return {
-        **asdict(plan),
+        **value,
         "rejection_reasons": list(plan.rejection_reasons),
         "forecast": plan.forecast.plain(),
         "economics": plan.economics.plain(),
