@@ -10,8 +10,6 @@ TradeAgent combines US stock and ETF scanning, model-assisted opportunity analys
 
 [How it works](#how-it-works) · [Run the agent](#run-the-agent) · [Quick start](#quick-start) · [Strategies](#strategies) · [Documentation](#documentation)
 
-> The current agent-to-LIVE implementation is on [`feat/tradeplan-engine`](https://github.com/danielye0010/TradeAgent/tree/feat/tradeplan-engine); `main` still contains an earlier code baseline.
-
 ## How it works
 
 ```mermaid
@@ -34,15 +32,15 @@ flowchart LR
 
 ### Where the agent runs
 
-**The model runs in Codex, not inside the Python trading engine.** Codex loads the repository's [`trade-opportunity-analyst` Skill](.agents/skills/trade-opportunity-analyst/SKILL.md), calls TradeAgent CLI tools, researches the shortlisted securities, and saves structured assessments. No separate OpenAI API key or LLM service is required for this Skill workflow.
+**The model runs in Codex, not inside the Python trading engine.** Codex loads the repository's [`trade-opportunity-analyst` Skill](https://github.com/danielye0010/TradeAgent/blob/main/.agents/skills/trade-opportunity-analyst/SKILL.md), calls TradeAgent CLI tools, researches the shortlisted securities, and saves structured assessments. No separate OpenAI API key or LLM service is required for this Skill workflow.
 
 | Component | Role |
 | --- | --- |
-| [`trade-opportunity-analyst/SKILL.md`](.agents/skills/trade-opportunity-analyst/SKILL.md) | Agent instructions, research sequence, RESEARCH/LIVE modes |
-| [`opportunity_cli.py`](src/tradeagent/opportunity_cli.py) | Scanner, assessment, decision, and execution commands |
-| [`alpha_signals.py`](src/tradeagent/research/alpha_signals.py) | Deterministic quantitative signals |
-| [`opportunity_workflow.py`](src/tradeagent/research/opportunity_workflow.py) | Frozen assessments, economic evidence, and outcome tracking |
-| [`opportunity_live.py`](src/tradeagent/opportunity_live.py) | Handoff to the existing live trading engine |
+| [`trade-opportunity-analyst/SKILL.md`](https://github.com/danielye0010/TradeAgent/blob/main/.agents/skills/trade-opportunity-analyst/SKILL.md) | Agent instructions, research sequence, RESEARCH/LIVE modes |
+| [`opportunity_cli.py`](https://github.com/danielye0010/TradeAgent/blob/main/src/tradeagent/opportunity_cli.py) | Scanner, assessment, decision, and execution commands |
+| [`alpha_signals.py`](https://github.com/danielye0010/TradeAgent/blob/main/src/tradeagent/research/alpha_signals.py) | Deterministic quantitative signals |
+| [`opportunity_workflow.py`](https://github.com/danielye0010/TradeAgent/blob/main/src/tradeagent/research/opportunity_workflow.py) | Frozen assessments, economic evidence, and outcome tracking |
+| [`opportunity_live.py`](https://github.com/danielye0010/TradeAgent/blob/main/src/tradeagent/opportunity_live.py) | Handoff to the existing live trading engine |
 
 The manual agent runs when invoked in Codex. An optional daily SHADOW timer invokes a bounded, tool-free Codex CLI assessment and freezes four independent research arms; Python owns collection, decisions and outcomes. It never schedules LIVE orders. See [daily research](docs/prospective-shadow.md#daily-opportunity-research). The optional `codex_bridge.py` is a broker-MCP transport adapter, not the market-research model.
 
@@ -75,7 +73,7 @@ See the [policy and exact invocation](docs/opportunity-workflow.md#explicit-expe
 Python 3.12–3.14 on Linux or Ubuntu/WSL2.
 
 ```bash
-git clone --branch feat/tradeplan-engine https://github.com/danielye0010/TradeAgent.git
+git clone https://github.com/danielye0010/TradeAgent.git
 cd TradeAgent
 
 python3 -m venv .venv
@@ -101,7 +99,7 @@ tradeagent opportunity decide --refresh
 tradeagent opportunity show
 ```
 
-The commands do not invoke an AI model on their own: agent analysis takes place in the Codex session. LIVE trading additionally requires a configured Robinhood connection; see [live execution](docs/one-shot.md).
+The commands do not invoke an AI model on their own: agent analysis takes place in the Codex session. LIVE trading additionally requires a configured Robinhood connection; see [live execution](https://github.com/danielye0010/TradeAgent/blob/main/docs/one-shot.md).
 
 ## Strategies
 
@@ -111,11 +109,11 @@ The commands do not invoke an AI model on their own: agent analysis takes place 
 | **Stabilized reversal** | Reversal after a strong opening move |
 | **Residual strength** | Price strength relative to the broader market |
 
-Daily SHADOW research compares Quant Only, Codex Only, Quant + Codex and a seeded Random baseline over shared market observations. No repeatable net trading edge has yet been established; see [research results](docs/alpha-findings.md).
+Daily SHADOW research compares Quant Only, Codex Only, Quant + Codex and a seeded Random baseline over shared market observations. No repeatable net trading edge has yet been established; see [research results](https://github.com/danielye0010/TradeAgent/blob/main/docs/alpha-findings.md).
 
 ## Documentation
 
-[Opportunity workflow](docs/opportunity-workflow.md) · [Getting started](docs/getting-started.md) · [Architecture](docs/architecture.md) · [Live execution](docs/one-shot.md) · [Shadow trading](docs/prospective-shadow.md)
+[Opportunity workflow](https://github.com/danielye0010/TradeAgent/blob/main/docs/opportunity-workflow.md) · [Getting started](https://github.com/danielye0010/TradeAgent/blob/main/docs/getting-started.md) · [Architecture](https://github.com/danielye0010/TradeAgent/blob/main/docs/architecture.md) · [Live execution](https://github.com/danielye0010/TradeAgent/blob/main/docs/one-shot.md) · [Shadow trading](https://github.com/danielye0010/TradeAgent/blob/main/docs/prospective-shadow.md)
 
 ## Development
 
