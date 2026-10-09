@@ -66,4 +66,38 @@ jobs:
           python-version: '3.14'
       - run: python -m pip install -e ".[dev]"
       - run: python -m build
-      - run: python -m twine check dist/*
+      - run: python -m twine check dist/*.whl dist/*.tar.gz
+      - name: Release metadata and content
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            python scripts/check_release.py --tag "$GITHUB_REF_NAME" --dist dist
+          else
+            python scripts/check_release.py --dist dist
+          fi
+      - name: Install wheel in a fresh environment
+        run: |
+          python -m venv work/wheel-venv
+          work/wheel-venv/bin/python -m pip install dist/*.whl
+          work/wheel-venv/bin/python -m pip check
+      - name: Installed-wheel smoke (outside checkout)
+        working-directory: ${{ runner.temp }}
+        run: |
+          PYTHON="$GITHUB_WORKSPACE/work/wheel-venv/bin/python"
+          CLI="$GITHUB_WORKSPACE/work/wheel-venv/bin/tradeagent"
+          "$PYTHON" -c 'import os, pathlib, tomllib, tradeagent; from importlib.metadata import version; assert "site-packages" in tradeagent.__file__; assert version("tradeagent") == tomllib.loads((pathlib.Path(os.environ["GITHUB_WORKSPACE"]) / "pyproject.toml").read_text())["project"]["version"]'
+          "$CLI" --help
+          "$CLI" opportunity --help
+          "$CLI" validate --config "$GITHUB_WORKSPACE/config/config.example.json" --risk "$GITHUB_WORKSPACE/config/risk.example.json"
+          "$CLI" demo --demo-dir wheel-smoke/demo
+          "$CLI" inspect --state-dir wheel-smoke/demo
+          "$CLI" run-once --paper --state-dir wheel-smoke/paper
+      - name: Validated distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ github.sha }}
+          path: |
+            dist/*.whl
+            dist/*.tar.gz
+            dist/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 14

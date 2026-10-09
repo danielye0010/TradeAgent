@@ -14,7 +14,7 @@ from an existing SHADOW environment:
 ```bash
 python3 -m venv ~/tradeagent-owner-venv
 source ~/tradeagent-owner-venv/bin/activate
-pip install /absolute/path/tradeagent-0.3.0-py3-none-any.whl
+pip install /absolute/path/tradeagent-1.0.0b1-py3-none-any.whl
 umask 077
 mkdir -p ~/.config/tradeagent
 cd ~/.config/tradeagent
