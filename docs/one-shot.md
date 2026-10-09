@@ -91,7 +91,9 @@ positive/finite validation, rather than hardcoded $1,000, six-hour or ETF restri
 The current position/risk settings may tighten the listed production ceilings.
 Unknown fields, disabled LIVE, invalid combinations or nonprivate files halt.
 
-The official broker must expose exactly one active agent-accessible account.
+The broker must resolve one active agent-accessible account. If several accounts
+are accessible to the agent, select the intended account with `broker.account_number`;
+ambiguous or inaccessible selection halts.
 `live-check` reports its complete `account_sha256` digest without its account number.
 Optionally add that independently verified digest to `[broker]` as
 `account_sha256 = "..."` **before the first LIVE launch** to pin the account.
