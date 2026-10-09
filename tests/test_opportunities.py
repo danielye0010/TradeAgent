@@ -277,13 +277,15 @@ def test_entry_delay_evidence_cannot_cross_delayed_hypotheses():
 
 
 @pytest.mark.parametrize("published", [None, NOW - 86401])
-def test_unproven_news_does_not_pass_combined_gate(tmp_path, published):
+def test_unproven_news_does_not_support_explicit_event_hypothesis(tmp_path, published):
     store, report = store_scan(tmp_path, market())
     try:
-        store.assessment(assessment(report, published=published), NOW)
+        store.assessment(
+            dict(assessment(report, published=published), hypothesis_type="event_driven"), NOW
+        )
         result = store.decide(report, market(), now=NOW)
         assert result["final_decision"] == "NO_TRADE"
-        assert result["comparisons"]["codex_only"]["shadow_direction"] == 1
+        assert result["comparisons"]["codex_only"]["shadow_direction"] == 0
         assert any("24 hours" in r for r in result["ranked_candidates"][0]["rejection_reasons"])
         with pytest.raises(ValueError, match="cannot authorize"):
             selected_execution(result, "codex_only")
@@ -373,6 +375,7 @@ def test_decisions_do_not_accept_a_different_market_pool(tmp_path):
 
 
 def test_measured_quant_edge_and_qualitative_rank_combine_without_new_sizing(tmp_path, monkeypatch):
+    from tradeagent.research.evidence_cohorts import comparison_context
     from tradeagent.research.opportunity_workflow import prediction_from_dict
 
     store, report = store_scan(tmp_path, market())
@@ -380,7 +383,7 @@ def test_measured_quant_edge_and_qualitative_rank_combine_without_new_sizing(tmp
         store.assessment(assessment(report), NOW)
         initial = store.decide(report, market(), now=NOW)
         rows = [
-            r
+            dict(r, comparison_context=comparison_context(raw["features"]))
             for c in initial["ranked_candidates"]
             for raw in c["predictions"]
             for r in evidence(prediction_from_dict(raw))

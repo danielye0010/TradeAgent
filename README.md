@@ -54,7 +54,9 @@ $trade-opportunity-analyst 分析今天的交易机会，生成 TradePlan。
 ```
 
 The Skill scans a configurable universe, researches up to three candidates with
-dated sources, and runs the existing quantitative forecasts and economic gates.
+measured market evidence and relevant news, and runs the quantitative forecasts
+and economic gates. News is optional for price-action hypotheses; explicit
+event-driven theses require fresh verified evidence.
 It saves a machine-readable TradePlan or NO_TRADE under ignored `data/opportunities/`.
 Quant Only, Codex Only and Quant + Codex share the same pool, timestamps, horizon
 and cost assumptions; later observations resolve their frozen decisions.

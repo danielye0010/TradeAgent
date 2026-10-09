@@ -135,6 +135,9 @@ def main(argv=None):
                                 "symbol": c["symbol"],
                                 "observed_at": now,
                                 "stance": "watch",
+                                "hypothesis_type": "event_driven"
+                                if set(c["categories"]) == {"verified_event"}
+                                else "price_action",
                                 "rank": i + 1,
                                 "thesis": "",
                                 "catalyst": "",

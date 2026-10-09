@@ -115,15 +115,22 @@ class EconomicPlan:
         return identity(asdict(self))
 
 
-def build_plan(prediction, snapshot, rows, *, selected=True):
+def build_plan(prediction, snapshot, rows, *, selected=True, evidence_policy="exact-v1"):
     if prediction.snapshot_id != snapshot_identity(snapshot):
         raise ValueError("prediction and snapshot mismatch")
-    evidence = economic_evidence(prediction, rows)
+    if evidence_policy == "exact-v1":
+        evidence = economic_evidence(prediction, rows)
+    elif evidence_policy == "opportunity-cohorts-v1":
+        from .evidence_cohorts import cohort_evidence
+
+        evidence = cohort_evidence(prediction, rows)
+    else:
+        raise ValueError("unknown economic evidence policy")
     spread = (snapshot.ask - snapshot.bid) / ((snapshot.ask + snapshot.bid) / 2) * 10000
     base = Costs(max(1.0, spread / 2), 1, 0.1)
     stress = Costs(max(2.0, spread / 2), 3, 0.2)
     mean, se = evidence["mean_gross"], evidence["standard_error"]
-    lower = stress.net(max(-0.999, mean - 1.96 * se))
+    lower = stress.net(max(-0.999, evidence.get("lower_gross_estimate", mean - 1.96 * se)))
     delay = prediction.features.value.get("entry_delay_seconds", 0)
     if not 0 <= finite(delay) < prediction.horizon:
         raise ValueError("invalid entry delay")
@@ -138,6 +145,7 @@ def build_plan(prediction, snapshot, rows, *, selected=True):
         reasons.append("abstention or unsupported short equity expression")
     if evidence["days"] < 20:
         reasons.append("fewer than 20 prior active daily clusters")
+    reasons.extend(evidence.get("insufficient_reasons", []))
     if lower <= 0:
         reasons.append("stress-cost lower estimate is nonpositive")
     if evidence["asof"] is None or prediction.decision_time - evidence["asof"] > 30 * 86400:
@@ -174,7 +182,11 @@ def build_plan(prediction, snapshot, rows, *, selected=True):
                 "stress_side_cost": stress.side,
                 "max_loss_fraction": 1.0,
                 "options": "research_only_missing_quote_outcomes",
-                "uncertainty": "daily-cluster standard error; selection and serial dependence unadjusted",
+                "uncertainty": (
+                    "fixed comparable strata, max ordinary/HAC daily SE, t(4) critical, target gate and between-symbol discount; descriptive screen, not calibrated coverage"
+                    if evidence_policy == "opportunity-cohorts-v1"
+                    else "daily-cluster standard error; selection and serial dependence unadjusted"
+                ),
             }
         ),
         prediction.decision_time + delay,

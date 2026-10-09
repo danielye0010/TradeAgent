@@ -39,28 +39,76 @@ Keep synthetic, replay, historical_market and prospective observations distinct.
 
 ## Decisions and memory
 
-`evidence --template` provides the exact assessment JSON. Complete thesis, catalyst,
-priced_in, contradictions, invalidation, stance (long/watch/avoid), ordinal rank,
-actual model identity (or not-exposed), and cited sources. Each source records HTTPS
-URL/title/claim, publication time or null, observation time, and role
-supporting/contradicting/context. Qualitative direction is not a calibrated return
-forecast or sizing instruction. Unknown publication time does not pass the dated
-support gate. Assessments are frozen per scan/symbol; a revision needs a new scan.
+`evidence --template` provides the assessment JSON. Complete thesis, catalyst
+(or explain that none is identified), priced_in, contradictions, invalidation,
+stance (long supports, avoid challenges, watch abstains), ordinal rank and actual
+model identity (or not-exposed). The optional `hypothesis_type` is `price_action`
+or `event_driven`; old assessments default to price action unless the scanner
+candidate is event-only. Freeze research before viewing quant economic eligibility.
+No subjective confidence, expected-return or sizing field is accepted.
 
-`decide` evaluates all three immutable Alpha hypotheses on each shortlisted
-candidate, without choosing the simple regime rule in advance. The prior-only
-EconomicPlan gate needs 20 active daily clusters of the same symbol, strategy
-version, source, horizon, entry delay, decision offset and evidence pool, with a positive stress-cost
-lower estimate. Sparse evidence yields NO_TRADE. The lower estimate is descriptive,
-not a calibrated confidence claim. Supported frozen total horizons are 30, 35,
-60, 65, 120 and 125 minutes (delay plus holding).
+News is optional for price/volume/relative-strength hypotheses. Codex can support
+them with the saved timestamped market evidence and empty `sources`. Relevant news
+may support or contradict the interpretation. Sources still retain HTTPS URL,
+title/claim, publication time or null, actual observation time and role. Only explicit
+event-driven claims require a supporting publication within 24 hours or the scanner's
+fresh verified event. Undated/old news is context, not a new catalyst.
 
-Quant Only ranks eligible measured economics; Quant + Codex filters them using
-supporting research published within 24 hours and the analyst's rank. Codex Only records a directional
-research hypothesis independently, with an executable NO_TRADE until quantitatively
-supported. All three arms retain the same candidate pool, decision time, price
-observations, planned delay/horizon and per-candidate cost model. Cash scores zero.
-This distinguishes research preference from authorization to take risk.
+`decide` evaluates the three immutable price-based Alpha hypotheses on each shortlist.
+Quant Only ranks eligible measured economics independently of assessments. Codex Only
+records independently frozen directional hypotheses, research-only with executable
+NO_TRADE; it does not inherit the quant plan or calibrated return. Quant + Codex can
+choose among economically eligible candidates supported by Codex, including market-only
+opportunities. Challenge/watch/missing assessments abstain in the combined arm.
+Each arm shares the same candidate pool, timestamp, outcome price model, horizon and
+cost assumptions. Performance reports partition paired comparisons by the frozen
+Skill/evidence-policy versions. Mixed-protocol aggregates are marked descriptive;
+they are not a single prospective treatment estimate.
+
+## Comparable economic evidence
+
+Daily opportunity plans use frozen policy `opportunity-cohorts-v1`; the legacy exact
+policy and frozen Alpha experiments are unchanged. The cohort design is deliberately
+specified before outcomes, with no best-performing grouping search:
+
+- Keep exact strategy/version, source, total horizon, entry delay and evidence pool.
+  Different feeds and holding periods are not interchangeable without new evidence.
+- Replace exact decision minute with a fixed 30-minute band. Match the original
+  trend/range regime, opening realized-volatility band (<0.3%, 0.3–1%, >=1%), and
+  observed decision-spread band (<10, 10–25, >=25 bp).
+- Pool known stocks within fixed sectors, broad equity ETFs, and sector equity ETFs
+  only in their separate predefined groups. Bond/commodity ETFs and unclassified stocks retain
+  their own symbol group. This assumes conditional comparability, not universal alpha.
+- Use only outcomes resolved strictly before this decision from the last 180 calendar
+  days. Cohort features come from the original frozen prediction and quote evidence,
+  never future realized volatility, current symbol status or AI confidence.
+- Average repeated/overlapping signals within symbol-day, then give each symbol an
+  equal share of ONE daily cohort vote. Twenty signals or symbols on one date are
+  still one day. All active losses are retained. Require >=20 cohort days and >=5
+  target-symbol days, with both represented within the existing 30-day freshness limit.
+
+Uncertainty uses the larger ordinary and three-lag Bartlett/Newey–West standard
+error of ordered active-day means. Use the conservative t(4) 97.5% critical value
+2.776 for both cohort and target estimates. Discount the cohort lower estimate by
+between-symbol mean dispersion; take the LESSER of that estimate and the target's
+own lower estimate. Apply the unchanged current spread/slippage/fee stress costs,
+and require the resulting net lower estimate to be strictly positive. Peer winners
+cannot override an unsupported or losing target. There is no return rescaling across
+horizons and no reduction of the 20-day cohort or positive stress-net requirements.
+
+The five-day target gate is a local transport check, not proof of a symbol-specific
+edge. Peer dispersion, sparse/serially dependent data and adaptive research can still
+invalidate comparability. These are conservative research screens, not calibrated
+confidence coverage or a profitability claim. Clustering follows the dependence
+concern in [Cameron and Miller](https://escholarship.org/uc/item/1jq5d0pq);
+the serial-dependence adjustment follows [Newey and West](https://www.nber.org/papers/t0055).
+The cohort boundaries, local gate and dispersion discount are explicit project choices.
+
+Evidence remains insufficient when comparability metadata is missing, fewer than 20
+cohort or five target days exist, target support is stale, target/peer uncertainty or
+dispersion erases the stress-net edge, or a prospective pool has only historical or
+synthetic samples. A price anomaly and an enthusiastic assessment do not change this.
+Supported total horizons remain 30/35/60/65/120/125 minutes (delay plus holding).
 
 The existing Experience SQLite database gains append-only daily scan, assessment,
 decision, outcome and execution tables. Local ignored `data/opportunities/` holds

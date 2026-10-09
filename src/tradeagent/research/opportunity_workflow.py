@@ -10,12 +10,60 @@ from urllib.parse import urlparse
 
 from .alpha_signals import FAMILIES, AlphaStrategy
 from .domain import Payload, Prediction, canonical, identity, timestamp
+from .evidence_cohorts import POLICY, comparison_context
 from .opportunities import research_snapshot
 from .store import Experience
 from .tradeplan import COSTS, build_plan, plan_dict, plan_from_dict
 
-SKILL_VERSION = "trade-opportunity-analyst-v1"
+SKILL_VERSION = "trade-opportunity-analyst-v2"
 ARMS = ("quant_only", "codex_only", "quant_codex")
+
+
+def research_support(candidate, assessment, now):
+    """Price action can support a thesis without news; event-only claims need proof."""
+    event = candidate.get("event_evidence") or {}
+    event_only = set(candidate["categories"]) == {"verified_event"}
+    hypothesis = (assessment or {}).get(
+        "hypothesis_type", "event_driven" if event_only else "price_action"
+    )
+    needs_event = hypothesis == "event_driven"
+    dated_source = bool(
+        assessment
+        and any(
+            s["role"] == "supporting"
+            and s["published_at"] is not None
+            and 0 <= now - timestamp(s["published_at"]) <= 86400
+            for s in assessment["sources"]
+        )
+    )
+    verified_event = bool(
+        event.get("verified")
+        and event.get("symbol") == candidate["symbol"]
+        and event.get("published_at") is not None
+        and event.get("observed_at") is not None
+        and 0 <= now - timestamp(event["published_at"]) <= 86400
+        and timestamp(event["published_at"]) <= timestamp(event["observed_at"]) <= now
+    )
+    reasons = []
+    if not assessment:
+        reasons.append("Codex abstained: no frozen assessment")
+    elif assessment["stance"] != "long":
+        reasons.append(
+            "Codex challenged the thesis"
+            if assessment["stance"] == "avoid"
+            else "Codex abstained: watch stance"
+        )
+    if needs_event and not (dated_source or verified_event):
+        reasons.append(
+            "event-driven thesis lacks verified supporting evidence published within 24 hours"
+        )
+    return {
+        "hypothesis_type": hypothesis,
+        "news_required": needs_event,
+        "fresh_event_evidence": dated_source or verified_event,
+        "supported": not reasons,
+        "reasons": reasons,
+    }
 
 
 class DailyResearch:
@@ -94,10 +142,12 @@ class DailyResearch:
             "sources",
             "model",
         }
-        if set(item) != required:
+        if set(item) not in (required, required | {"hypothesis_type"}):
             raise ValueError(
                 "assessment must match the documented schema; no subjective sizing or invented forecast fields"
             )
+        if item.get("hypothesis_type", "price_action") not in {"price_action", "event_driven"}:
+            raise ValueError("hypothesis_type must be price_action or event_driven")
         report = self.scan(item["scan_id"])
         if item["symbol"] not in {r["symbol"] for r in report["candidates"]}:
             raise ValueError("assess only a saved shortlisted candidate")
@@ -134,7 +184,24 @@ class DailyResearch:
         return self.save("assessments", item, identity([item["scan_id"], item["symbol"]]), now)
 
     def prior_rows(self):
-        rows = [r for o in self.records("outcomes") for r in o.get("economic_rows", [])]
+        # Rehydrate comparability from ORIGINAL frozen forecasts/plans for older
+        # outcomes. Do not update any decision or persisted economic row.
+        frozen = {
+            p["prediction_id"]: comparison_context(p["features"], c["outcome_costs"])
+            for d in self.records("decisions")
+            for c in d["ranked_candidates"]
+            for p in c["predictions"]
+        }
+        rows = [
+            {
+                **r,
+                "comparison_context": r.get(
+                    "comparison_context", frozen.get(r["prediction_id"], {})
+                ),
+            }
+            for o in self.records("outcomes")
+            for r in o.get("economic_rows", [])
+        ]
         for r in self.db.execute(
             "SELECT p.*,o.raw_return,o.resolved_at FROM predictions p JOIN outcomes o USING(prediction_id)"
         ):
@@ -153,6 +220,7 @@ class DailyResearch:
                     "decision_offset": features.get("decision_offset"),
                     "entry_delay_seconds": features.get("entry_delay_seconds", 0),
                     "regime": context.get("regime"),
+                    "comparison_context": comparison_context(features),
                     "active": r["direction"] > 0,
                     "gross": r["raw_return"],
                 }
@@ -206,10 +274,13 @@ class DailyResearch:
                                 **prediction.features.plain(),
                                 "entry_delay_seconds": delay_seconds,
                                 "decision_offset": int((now - dataset["session_open"]) // 60),
+                                "observed_spread_bps": (snapshot.ask - snapshot.bid)
+                                / ((snapshot.ask + snapshot.bid) / 2)
+                                * 10000,
                             }
                         ),
                     )
-                    plan = build_plan(prediction, snapshot, rows)
+                    plan = build_plan(prediction, snapshot, rows, evidence_policy=POLICY)
                     if plan.exit_at > dataset["session_close"]:
                         plan = replace(
                             plan,
@@ -231,21 +302,14 @@ class DailyResearch:
                 errors.append(str(error))
             approved = [p for p in plans if p["decision"]["kind"] == "UNDERLYING"]
             best = max(approved, key=lambda p: p["economics"]["lower_net_estimate"], default=None)
-            source_ready = bool(
-                research
-                and any(
-                    s["role"] == "supporting"
-                    and s["published_at"] is not None
-                    and 0 <= now - timestamp(s["published_at"]) <= 86400
-                    for s in research["sources"]
-                )
-            )
-            combined = best if research and research["stance"] == "long" and source_ready else None
+            support = research_support(candidate, research, now)
+            combined = best if support["supported"] else None
             candidates.append(
                 {
                     "symbol": symbol,
                     "scanner": candidate,
                     "research": research,
+                    "codex_support": support,
                     "predictions": predictions,
                     "economic_plans": plans,
                     "outcome_costs": plans[0]["economics"]
@@ -260,11 +324,7 @@ class DailyResearch:
                     "limitations": errors,
                     "rejection_reasons": errors
                     + sorted({reason for p in plans for reason in p["rejection_reasons"]})
-                    + (
-                        []
-                        if source_ready
-                        else ["no supporting Codex source published within 24 hours"]
-                    ),
+                    + support["reasons"],
                     "entry_condition": "fresh US equity quote, original price cap, entry window and existing owner risk checks",
                     "invalidation": research["invalidation"]
                     if research
@@ -286,7 +346,7 @@ class DailyResearch:
             default=None,
         )
         ai = min(
-            (r for r in candidates if r["research"] and r["research"]["stance"] == "long"),
+            (r for r in candidates if r["codex_support"]["supported"]),
             key=lambda r: r["research"]["rank"],
             default=None,
         )
@@ -303,7 +363,7 @@ class DailyResearch:
                 "plan": plan,
                 "shadow_direction": 1 if chosen else 0,
                 "research_only": name == "codex_only" or bool(plan and plan["research_only"]),
-                "reason": "dated qualitative support plus measured prior net-edge gate"
+                "reason": "evidence-based Codex support plus measured prior net-edge gate"
                 if name == "quant_codex" and plan
                 else "positive prior cost gate"
                 if plan
@@ -314,6 +374,7 @@ class DailyResearch:
         result = {
             "schema_version": 1,
             "skill_version": SKILL_VERSION,
+            "economic_evidence_policy": POLICY,
             "recorded_at": now,
             "decision_time": now,
             "scan_id": report["scan_id"],
@@ -436,6 +497,7 @@ class DailyResearch:
                                 "entry_delay_seconds", 0
                             ),
                             "regime": prediction["context"].get("regime"),
+                            "comparison_context": comparison_context(prediction["features"], costs),
                             "active": prediction["direction"] > 0,
                             "gross": gross,
                         }
@@ -474,9 +536,8 @@ class DailyResearch:
 
     def performance(self):
         outcomes = self.records("outcomes")
-        pools = {}
-        for pool in sorted({o["evidence_kind"] for o in outcomes}):
-            subset = [o for o in outcomes if o["evidence_kind"] == pool]
+
+        def paired_stats(subset):
             arm_stats = {
                 name: {
                     "decisions": len(subset),
@@ -498,7 +559,26 @@ class DailyResearch:
                 )
                 for name in ("codex_only", "quant_codex")
             }
-            pools[pool] = {"arms": arm_stats, "paired_mean_net_minus_quant": paired}
+            return {"arms": arm_stats, "paired_mean_net_minus_quant": paired}
+
+        decisions = {d["decision_id"]: d for d in self.records("decisions")}
+        pools = {}
+        for pool in sorted({o["evidence_kind"] for o in outcomes}):
+            subset = [o for o in outcomes if o["evidence_kind"] == pool]
+            protocols = {}
+            for outcome in subset:
+                decision = decisions[outcome["decision_id"]]
+                protocol = (
+                    decision.get("skill_version", "unspecified")
+                    + "/"
+                    + decision.get("economic_evidence_policy", "exact-v1")
+                )
+                protocols.setdefault(protocol, []).append(outcome)
+            pools[pool] = {
+                **paired_stats(subset),
+                "mixed_protocols": len(protocols) > 1,
+                "protocols": {p: paired_stats(rows) for p, rows in sorted(protocols.items())},
+            }
         return {
             "evidence_pools": pools,
             "pending_decisions": len(self.records("decisions")) - len(outcomes),
