@@ -1,119 +1,191 @@
 # TradeAgent
 
-**Agent-driven market research. Deterministic trade execution.**
+**An AI analyst picks the trade. A deterministic engine places it.**
 
-TradeAgent combines US stock and ETF scanning, model-assisted opportunity analysis, quantitative trading strategies, and Robinhood execution in one workflow. The agent investigates market opportunities; the Python engine measures signals, evaluates trading costs, and manages orders and exits.
+TradeAgent scans US stocks and ETFs, asks a coding agent (Codex) to sanity-check the most
+interesting moves, runs the survivors through cost-aware quantitative checks, and trades
+them on Robinhood with automatic exits. Every forecast is written down before the market
+answers, so you can see which picks were right after the fact.
 
 [![CI](https://github.com/danielye0010/TradeAgent/actions/workflows/ci.yml/badge.svg)](https://github.com/danielye0010/TradeAgent/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.12%E2%80%933.14-blue)
 [![License](https://img.shields.io/badge/License-Apache--2.0-blue)](LICENSE)
 
-[How it works](#how-it-works) · [Run the agent](#run-the-agent) · [Quick start](#quick-start) · [Strategies](#strategies) · [Documentation](#documentation)
+[How it works](#how-it-works) · [Quick start](#quick-start) · [Trading modes](#trading-modes) · [Daily autopilot](#daily-autopilot) · [Strategies](#strategies) · [Docs](#documentation)
 
 ## How it works
 
 ```mermaid
 flowchart LR
-    A[Market data] --> B[Scanner & quantitative signals]
-    B --> C[Agent review of top candidates]
-    B --> D[Forecasts & subsequent outcomes]
-    C --> E[Evidence-based TradePlan]
+    A[Market data<br/>31 stocks & ETFs] --> B[Scanner]
+    B -->|top 3 movers| C[Codex review]
+    B --> D[Quant signals]
+    C --> E{TradePlan}
     D --> E
-    E -->|Owner-authorized LIVE| F[Risk & execution engine]
-    F --> G[Robinhood Trading MCP]
-    G --> H[Orders, exits & realized P&L]
+    E -->|NO_TRADE| F[Recorded & scored later]
+    E -->|BUY| G[Risk checks]
+    G --> H[Robinhood order]
+    H --> I[Timed exit & P&L]
 ```
 
-- **Scan:** analyze a configurable universe of 31 US stocks and ETFs; record systematic forecasts across the available universe.
-- **Research:** the agent reviews up to three shortlisted opportunities using observed price action, volume, relative strength, and relevant news.
-- **Decide:** combine the agent's research with prior resolved quantitative evidence and estimated trading costs to produce a `TradePlan` or `NO_TRADE`.
-- **Execute:** an eligible, explicitly authorized LIVE plan enters the existing Robinhood order lifecycle, with position limits, exit management, reconciliation, and recovery.
-- **Learn from outcomes:** resolve forecasts against later market observations; track research returns separately from broker-confirmed P&L.
+The split is deliberate. **The model decides what is worth a look; it never touches the
+broker.** Sizing, risk limits, order placement, exits and reconciliation all live in
+plain Python that behaves the same way every time.
 
-### Where the agent runs
+A typical trading day:
 
-**The model runs in Codex, not inside the Python trading engine.** Codex loads the repository's [`trade-opportunity-analyst` Skill](https://github.com/danielye0010/TradeAgent/blob/main/.agents/skills/trade-opportunity-analyst/SKILL.md), calls TradeAgent CLI tools, researches the shortlisted securities, and saves structured assessments. No separate OpenAI API key or LLM service is required for this Skill workflow.
-
-| Component | Role |
+| Time (ET) | What happens |
 | --- | --- |
-| [`trade-opportunity-analyst/SKILL.md`](https://github.com/danielye0010/TradeAgent/blob/main/.agents/skills/trade-opportunity-analyst/SKILL.md) | Agent instructions, research sequence, RESEARCH/LIVE modes |
-| [`opportunity_cli.py`](https://github.com/danielye0010/TradeAgent/blob/main/src/tradeagent/opportunity_cli.py) | Scanner, assessment, decision, and execution commands |
-| [`alpha_signals.py`](https://github.com/danielye0010/TradeAgent/blob/main/src/tradeagent/research/alpha_signals.py) | Deterministic quantitative signals |
-| [`opportunity_workflow.py`](https://github.com/danielye0010/TradeAgent/blob/main/src/tradeagent/research/opportunity_workflow.py) | Frozen assessments, economic evidence, and outcome tracking |
-| [`opportunity_live.py`](https://github.com/danielye0010/TradeAgent/blob/main/src/tradeagent/opportunity_live.py) | Handoff to the existing live trading engine |
-
-The manual agent runs when invoked in Codex. An optional daily SHADOW timer invokes a bounded, tool-free Codex CLI assessment and freezes four independent research arms; Python owns collection, decisions and outcomes. It never schedules LIVE orders. See [daily research](docs/prospective-shadow.md#daily-opportunity-research). The optional `codex_bridge.py` is a broker-MCP transport adapter, not the market-research model.
-
-## Run the agent
-
-Open Codex in the checkout. The same Skill supports three explicit modes.
-
-**RESEARCH** — scan, investigate, and record a trading decision without placing orders.
-
-```text
-$trade-opportunity-analyst Analyze today's market opportunities and generate a TradePlan.
-```
-
-**LIVE** — show a purchase plan, execute only if eligible, then track exit and actual P&L.
-
-```text
-$trade-opportunity-analyst LIVE: Analyze today's market; show the purchase plan; if eligible, execute through Robinhood, manage the exit, and report realized P&L.
-```
-
-LIVE uses the owner's existing private configuration and authorized symbols. If economic or execution requirements are not met, it returns `NO_TRADE`. The LIVE invocation is interactive and owner-initiated, not an unattended trading schedule.
-
-**EXPERIMENTAL LIVE** — explore predefined quantitative long signals with the owner's
-existing $5 sizing and at most one new entry attempt per trading day. It retains all
-broker/risk/recovery protection and records unvalidated results separately. Ordinary
-LIVE retains its evidence gates; experimental mode requires an explicit owner request.
-See the [policy and exact invocation](docs/opportunity-workflow.md#explicit-experimental-policy).
+| 10:00 | Pull fresh bars and quotes, rank the most unusual moves |
+| 10:01 | Codex reviews the top three and returns *long*, *watch* or *avoid* |
+| 10:02 | Quant signals and cost estimates are frozen into a decision |
+| 10:05 | Entry window opens for an eligible plan |
+| 11:05 | Position is closed on schedule |
+| 17:00 | Every forecast, traded or not, is scored against what actually happened |
 
 ## Quick start
 
-Python 3.12–3.14 on Linux or Ubuntu/WSL2.
+You need Python 3.12+ on Linux (WSL2 works fine).
 
 ```bash
 git clone https://github.com/danielye0010/TradeAgent.git
 cd TradeAgent
-
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -e ".[dev]"
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
 ```
 
-Run the research pipeline offline, without a brokerage account:
+Two things you can run right away, no accounts needed:
 
 ```bash
+# Simulated strategy lab: predictions, outcomes, learning and challengers on synthetic data
 tradeagent demo --demo-dir data/demo
 tradeagent inspect --state-dir data/demo
+
+# A full buy-and-sell round trip against a simulated broker
+tradeagent run-once --paper --state-dir data/paper
 ```
 
-For direct CLI operation:
+### Connect market data
+
+Scanning live markets uses the official
+[Robinhood Trading MCP](https://robinhood.com/us/en/support/articles/agentic-trading-overview/).
+TradeAgent never sees your password. You provide a small helper executable that prints a
+token, and TradeAgent calls it when it needs one:
+
+```json
+{"access_token": "...", "expires_at": 1767225600, "resource": "https://agent.robinhood.com/mcp/trading"}
+```
+
+Put it at `~/.local/libexec/robinhood-mcp-oauth-helper` (or pass `--oauth-helper`).
+Details are in the [helper contract](docs/prospective-shadow.md#robinhood-setup).
+Prefer Alpaca for data? Add `--provider alpaca` to `scan`.
+
+Then try a research pass by hand:
 
 ```bash
-tradeagent opportunity scan --candidates 3
-tradeagent opportunity evidence --template
-# Save a completed assessment as assessment.json
-tradeagent opportunity assess --input assessment.json
-tradeagent opportunity decide --refresh
+tradeagent opportunity scan --candidates 3     # rank today's unusual movers
+tradeagent opportunity evidence --template     # the form Codex fills in
+tradeagent opportunity decide --refresh        # freeze a TradePlan or NO_TRADE
 tradeagent opportunity show
 ```
 
-The commands do not invoke an AI model on their own: agent analysis takes place in the Codex session. LIVE trading additionally requires a configured Robinhood connection; see [live execution](https://github.com/danielye0010/TradeAgent/blob/main/docs/one-shot.md).
+## Trading modes
+
+Open [Codex](https://github.com/openai/codex) in the repo and talk to the
+`trade-opportunity-analyst` skill. It runs the commands above for you, reads the news
+for each candidate, and explains its reasoning.
+
+| Mode | Say this | What happens |
+| --- | --- | --- |
+| **Research** | `$trade-opportunity-analyst Analyze today's market and generate a TradePlan.` | Full analysis, no orders |
+| **Live** | `$trade-opportunity-analyst LIVE: analyze today's market, show the purchase plan, execute if eligible, and report P&L.` | Trades only when the strategy has a statistically proven edge for that setup |
+| **Experimental live** | `$trade-opportunity-analyst EXPERIMENTAL LIVE: trade today's strongest quant signal with my $5 setting.` | One $5 position per day on the best quant signal, so you can learn from real fills |
+
+Live and experimental modes both use the same execution engine and your private config:
+
+```toml
+[live]
+enabled = true
+symbols = ["QQQ", "IWM", "AAPL", "MSFT"]   # what the agent is allowed to buy
+state_dir = "/abs/path/to/state"
+max_notional = "25"
+
+[broker]
+oauth_helper = "/abs/path/to/robinhood-mcp-oauth-helper"
+
+[entry]
+order_type = "market"
+dollar_amount = "5"
+```
+
+Before the first live trade, run `tradeagent live-check --config tradeagent.toml`. It reads
+your account, quotes and permissions without placing anything. Drop a file named `KILL` in
+`state_dir` at any time to close the position and stop. The full config reference is in
+[Live execution](docs/one-shot.md).
+
+## Daily autopilot
+
+One command installs a systemd timer that runs the research loop every trading day, with
+no chat window involved:
+
+```bash
+python scripts/install_shadow.py --daily \
+  --python "$PWD/.venv/bin/python" \
+  --state-dir /abs/path/to/daily-research
+```
+
+At 10:00 ET it scans the market and asks Codex (via `codex exec`, logged in with your
+ChatGPT account) to rank the top three candidates from the price and volume data. Then it
+records four competing picks:
+
+| Arm | How it picks |
+| --- | --- |
+| **Quant only** | Strongest quantitative signal |
+| **Codex only** | Codex's top-ranked *long* |
+| **Quant + Codex** | Best name that both agree on |
+| **Random** | A seeded coin flip among the same candidates, or cash |
+
+Results land in `daily-status.json`. The random arm is the one to beat: if the agent can't
+outpick a coin flip over a few months, you'll know. The autopilot paper-trades only; real
+orders always come from one of the modes above.
 
 ## Strategies
 
-| Strategy | Hypothesis |
-| --- | --- |
-| **Opening continuation** | Opening momentum aligned with the gap and market |
-| **Stabilized reversal** | Reversal after a strong opening move |
-| **Residual strength** | Price strength relative to the broader market |
+Three intraday hypotheses, each evaluated on 5-minute-delayed entries with a one-hour hold:
 
-Daily SHADOW research compares Quant Only, Codex Only, Quant + Codex and a seeded Random baseline over shared market observations. No repeatable net trading edge has yet been established; see [research results](https://github.com/danielye0010/TradeAgent/blob/main/docs/alpha-findings.md).
+| Strategy | The bet |
+| --- | --- |
+| **Opening continuation** | A strong open that agrees with the gap and the market keeps going |
+| **Stabilized reversal** | A big opening move that starts to stall is about to retrace |
+| **Residual strength** | A stock outrunning the market on a beta-adjusted basis keeps outrunning it |
+
+Trading costs (spread, slippage and fees) are subtracted before anything counts as a win.
+Bearish signals are recorded but never shorted.
+
+**Where things stand:** no strategy has shown a repeatable edge yet. The early numbers are
+in [Alpha findings](docs/alpha-findings.md), and the daily autopilot exists to change that
+answer with real data.
+
+## Project layout
+
+```text
+.agents/skills/trade-opportunity-analyst/   the Codex skill
+src/tradeagent/
+  research/       scanner, signals, TradePlans, outcome tracking
+  prospective/    daily autopilot and market-data providers
+  oneshot.py      live entry/exit engine
+  risk.py         position, exposure and cash limits
+scripts/          systemd installers
+docs/             design notes and operating guides
+```
 
 ## Documentation
 
-[Opportunity workflow](https://github.com/danielye0010/TradeAgent/blob/main/docs/opportunity-workflow.md) · [Getting started](https://github.com/danielye0010/TradeAgent/blob/main/docs/getting-started.md) · [Architecture](https://github.com/danielye0010/TradeAgent/blob/main/docs/architecture.md) · [Live execution](https://github.com/danielye0010/TradeAgent/blob/main/docs/one-shot.md) · [Shadow trading](https://github.com/danielye0010/TradeAgent/blob/main/docs/prospective-shadow.md)
+- [Opportunity workflow](docs/opportunity-workflow.md): every command and how decisions are made
+- [Live execution](docs/one-shot.md): config reference, recovery, kill switch
+- [Daily autopilot and shadow trading](docs/prospective-shadow.md)
+- [Architecture](docs/architecture.md)
+- [Alpha findings](docs/alpha-findings.md)
 
 ## Development
 
@@ -123,8 +195,12 @@ ruff check src tests scripts
 ruff format --check src tests scripts
 ```
 
+The test suite uses synthetic markets and a mock broker, so it runs offline in about two
+minutes.
+
 ## License
 
-[Apache 2.0](LICENSE). [Third-party licenses](THIRD_PARTY.md).
+[Apache 2.0](LICENSE), with some vendored MIT components ([details](THIRD_PARTY.md)).
 
-TradeAgent is an independent project, not affiliated with Robinhood Markets, Inc. Trading involves risk of loss.
+TradeAgent is an independent project and is not affiliated with Robinhood Markets, Inc.
+Trading involves risk of loss.
