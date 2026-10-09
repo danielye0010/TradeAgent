@@ -66,6 +66,32 @@ def research_support(candidate, assessment, now):
     }
 
 
+def scan_failure(report):
+    """A collection failure is terminal evidence, never an economic abstention."""
+    if (
+        report.get("status") != "INCOMPLETE"
+        and report.get("source") not in (None, "", "unavailable")
+        and report.get("evidence_kind") not in (None, "", "unavailable")
+    ):
+        return None
+    limitations = report.get("limitations") or ["market-data source unavailable"]
+    return {
+        "schema_version": 1,
+        "status": "INCOMPLETE",
+        "decision": "NO_TRADE",
+        "failure_kind": "MARKET_DATA_UNAVAILABLE",
+        "failure_id": report["scan_id"],
+        "invocation_id": report["scan_id"],
+        "scan_id": report["scan_id"],
+        "recorded_at": report["decision_time"],
+        "reason": "; ".join(limitations),
+        "limitations": limitations,
+        "orders_submitted": 0,
+        "submission_status": "NOT_SUBMITTED",
+        "execution_invoked": False,
+    }
+
+
 class DailyResearch:
     """Additional research records in Experience; no execution state or new scheduler."""
 
@@ -228,6 +254,9 @@ class DailyResearch:
         return rows
 
     def decide(self, report, dataset, *, now, holding_seconds=3600, delay_seconds=300):
+        failure = scan_failure(report)
+        if failure:
+            return failure
         if (
             type(holding_seconds) is not int
             or holding_seconds <= 0

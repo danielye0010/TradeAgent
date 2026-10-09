@@ -7,7 +7,7 @@ from pathlib import Path
 
 from .model import Halt
 from .research.opportunities import UNIVERSE, capture, scan
-from .research.opportunity_workflow import DailyResearch, selected_execution
+from .research.opportunity_workflow import DailyResearch, scan_failure, selected_execution
 
 
 def read(path):
@@ -20,6 +20,21 @@ def write(path, value):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     atomic_json(path, value)
+
+
+def saved_scan_failure(directory, report):
+    failure = scan_failure(report)
+    if failure is None:
+        return None
+    path = Path(directory) / "invocations" / (failure["invocation_id"] + ".json")
+    failure["invocation_file"] = str(path.resolve())
+    # Retries and legacy failed scans keep the same failure identity and evidence.
+    if path.exists():
+        if read(path) != failure:
+            raise ValueError("saved scan failure evidence differs; refusing to overwrite")
+    else:
+        write(path, failure)
+    return failure
 
 
 def main(argv=None):
@@ -86,6 +101,14 @@ def main(argv=None):
         store = DailyResearch(args.state_dir)
         with store.experience.lock():
             now = time.time()
+            if args.command in {"evidence", "decide"} or (
+                args.command == "show" and not args.decision_id and store.records("scans")
+            ):
+                report = store.scan(getattr(args, "scan_id", None))
+                failure = saved_scan_failure(args.state_dir, report)
+                if failure:
+                    print(json.dumps(failure, indent=2, allow_nan=False))
+                    return 2
             if args.command == "scan":
                 try:
                     dataset = (
@@ -106,6 +129,9 @@ def main(argv=None):
                         "schema_version": 1,
                         "decision_time": time.time(),
                         "status": "INCOMPLETE",
+                        "source": None,
+                        "evidence_kind": "unavailable",
+                        "requested_provider": args.provider,
                         "candidates": [],
                         "candidate_pool": [],
                         "universe": args.symbols,
@@ -121,7 +147,7 @@ def main(argv=None):
                     report["market_file"] = str(market.resolve())
                 store.save("scans", report, report["scan_id"])
                 write(args.state_dir / "latest-candidates.json", report)
-                result = report
+                result = saved_scan_failure(args.state_dir, report) or report
             elif args.command == "evidence":
                 report = store.scan(args.scan_id)
                 result = (
@@ -152,12 +178,20 @@ def main(argv=None):
                     }
                 )
             elif args.command == "assess":
-                items = read(args.input)
+                document = read(args.input)
+                items = document
                 items = (
                     items["assessments"]
                     if isinstance(items, dict) and "assessments" in items
                     else [items]
                 )
+                assessment_scan = (
+                    document.get("scan_id") if isinstance(document, dict) else None
+                ) or (items[0].get("scan_id") if items else None)
+                failure = saved_scan_failure(args.state_dir, store.scan(assessment_scan))
+                if failure:
+                    print(json.dumps(failure, indent=2, allow_nan=False))
+                    return 2
                 # Each frozen assessment is idempotent; retries preserve already saved evidence.
                 with store.db:
                     ids = [store.assessment(item, now) for item in items]
@@ -171,14 +205,10 @@ def main(argv=None):
                     if args.refresh
                     else read(report["market_file"])
                     if "market_file" in report
-                    else {
-                        "source": "unavailable",
-                        "evidence_kind": "historical_market",
-                        "observed_at": now,
-                        "bars": [],
-                        "quotes": {},
-                    }
+                    else None
                 )
+                if dataset is None:
+                    raise ValueError("saved market capture unavailable; run a new scan")
                 result = store.decide(
                     report,
                     dataset,

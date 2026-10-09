@@ -117,12 +117,15 @@ class Robinhood:
         pin = json.loads(
             files("tradeagent").joinpath("contracts/market-data-1.7.0.json").read_text()
         )
-        if bridge.server_info.get("version") != pin["server_version"]:
-            raise Halt("Robinhood market-data server version drift")
+        # The pin's version records provenance, not compatibility. Accept server
+        # upgrades only while both read schemas and safety annotations match.
         for name, expected in pin["tools"].items():
             live = bridge.tools.get(name, {})
-            if structural({k: live[k] for k in expected if k in live}) != expected:
-                raise Halt("Robinhood market-data contract unavailable or changed")
+            if (
+                not isinstance(live, dict)
+                or structural({k: live[k] for k in expected if k in live}) != expected
+            ):
+                raise Halt(f"Robinhood market-data contract unavailable or changed: {name}")
 
     def fetch(self, bounds, startup):
         started = self.clock()

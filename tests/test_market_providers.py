@@ -2,6 +2,7 @@
 
 import importlib.util
 import json
+from copy import deepcopy
 from dataclasses import asdict, replace
 from pathlib import Path
 from types import SimpleNamespace
@@ -222,9 +223,8 @@ def test_robinhood_fetch_uses_only_named_market_reads():
         "bounds": "regular",
         "adjustment_type": "none",
     }
-    client.server_info["version"] = "unknown"
-    with pytest.raises(Halt, match="version"):
-        Robinhood(client)
+    client.server_info["version"] = "1.7.2"
+    assert Robinhood(client).bridge is client
 
 
 def test_default_provider_does_not_load_alpaca(monkeypatch, tmp_path):
@@ -325,3 +325,39 @@ def test_provider_state_and_gap_cursor_are_not_silently_reused(tmp_path):
     with pytest.raises(ValueError, match="configuration changed"):
         Shadow(tmp_path, DECISION + 1, provider="alpaca")
     assert (tmp_path / "deployment.json").read_bytes() == marker
+
+
+@pytest.mark.parametrize("version", ["1.7.0", "1.7.2", "2.0.0"])
+def test_market_server_upgrade_requires_identical_read_contracts(version):
+    client = bridge()
+    client.server_info = {"name": "robinhood-trading", "version": version}
+    client.tools = deepcopy(PIN["tools"])
+    client.tools["get_equity_quotes"]["description"] = "Updated documentation"
+    assert Robinhood(client).bridge is client
+    assert client.calls == []
+
+
+@pytest.mark.parametrize("name", list(PIN["tools"]))
+@pytest.mark.parametrize("change", ["missing", "input", "output", "read_only"])
+def test_market_schema_drift_rejected_even_on_upgraded_server(name, change):
+    client = bridge()
+    client.server_info["version"] = "1.7.2"
+    client.tools = deepcopy(PIN["tools"])
+    if change == "missing":
+        del client.tools[name]
+    elif change in {"input", "output"}:
+        del client.tools[name][change + "Schema"]
+    else:
+        client.tools[name]["annotations"]["readOnlyHint"] = False
+    with pytest.raises(Halt, match=name):
+        Robinhood(client)
+    assert client.calls == []
+
+
+@pytest.mark.parametrize("name", list(PIN["tools"]))
+def test_market_required_field_change_is_incompatible(name):
+    client = bridge()
+    client.tools = deepcopy(PIN["tools"])
+    client.tools[name]["outputSchema"]["required"] = []
+    with pytest.raises(Halt, match=name):
+        Robinhood(client)

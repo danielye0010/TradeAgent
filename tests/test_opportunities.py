@@ -487,3 +487,108 @@ def test_after_close_actual_observations_resolve_prospective_decisions_without_p
         assert all(row["evidence_kind"] == "prospective" for row in store.prior_rows())
     finally:
         store.close()
+
+
+@pytest.mark.parametrize("legacy", [False, True])
+def test_failed_scan_daily_workflow_is_terminal_and_preserves_original_error(
+    tmp_path, monkeypatch, capsys, legacy
+):
+    import tradeagent.opportunity_cli as cli
+
+    root = tmp_path / "daily"
+    prefix = ["--state-dir", str(root)]
+    error = "Robinhood market-data contract unavailable or changed: get_equity_quotes"
+    monkeypatch.setattr(cli.time, "time", lambda: NOW)
+
+    def unavailable(*args):
+        raise Halt(error)
+
+    monkeypatch.setattr(cli, "capture", unavailable)
+    if not legacy:
+        assert main([*prefix, "scan"]) == 2
+        failure = json.loads(capsys.readouterr().out)
+        scan_id = failure["scan_id"]
+        report = json.loads((root / "latest-candidates.json").read_text())
+        assert report["source"] is None
+        assert report["evidence_kind"] == "unavailable"
+    else:
+        scan_id = "legacy-failed-scan"
+        report = {
+            "schema_version": 1,
+            "scan_id": scan_id,
+            "decision_time": NOW,
+            "status": "INCOMPLETE",
+            "candidates": [],
+            "candidate_pool": [],
+            "universe": ["QQQ", "IWM", "SPY"],
+            "limitations": [error],
+            "orders_submitted": 0,
+        }
+        store = DailyResearch(root)
+        store.save("scans", report, scan_id, NOW)
+        store.close()
+        cli.write(root / "latest-candidates.json", report)
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("failed scan continued into market collection or economic evaluation")
+
+    monkeypatch.setattr(cli, "capture", forbidden)
+    monkeypatch.setattr(DailyResearch, "prior_rows", forbidden)
+    empty = tmp_path / "legacy-empty-assessment.json"
+    empty.write_text(json.dumps({"scan_id": scan_id, "assessments": []}))
+    # A stale latest plan cannot mask a newer collection failure.
+    cli.write(root / "latest-plan.json", {"decision_id": "older-view"})
+    previous_plan = (root / "latest-plan.json").read_bytes()
+    previous_scan = (root / "latest-candidates.json").read_bytes()
+    saved = None
+    for command in (
+        ["evidence", "--template"],
+        ["decide", "--refresh"],
+        ["assess", "--input", str(empty)],
+        ["show"],
+        ["decide", "--scan-id", scan_id],
+    ):
+        assert main([*prefix, *command]) == 2
+        result = json.loads(capsys.readouterr().out)
+        assert result["status"] == "INCOMPLETE"
+        assert result["decision"] == "NO_TRADE"
+        assert result["failure_kind"] == "MARKET_DATA_UNAVAILABLE"
+        assert result["reason"] == error
+        assert result["submission_status"] == "NOT_SUBMITTED"
+        assert result["orders_submitted"] == 0 and not result["execution_invoked"]
+        assert result["failure_id"] == result["invocation_id"] == scan_id
+        assert "decision_id" not in result and "selected_plan" not in result
+        path = Path(result["invocation_file"])
+        assert json.loads(path.read_text()) == result
+        if saved is None:
+            saved = path.read_bytes()
+        assert path.read_bytes() == saved
+    assert (root / "latest-plan.json").read_bytes() == previous_plan
+    assert (root / "latest-candidates.json").read_bytes() == previous_scan
+    assert not (root / "captures").exists()
+    assert not (root / "decisions").exists()
+    store = DailyResearch(root)
+    try:
+        # The core API also handles older reports without source, even with no dataset.
+        result = store.decide(report, None, now=NOW)
+        assert result["reason"] == error and "decision_id" not in result
+        assert store.records("scans") == [report]
+        for kind in ("assessments", "decisions", "outcomes", "executions"):
+            assert store.records(kind) == []
+    finally:
+        store.close()
+
+
+def test_unavailable_source_is_not_an_economic_no_trade_decision(tmp_path, monkeypatch):
+    store, report = store_scan(tmp_path, market())
+    try:
+        monkeypatch.setattr(store, "prior_rows", lambda: pytest.fail("economic evaluation"))
+        for source in (None, "unavailable"):
+            failed = dict(report, source=source, limitations=["market-data source unavailable"])
+            result = store.decide(failed, None, now=NOW)
+            assert result["status"] == "INCOMPLETE"
+            assert result["reason"] == "market-data source unavailable"
+            assert "comparisons" not in result and "decision_id" not in result
+        assert store.records("decisions") == []
+    finally:
+        store.close()

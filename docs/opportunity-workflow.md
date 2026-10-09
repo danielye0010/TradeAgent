@@ -28,8 +28,17 @@ the universe/window; the default is 31 liquid equities/ETFs. Robinhood market re
 use the existing external OAuth helper. `--provider alpaca` reuses its configured
 credentials and free IEX feed; it is single-exchange data, not consolidated NBBO.
 Neither scanner reads account state nor calls broker write tools. There is no
-silent provider fallback. After close the last complete session is explicitly
-historical/research-only; missing data returns INCOMPLETE or NO_TRADE.
+silent provider fallback. Read-only Robinhood compatibility is checked against the
+frozen input/output schemas and safety annotations of both market tools; a server
+version change alone does not reject identical contracts. Changed schemas still halt,
+and broker write contracts and authorization remain separate and unchanged.
+A failed scan returns `INCOMPLETE / NO_TRADE` with exit code 2 and the original provider
+error. Its scan ID also identifies a stable saved failure under `invocations/`; it
+creates no executable decision ID or TradePlan. The Skill stops before assessment or
+decision. Retrying evidence/decide/show against that scan returns the same failure,
+including for older failed scans without source metadata. After close the last
+complete session is explicitly historical/research-only; missing data returns
+INCOMPLETE or NO_TRADE.
 
 `scan --input FILE` and `decide --input FILE` accept captured timestamped market
 evidence: source, evidence_kind, observed_at, session_open/close, interval_seconds,

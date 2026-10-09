@@ -30,6 +30,11 @@ Do not request a second manually typed command merely to transmit an eligible pl
    state `data/opportunities`, or put `--state-dir DIR` before the subcommand consistently.
    Read the candidate file and actual receipt/bar/quote times. Historical, synthetic,
    unavailable and current evidence are separate pools; never relabel a cached capture.
+   If scan returns `INCOMPLETE` (exit code 2), STOP this invocation before evidence,
+   assessment, decision, handoff or execution. Report the original provider error,
+   stable failure/invocation ID, saved invocation file and zero submitted orders.
+   This is failed data collection, not statistical abstention; no executable decision
+   ID or TradePlan exists. Preserve the scanner failure and do not invent observations.
 2. Use `tradeagent opportunity evidence --template` to get the exact assessment schema.
    Investigate at most three shortlisted candidates, driven by their measured abnormal
    move, SPY-relative strength, volume, gap or verified event. A rank is not a buy signal.
