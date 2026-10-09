@@ -58,6 +58,11 @@ measured market evidence and relevant news, and runs the quantitative forecasts
 and economic gates. News is optional for price-action hypotheses; explicit
 event-driven theses require fresh verified evidence.
 It saves a machine-readable TradePlan or NO_TRADE under ignored `data/opportunities/`.
+RESEARCH remains the default. An explicit owner `LIVE` invocation also displays
+the owner-sized purchase plan and carries an eligible Quant + Codex decision through
+the existing Robinhood entry/exit engine, saving actual execution feedback. Broker
+confirmations and unchanged economic/risk gates remain authoritative. See the
+[workflow](docs/opportunity-workflow.md#explicit-owner-live-invocation) for the invocation.
 Quant Only, Codex Only and Quant + Codex share the same pool, timestamps, horizon
 and cost assumptions; later observations resolve their frozen decisions.
 Execution requires a separate explicit owner command using fresh market/account

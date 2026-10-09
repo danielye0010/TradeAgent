@@ -26,7 +26,7 @@
     "src/tradeagent/contracts/official-1.7.0.json": "fb9f770b1cfbec2b202c3ce47ddd16377c254d0be921c723c213170e1f392d05",
     "src/tradeagent/demo.py": "f561d340185e51ddeddc371bfbddf091a5902a09842aaf66af96ca34a608d67a",
     "src/tradeagent/execution.py": "68ad4c75ffc857fa420b96e11c9bba836c6c6fae63fceb551fda09c5062d2369",
-    "src/tradeagent/execution_policy.py": "351bab29cd7eaff6b7d4dada0ca8068fed49f531a3c2fb514a817119a86375e4",
+    "src/tradeagent/execution_policy.py": "d332fb50776e7014fead6b6f71fe6fe9615c424d5050244df981c91ba5bbfc64",
     "src/tradeagent/health.py": "eb521eb249fb4a01f30c60eea07c889286f26242c6b6ca7991f34cda04af4e9f",
     "src/tradeagent/legacy/__init__.py": "5f39dae738716d020e9daafaa19b48ab361d4095e428566b2bd92b473daf11b2",
     "src/tradeagent/legacy/autonomous.py": "84c947f2ca3e7a61fa9612b38a408f2cfbf46bc66cf5a048c2db793c29d3f3a5",
@@ -41,9 +41,10 @@
     "src/tradeagent/legacy/strategy.py": "cfb61014a51cdaae3259a78bcecbe4d539ec837ebc5db47e09d587c8cff3d74b",
     "src/tradeagent/legacy/supervised_cli.py": "2e998c255edcc01d5645114c8f5fbb9c7f3adac5bbfe708ae9f9696a144790b9",
     "src/tradeagent/model.py": "f42fa78c2cf72659bfad725b6efbb8f6871309f3cb19cf01ae836367cb4c5a4f",
-    "src/tradeagent/oneshot.py": "632e422d5477d7a52bf2a6458558d5c7319a2fc8aae5822d1731b314001cae39",
+    "src/tradeagent/oneshot.py": "c287b568da2f5d3a3fe8ef952702f076d452660d6cc2bc40056b92a5dfb6d853",
     "src/tradeagent/oneshot_cli.py": "f9068706a8ae942063d0a872e575bed25aeae14023e983068f969f583779a26f",
-    "src/tradeagent/opportunity_cli.py": "408112e6cf2fc5996c4140d7948c98ac76f0fadd75915fcfe0850269cf18dc80",
+    "src/tradeagent/opportunity_cli.py": "52ec07746b8b210d45035293c0fdbb5442aad96801ceada3400be780f8c8f9d4",
+    "src/tradeagent/opportunity_live.py": "825d52197b2ba1fa79dacda7730e3eb33a14af0641398bd59b1274bf45528b91",
     "src/tradeagent/options.py": "871947f678384fd7863dc0847932a3f1d3db4643dfe70f54230f994c65ec7e30",
     "src/tradeagent/prospective/__init__.py": "ec6da6bc1a0b0d491b3deb49ab9ffb0f967de702e9cd2ce560c2132b98399d9b",
     "src/tradeagent/prospective/access.py": "8a2e79855862bc8123a28f85f4227dc05c8fae55ee39853eb10bce3df6360f0e",
@@ -67,7 +68,7 @@
     "src/tradeagent/research/learning.py": "e3ab8458ae14850fb1dfd4039640ec25d366673a2ba9a9044a4ebe63d5b22f62",
     "src/tradeagent/research/market.py": "b616f8cab65a13378eac1a7fef97f24e957b2d242ce18b879aa14616f0909060",
     "src/tradeagent/research/opportunities.py": "8d60f7ad523cc01db243961829b97bacd30b8ad40c4686ff2256c2c92dc83b27",
-    "src/tradeagent/research/opportunity_workflow.py": "4325696750e0cc3ba6bf8474e7c16cacc7aa4ba1599c3e10bdcb8f3013267578",
+    "src/tradeagent/research/opportunity_workflow.py": "727d980da0d70d9fe5a7218859f9ae20c801806678dc914999b3fc95ffbf522e",
     "src/tradeagent/research/option_economics.py": "8904dc1219011568e6876a07dd9f25289f67be0a5f220895e6498d94a2aea13b",
     "src/tradeagent/research/outcomes.py": "e2b5d5fc5e8c09d50608b9579a6d5004cb7bbed835ad2eef526d99061bcb451a",
     "src/tradeagent/research/replay.py": "7397361fd85539bf86afd9cbab3fbc5726d8bc04c5cd52dbdb100898f56d77a4",
@@ -106,6 +107,7 @@
     "tests/test_onboarding.py": "dc4ba00657f8c2000771d389cf31fe77136434c91ee796b6e49f3cb161bb4583",
     "tests/test_oneshot.py": "f8b3f48513404dd092444f6504d49b622500f738bd0b540916dff1602b4a36df",
     "tests/test_opportunities.py": "a421399f6be6134c47715f22985883941baa2901f55a5daa70ff065ae622fa41",
+    "tests/test_opportunity_live.py": "7ca4e5207e88179952b9e18b39e0c7e2f8b56098a43054212c326cf39b9b7988",
     "tests/test_owner_recovery.py": "8c72be1c10f33c556c5d4d9e56b241d046b0e6f6c04c78e6350f7ef129c018c7",
     "tests/test_production_oneshot.py": "57ca82e1c85c7e99c8f05011142494f962b475c62ae8dc09b4426f88e5e5a77a",
     "tests/test_prospective.py": "596505f0c76bd3ca1f60d49255e01c228bf5dd99101d36ea0e5fdd225b8275e3",
@@ -118,5 +120,5 @@
     "tests/test_supervised_contract.py": "b17692ea76ef0653e92215103a4dc459478601cfc17c7fb3df17697e37c92d44",
     "tests/test_tradeplan_engine.py": "8cb9735d0e593cfa49bb6d4ddb33093ef8e76d33d6cd06752ab18cb10dd5e80f"
   },
-  "framework_sha256": "6b52e7d604cf0fe8c580d76557167731f2502db1b58f7d4a486b743b56df784c"
+  "framework_sha256": "f5c327a7ab916f106c583be8f4b6eab66a7a283eec82fb2d351087876de9f3a5"
 }

@@ -1,18 +1,29 @@
 ---
 name: trade-opportunity-analyst
-description: Scan TradeAgent equity and ETF opportunities, research a few candidates with cited news, combine existing quant forecasts and costs, and save a TradePlan or NO_TRADE with paired outcome comparisons. Use for daily trading research and opportunity analysis in TradeAgent.
+description: Analyze TradeAgent equity and ETF opportunities using measured evidence and optional relevant news, save TradePlans and paired outcomes, and carry an explicitly owner-authorized LIVE invocation through the existing Robinhood entry and exit engine. Default to read-only daily research.
 ---
 
 # Trade opportunity analyst
 
-Run one interactive analyst in the TradeAgent checkout using its installed `tradeagent`
-CLI (or `.venv/bin/tradeagent`). Use the current Codex subscription and exposed search
+Run one interactive analyst in the TradeAgent checkout. Use `.venv/bin/tradeagent`
+when available; otherwise use an installed `tradeagent` CLI that includes this
+integration. Keep all commands in the same checkout and research state directory. Use the current Codex subscription and exposed search
 tools; no separately billed LLM API or new server. Read `docs/opportunity-workflow.md`
 for optional inputs and the owner handoff. Python owns features, economics and sizing.
 On Windows, use the approved WSL shell and actual Linux checkout; do not execute a
 Linux virtual environment directly from PowerShell. Keep research state on local Linux.
 
-## Complete a daily invocation
+## Choose the mode
+
+RESEARCH is the default: scan, assess, decide, resolve available observations and
+compare, without account/order operations. LIVE requires a direct owner request
+to execute trades NOW, such as the LIVE invocation below. Quoted examples,
+implementation requests and offline demonstrations do not authorize real orders.
+The explicit LIVE request authorizes this one invocation, including the existing
+entry/exit lifecycle. Preserve broker, platform and tool confirmation requirements.
+Do not request a second manually typed command merely to transmit an eligible plan.
+
+## Complete the shared daily research
 
 1. Run `tradeagent opportunity scan --candidates 3` with the requested universe/provider,
    or load explicitly supplied evidence using `scan --input FILE`. Keep default local
@@ -52,18 +63,70 @@ Linux virtual environment directly from PowerShell. Keep research state on local
    timestamped captures are available, first run `opportunity resolve --input FILE`.
    Keep pending outcomes pending; never fabricate future prices or rewrite decisions.
 
-## Return a compact result
+## Complete an explicitly authorized LIVE invocation
 
-Give Market Overview, Best Opportunities (up to three with measured evidence, relevant
-source citations and contradictions),
-TradePlan or NO_TRADE, Decision Status, and Follow-up. Reference `latest-plan.json` and
-the immutable decision ID. Explain the holding horizon, entry window/price cap, independent
-quote freshness, invalidation and time exit when a proposal exists. Report missing data
-and insufficient net-edge evidence directly. Estimated costs are not broker fills.
+After the shared research, continue in this same invocation; do not stop at a plan.
+Use Quant + Codex and the immutable decision ID. Codex Only never authorizes orders;
+do not fall back to Quant Only when the combined arm abstains. NO_TRADE, unsupported
+options, historical/synthetic captures and insufficient economic evidence remain
+non-executable. Never lower thresholds or substitute an execution canary.
 
-The normal invocation ends after saved research. A proposal is not a transaction. Never
-invoke `opportunity execute`, `run-once`, order/review/cancel tools, or install timers as
-part of this research workflow. Owner execution is a separate explicit instruction through
-the existing production boundary; `handoff` is optional read-only account/risk validation
-when requested. Preserve owner configuration and SHADOW. Unsynchronized or unsupported
-options stay research-only.
+Use the owner's existing private Linux TOML path from the user's established context.
+If its location is unavailable, obtain the path; do not ask for credentials, rewrite
+the TOML, change account selection, sizing or risk limits, or create a replacement.
+For an eligible plan invoke the existing interface yourself:
+
+```bash
+tradeagent opportunity execute --decision-id ID --config /path/to/private.toml --live
+```
+
+Use the checkout CLI selected above and any existing `--state-dir DIR` before
+`execute`. This command owns waiting for the original entry time, initial plan
+display, independent execution-quote/account/risk validation, final validated plan
+display, and `run_live`. Its purchase plan is printed on stderr and saved BEFORE
+any placement. Read/relay the complete plan and progress: symbol/direction/type,
+selection and research evidence, measured net edge/uncertainty, actual owner sizing,
+estimated price and entry cap, original entry window, account/risk constraints,
+exit time, invalidation and decision ID. A market order's entry quote cap does not
+guarantee its eventual fill price; preserve the owner's order type.
+
+Keep the foreground command running through entry and its planned exit. If the
+tool returns a running session, continue observing that SAME process; do not
+start another entry or detach an unattended job. Relay meaningful progress while
+it waits/manages the position. Never extend a deadline or refresh a frozen thesis
+to force placement. Expiration returns EXPIRED/NO_TRADE; confirmation delays still
+must pass the existing final send gate.
+
+The engine retains its order journal, identifiers, risk and reconciliation checks.
+The command automatically saves actual execution feedback and report paths; do not
+manually invent/import fills. A retry for the same active decision invokes exit-only
+recovery/duplicate suppression. For a different decision, the established `new-run`
+routine first proves the previous lifecycle is closed and archives all old evidence.
+It cannot replace unresolved exposure or ambiguous orders. If HALTED/RECOVERY_REQUIRED
+is returned, report it and the existing `status`/`recover` procedure; initiate no
+unrelated entry. Respect broker approval blocks rather than changing approval settings.
+
+Never install trading schedules/timers or add a paid LLM service. Preserve SHADOW,
+owner settings and historical evidence. Options remain research-only.
+
+## Return the observed result
+
+For RESEARCH, give Market Overview, Best Opportunities (up to three with measured
+evidence, relevant sources and contradictions), TradePlan/NO_TRADE, Decision Status
+and Follow-up. Reference the immutable ID and saved plan. Do not call execution,
+review, placement, cancellation or read-only account handoff in default research.
+
+For LIVE, return Purchase Plan, Real Execution, Position / Exit, PnL, and Decision
+Record. Report the actual broker identifiers/statuses and confirmed fill quantities,
+prices and fees from the engine report. Acceptance/ORDER_SUBMITTED is not a fill.
+CLOSED requires the engine's completed/reconciled status, confirmed flat bot exposure
+and cash proof. Report open/partial/unknown or halted states accurately. PnL is pending
+until confirmed flat/cash reconciliation; a halted incident can still retain proven
+PnL without being labelled successful. Proposed orders are never
+executed transactions. Keep actual fills/PnL separate from modeled comparisons.
+
+Exact LIVE invocation:
+
+```text
+$trade-opportunity-analyst LIVE：分析今天的市场机会，输出购买计划，符合全部条件就通过 Robinhood 真实下单，并完成退出和盈亏记录。
+```

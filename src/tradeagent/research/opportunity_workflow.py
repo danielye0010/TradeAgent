@@ -561,6 +561,13 @@ class DailyResearch:
             }
             return {"arms": arm_stats, "paired_mean_net_minus_quant": paired}
 
+        # Keep every append-only report, but count one actual lifecycle per decision
+        # and arm. Recovery/duplicate-suppressed reports must not duplicate PnL.
+        execution_reports = [
+            json.loads(row[0])
+            for row in self.db.execute("SELECT payload FROM opportunity_executions ORDER BY rowid")
+        ]
+        actual = {(r["decision_id"], r["research_arm"]): r for r in execution_reports}
         decisions = {d["decision_id"]: d for d in self.records("decisions")}
         pools = {}
         for pool in sorted({o["evidence_kind"] for o in outcomes}):
@@ -582,7 +589,8 @@ class DailyResearch:
         return {
             "evidence_pools": pools,
             "pending_decisions": len(self.records("decisions")) - len(outcomes),
-            "actual_execution_records": len(self.records("executions")),
+            "actual_execution_records": len(actual),
+            "execution_report_records": len(execution_reports),
             "actual_performance": [
                 {
                     "decision_id": r["decision_id"],
@@ -591,8 +599,16 @@ class DailyResearch:
                     "entry_executed_notional": r["report"].get("entry_executed_notional"),
                     "known_fees": r["report"].get("known_fees"),
                     "verification": r["verification"],
+                    "engine_status": r["report"].get("status"),
+                    "submission_status": r["report"].get("submission_status"),
+                    "broker_order_count": r["report"].get("broker_order_count"),
+                    "bought": r["report"].get("bought"),
+                    "sold": r["report"].get("sold"),
+                    "final_positions": r["report"].get("final_positions"),
+                    "reconciliation_status": r["report"].get("reconciliation_status"),
+                    "execution_report_path": r.get("execution_report_path"),
                 }
-                for r in self.records("executions")
+                for r in actual.values()
             ],
             "interpretation": "paired fixed-pool/horizon/cost shadow comparisons; no established AI uplift or independence claim",
         }

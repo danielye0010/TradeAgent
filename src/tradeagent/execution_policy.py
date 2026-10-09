@@ -475,6 +475,26 @@ class OwnerPolicy:
             raise Halt("broker approval-setting reader required")
         if not self.simulation and snapshot.countries.get(intent.symbol) != "US":
             raise Halt("US equity eligibility unavailable")
+        if (
+            intent.side == "buy"
+            and self.state.db.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='one_shot_meta'"
+            ).fetchone()
+        ):
+            row = self.state.db.execute(
+                "SELECT payload FROM one_shot_meta WHERE key='decision'"
+            ).fetchone()
+            recorded = json.loads(row[0]) if row else {}
+            economic = (recorded.get("provenance") or {}).get("economic_plan")
+            if economic is not None:
+                from .research.tradeplan import plan_from_dict, validate_execution_plan
+
+                plan = plan_from_dict(economic)
+                validate_execution_plan(plan, self.clock())
+                if intent.symbol != plan.decision.instrument or snapshot.asks.get(
+                    intent.symbol, dec(0)
+                ) > dec(plan.decision.entry_limit):
+                    raise Halt("entry price condition is no longer met at owner send boundary")
         if intent.side == "buy" and intent.risk_notional(snapshot, self.risk) > dec(
             self.options["max_notional"]
         ):

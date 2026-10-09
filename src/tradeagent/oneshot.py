@@ -141,7 +141,9 @@ def validated_plan_entry(plan, prediction, snapshot, config, risk, now, limit, e
     requested.pop("preferred_symbols", None)
     requested["symbol"] = plan.instrument
     if requested.get("order_type", "limit") == "limit" and plan.entry_limit is not None:
-        requested["limit_price"] = str(plan.entry_limit)
+        requested["limit_price"] = str(
+            min(dec(plan.entry_limit), dec(requested.get("limit_price", plan.entry_limit)))
+        )
     intent, reasons = choose_entry(snapshot, config, risk, now, limit, requested)
     if intent is None:
         raise Halt("validated plan rejected: " + "; ".join(reasons))
@@ -528,6 +530,28 @@ class OneShotRun:
                     "provenance": provenance,
                 },
             )
+            if provenance:
+                # The observer must persist/display the owner-sized plan before any
+                # placement. A failure here leaves an unsubmitted decision.
+                self.state.event(
+                    self.run_id,
+                    "validated_plan_entry",
+                    {
+                        "intent": intent.payload(),
+                        "provenance": provenance,
+                        "ask": str(initial.asks[intent.symbol]),
+                        "quote_asof": initial.quote_times[intent.symbol],
+                        "validated_at": self.clock(),
+                        "account_key": initial.account_key,
+                        "account_constraints": {
+                            "cash": str(initial.cash),
+                            "buying_power": str(initial.buying_power),
+                            "nav": str(initial.nav),
+                            "allowed_symbols": self.config.allowed_symbols,
+                            "max_notional": self.options["max_notional"],
+                        },
+                    },
+                )
             self.submit(intent)
             entries = [r for r in self.rows() if intent_from_row(r).side == "buy"]
         entry = entries[0]
@@ -823,6 +847,24 @@ def _run_live(settings, *, recover=False, observer=None, plan=None, prediction=N
         raise Halt(
             "no existing lifecycle; recover cannot initiate an entry, use run-once for a new lifecycle"
         )
+    if previous_artifact is not None and plan is not None:
+        # Recheck identity under the owner lock: another command may have created
+        # a lifecycle since opportunity orchestration inspected/archived the old one.
+        import sqlite3
+
+        with sqlite3.connect(
+            f"file:{settings.directory / 'agent/state.sqlite3'}?mode=ro", uri=True
+        ) as db:
+            row = db.execute("SELECT payload FROM one_shot_meta WHERE key='decision'").fetchone()
+        recorded = (json.loads(row[0]).get("provenance") or {}) if row else {}
+        from .research.tradeplan import plan_dict
+
+        if recorded.get("prediction_id") != prediction.prediction_id or recorded.get(
+            "economic_plan"
+        ) != plan_dict(plan):
+            raise Halt(
+                "active lifecycle belongs to a different immutable TradePlan; inspect/recover first"
+            )
     settings = active_settings(settings)
     selected, config, risk, options = (
         settings.directory,

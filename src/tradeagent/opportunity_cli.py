@@ -237,6 +237,12 @@ def main(argv=None):
                     "verification": "owner-imported existing reconciled execution report; not a fresh broker query",
                 }
                 result = {"execution_record": store.save("executions", item), "orders_submitted": 0}
+            elif args.command == "execute":
+                from .opportunity_live import execute_opportunity
+
+                result = execute_opportunity(
+                    store, args.decision_id, args.config, live=args.live, mode=args.mode
+                )
             else:
                 from .execution_policy import active_settings, load_live_config
                 from .research.tradeplan import execution_handoff, validate_execution_plan
@@ -265,13 +271,8 @@ def main(argv=None):
                             settings.options["max_notional"],
                             settings.options["entry"],
                         )
-                else:
-                    from .oneshot import run_live
-                    from .oneshot_cli import progress
-
-                    result = run_live(settings, plan=plan, prediction=prediction, observer=progress)
             print(json.dumps(result, indent=2, default=str, allow_nan=False))
-            return 2 if result.get("status") == "INCOMPLETE" else 0
+            return 2 if result.get("status") in {"INCOMPLETE", "HALTED", "RECOVERY_REQUIRED"} else 0
     except (Halt, OSError, ValueError, KeyError, TypeError) as error:
         print(
             json.dumps(

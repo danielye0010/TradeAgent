@@ -4,7 +4,9 @@ Default: Robinhood market data + Robinhood execution. Optional: Alpaca market da
 + Robinhood execution. Provider selection is explicit; there is no silent fallback.
 
 The installed production owner is the prospective SHADOW service. The execution
-substrate is separately callable and has no automatic research-to-broker bridge.
+substrate is separately callable. A manually invoked, explicitly owner-authorized
+Opportunity Skill LIVE mode can hand an eligible frozen plan to that same engine;
+the default research invocation and SHADOW service never execute orders.
 
 ```mermaid
 flowchart LR
@@ -105,7 +107,9 @@ JSON hypothesis and constrained parameters. No LLM service is called automatical
 Quant code owns features, returns, residuals, counterfactuals, score updates, clustering,
 calibration diagnostics and evaluation decisions. Narratives cannot replace facts.
 Execution code owns risk bounds, durable order identity, broker requests, fills and
-reconciliation. There is no LLM-to-order path. The unattended shadow collector never
+reconciliation. Qualitative hypotheses cannot authorize orders alone; explicit
+owner Skill LIVE orchestration uses the unchanged measured gates and production
+validation/entry/exit boundary. The unattended shadow collector never
 creates, evaluates or promotes challengers; those operations require explicit commands.
 Daily learner failure is recorded after outcomes commit. Status-file I/O failure is
 recorded without stopping collection. Database corruption, unknown evidence pools

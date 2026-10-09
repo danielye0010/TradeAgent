@@ -2,7 +2,9 @@
 
 The repository Skill `.agents/skills/trade-opportunity-analyst/SKILL.md` completes a
 manual daily analysis through the current Codex subscription. No LLM API key or
-new service is needed. It uses available Codex search tools and the installed CLI.
+new service is needed. It uses available Codex search tools and the checkout CLI.
+The default invocation is read-only RESEARCH; an explicit owner LIVE request also
+completes the production entry/exit lifecycle in that same invocation.
 
 ```text
 $trade-opportunity-analyst 分析今天的交易机会，生成 TradePlan。
@@ -130,32 +132,73 @@ Missing paths stay pending. `compare` separates pools and reports paired mean ne
 differences against Quant Only; small correlated samples establish no AI uplift.
 Only strictly prior resolved outcomes can enter later economic evidence.
 
-## Explicit owner handoff
+## Explicit owner LIVE invocation
 
-Decision generation does not submit transactions. In the planned window, the owner
-can request read-only validation or explicitly execute an eligible proposal:
-
-```bash
-tradeagent opportunity handoff --decision-id ID --config /path/to/private.toml
-tradeagent opportunity execute --decision-id ID --config /path/to/private.toml --live
+```text
+$trade-opportunity-analyst LIVE：分析今天的市场机会，输出购买计划，符合全部条件就通过 Robinhood 真实下单，并完成退出和盈亏记录。
 ```
 
-The default selection is Quant + Codex; `--mode quant_only` allows operation without
-AI. Codex Only never authorizes execution. The existing `validated_plan_entry`
-boundary sizes from owner dollar/quantity settings and revalidates fresh quotes,
-account/risk constraints and the original price cap. A five-minute delayed signal
-can remain valid while its initial two-minute quote expires: execution needs a real
-new quote within its own freshness window. No stale timestamp is extended.
+This direct owner instruction authorizes execution for this invocation. Development
+requests and quoted examples do not. RESEARCH remains read-only. After scan/assessment/
+decision the Skill invokes the existing `opportunity execute --decision-id ID --config
+/path/to/private.toml --live` itself, using the checkout's `.venv/bin/tradeagent` when
+available. A second manually assembled order command is unnecessary. Broker/platform/
+tool confirmations remain authoritative. Account selection, sizing and risk settings
+come from the existing owner TOML; no secrets or settings are rewritten.
 
-Explicit execution calls the established one-shot engine, preserving durable order
-identity, ownership, fills, recovery and reconciliation. The plan's exit endpoint
-is persisted and reused on restart; a horizon exceeding the regular-session exit
-buffer is rejected before placement. The owner's commissioning hold/configuration
-is unchanged. Unsupported options remain research-only. No timers are installed.
+`execute` saves and prints the purchase plan before placement: symbol/direction/type,
+selection reason, measured economics/uncertainty and Codex conclusion, owner dollar
+budget/share quantity and order type, price estimate/cap, original entry window,
+account/risk constraints, planned exit/invalidation and immutable decision ID.
+Initial account checks are marked pending. Inside the production engine, the same
+`validated_plan_entry` boundary independently refreshes quote/account/risk evidence;
+its observer saves and displays the complete validated transaction before review/place.
+A failed pre-placement display/persistence blocks entry. Later progress/feedback I/O
+failures do not interrupt the engine's position management; they are reported.
 
-`feedback --decision-id ID --input existing-execution-report.json` links a previously
-broker-confirmed, cash-reconciled, flat LIVE report carrying this prediction identity.
-Use `--mode quant_only` for an execution of that arm. `compare` reports imported
-actual PnL/notional/fees separately from modeled returns.
-It stores the original report as owner-imported evidence, separate from modeled
-returns; it makes no fresh broker query and submits nothing.
+The command waits in its current foreground invocation for the original entry time.
+It never extends the window: EXPIRED returns without new entry. The final owner send
+gate rechecks the frozen window and original quote cap after slow reads. Market orders
+preserve configured dollar/fractional sizing; the quote cap is a transaction-time
+condition, not a guaranteed market fill price. Limit orders retain the stricter owner-configured or frozen-plan broker cap.
+
+The existing `run_live`, official MCP transport, order identity, journal, entry/exit,
+cash/position reconciliation and recovery remain the execution implementation. Hold
+the foreground process through its existing planned exit. No detached trading job,
+new broker adapter, scheduler or timer is added. Broker approval requirements block
+execution; this workflow never disables them. Unsupported options and Codex Only
+cannot execute. Quant + Codex is the Skill default with no fallback; the existing
+explicit CLI `--mode quant_only` capability remains available separately.
+
+Retries of the same active immutable plan use `recover=True` (no new entry) and
+duplicate suppression, including after its entry window expires. A different new
+plan may call the existing `new-run` routine, which freshly proves prior closure and
+archives the complete old state and receipts. Open/ambiguous exposure prevents this.
+Plan identity is checked again under the owner lock to exclude a competing lifecycle.
+An already attempted archived decision cannot be replayed. HALTED/RECOVERY_REQUIRED
+surfaces `tradeagent status --config CONFIG` and the existing exit-only
+`tradeagent recover --config CONFIG`; do not initiate an unrelated entry.
+
+Truthful progress includes PLAN_CREATED, AWAITING_ENTRY, SUBMISSION_UNKNOWN (send
+started, acknowledgment uncertain), ORDER_SUBMITTED (broker acknowledged),
+PARTIALLY_FILLED, POSITION_OPEN, exit-fill confirmation, CLOSED, NO_TRADE, EXPIRED,
+HALTED and RECOVERY_REQUIRED. Acknowledgment does not establish a fill. CLOSED
+requires the engine's reconciled terminal status, confirmed flat bot position and
+cash proof. Realized PnL stays pending until broker-confirmed flat/cash reconciliation proof;
+a separately halted incident can retain proven PnL without being labelled successful. Observed fills/average prices/fees,
+actual final positions and broker IDs are retained when observed. A halt can have
+zero orders, known residual exposure or unknown submission; do not conflate them.
+
+Append-only execution feedback links the engine report to the original decision and
+research arm. Every report is preserved; `compare` uses the latest appended report
+per decision/arm so recovery does not double-count PnL. It retains actual execution
+status/PnL separately from modeled paired returns. Private Linux artifacts are in `data/opportunities/live/<decision-id>/
+<attempt-id>/`: purchase-plan-created.json, purchase-plan-validated.json (when
+validated), events.jsonl, execution-report.json (when engine observed), and result.json.
+The original immutable TradePlan and owner engine journal/report remain preserved.
+
+The optional `handoff --decision-id ID --config /path/to/private.toml` is still a
+read-only account/risk check when explicitly requested. `feedback --decision-id ID
+--input existing-execution-report.json` still imports a previously broker-confirmed,
+cash-reconciled, flat LIVE report carrying the matching prediction identity; it
+does not make a fresh broker query or submit anything.
