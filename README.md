@@ -44,7 +44,7 @@ flowchart LR
 | [`opportunity_workflow.py`](src/tradeagent/research/opportunity_workflow.py) | Frozen assessments, economic evidence, and outcome tracking |
 | [`opportunity_live.py`](src/tradeagent/opportunity_live.py) | Handoff to the existing live trading engine |
 
-There is no always-on model process or embedded inference endpoint. The agent runs when invoked in Codex; the standalone Python CLI also supports direct, non-agent operation. The optional `codex_bridge.py` is a broker-MCP transport adapter, not the market-research model.
+The manual agent runs when invoked in Codex. An optional daily SHADOW timer invokes a bounded, tool-free Codex CLI assessment and freezes four independent research arms; Python owns collection, decisions and outcomes. It never schedules LIVE orders. See [daily research](docs/prospective-shadow.md#daily-opportunity-research). The optional `codex_bridge.py` is a broker-MCP transport adapter, not the market-research model.
 
 ## Run the agent
 
@@ -111,7 +111,7 @@ The commands do not invoke an AI model on their own: agent analysis takes place 
 | **Stabilized reversal** | Reversal after a strong opening move |
 | **Residual strength** | Price strength relative to the broader market |
 
-Research compares quantitative-only, agent-only, and combined decisions over shared market observations. No repeatable net trading edge has yet been established; see [research results](docs/alpha-findings.md).
+Daily SHADOW research compares Quant Only, Codex Only, Quant + Codex and a seeded Random baseline over shared market observations. No repeatable net trading edge has yet been established; see [research results](docs/alpha-findings.md).
 
 ## Documentation
 

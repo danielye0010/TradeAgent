@@ -268,10 +268,7 @@ def validate_execution_plan(plan, now):
     if plan.execution_policy not in {EVIDENCE_GATED, EXPERIMENTAL}:
         raise Halt("unknown execution policy")
     if plan.execution_policy == EXPERIMENTAL:
-        from pathlib import Path
-
-        from . import alpha_signals
-        from .alpha_signals import FAMILIES
+        from .alpha_signals import ALPHA_VERSION, FAMILIES, semantic_version
 
         forecast = plan.forecast.value
         from datetime import datetime
@@ -286,7 +283,7 @@ def validate_execution_plan(plan, now):
             raise Halt("experimental plan session differs from XNYS calendar")
         if (
             forecast.get("strategy") not in FAMILIES
-            or forecast.get("version") != identity(Path(alpha_signals.__file__).read_text())[:16]
+            or semantic_version(forecast.get("version")) != ALPHA_VERSION
             or horizon not in (1800, 2100, 3600, 3900, 7200, 7500)
             or forecast.get("direction") != 1
             or forecast.get("raw_expected_return", 0) <= 0

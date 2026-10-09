@@ -8,7 +8,7 @@ from dataclasses import asdict, replace
 from pathlib import Path
 from urllib.parse import urlparse
 
-from .alpha_signals import FAMILIES, AlphaStrategy
+from .alpha_signals import FAMILIES, AlphaStrategy, semantic_version
 from .domain import Payload, Prediction, canonical, identity, timestamp
 from .evidence_cohorts import POLICY, comparison_context
 from .opportunities import research_snapshot
@@ -114,6 +114,7 @@ class DailyResearch:
             "executions",
             "symbol_outcomes",
             "resolution_failures",
+            "sessions",
         ):
             table = "opportunity_" + name
             self.db.execute(
@@ -140,6 +141,7 @@ class DailyResearch:
             "executions",
             "symbol_outcomes",
             "resolution_failures",
+            "sessions",
         }:
             raise ValueError("unknown daily research record")
         key = key or identity(item)
@@ -169,6 +171,7 @@ class DailyResearch:
             "executions",
             "symbol_outcomes",
             "resolution_failures",
+            "sessions",
         }:
             raise ValueError("unknown daily research record")
         return [
@@ -303,7 +306,7 @@ class DailyResearch:
             if old is not None and old != row:
                 raise ValueError("conflicting frozen economic observation")
             unique[row["prediction_id"]] = row
-        return list(unique.values())
+        return [dict(r, version=semantic_version(r["version"])) for r in unique.values()]
 
     def terminal_windows(self, now):
         """Append terminal timing evidence; never edit a frozen decision/outcome."""
@@ -370,7 +373,7 @@ class DailyResearch:
             failed[did] = item
         return list(failed.values())
 
-    def pending_sessions(self, now):
+    def pending_sessions(self, now, *, evidence_kind="prospective"):
         """Only genuinely prospective, already matured forecasts need later history."""
         done = {o["decision_id"] for o in self.records("outcomes")}
         terminal = {r["decision_id"] for r in self.terminal_windows(now)}
@@ -379,7 +382,7 @@ class DailyResearch:
         for d in self.records("decisions"):
             if (
                 d["decision_id"] in terminal
-                or d["evidence_kind"] != "prospective"
+                or d["evidence_kind"] != evidence_kind
                 or d.get("outcome_exit_time") is None
                 or now < d["outcome_exit_time"]
             ):
@@ -418,6 +421,8 @@ class DailyResearch:
         holding_seconds=3600,
         delay_seconds=300,
         execution_policy=EVIDENCE_GATED,
+        shadow_protocol=None,
+        assessment_status="VALID",
     ):
         failure = scan_failure(report)
         if failure:
@@ -610,6 +615,61 @@ class DailyResearch:
                 if name == "codex_only" and chosen
                 else "insufficient supported net edge",
             }
+        if shadow_protocol is not None:
+            if shadow_protocol != "daily-four-arm-v1" or authorized is not None:
+                raise ValueError("scheduled research protocol cannot use an execution universe")
+            import random
+
+            eligible = [c for c in candidates if c["predictions"] and not c["limitations"]]
+            signals = {
+                c["symbol"]: max(
+                    (p["expected_return"] for p in c["predictions"] if p["direction"] == 1),
+                    default=0.0,
+                )
+                for c in eligible
+            }
+            quant = max(
+                (c for c in eligible if signals[c["symbol"]] > 0),
+                key=lambda c: (signals[c["symbol"]], c["symbol"]),
+                default=None,
+            )
+            ai = min(
+                (c for c in eligible if c["codex_support"]["supported"]),
+                key=lambda c: (c["research"]["rank"], c["symbol"]),
+                default=None,
+            )
+            combined = min(
+                (
+                    c
+                    for c in eligible
+                    if signals[c["symbol"]] > 0 and c["codex_support"]["supported"]
+                ),
+                key=lambda c: (c["research"]["rank"], -signals[c["symbol"]], c["symbol"]),
+                default=None,
+            )
+            seed = identity([shadow_protocol, "random-seed-2026-10-09", dataset["session_open"]])
+            randomized = random.Random(seed).choice(
+                [None, *sorted(eligible, key=lambda c: c["symbol"])]
+            )
+            arms = {}
+            for name, chosen in (
+                ("quant_only", quant),
+                ("codex_only", ai),
+                ("quant_codex", combined),
+                ("seeded_random", randomized),
+            ):
+                unavailable = name in {"codex_only", "quant_codex"} and assessment_status != "VALID"
+                arms[name] = {
+                    "symbol": chosen["symbol"] if chosen and not unavailable else None,
+                    "decision": "SHADOW_LONG" if chosen and not unavailable else "NO_TRADE",
+                    "plan": None,
+                    "research_only": True,
+                    "shadow_direction": int(bool(chosen and not unavailable)),
+                    "status": "UNAVAILABLE" if unavailable else "VALID",
+                    "reason": "bounded assessment unavailable"
+                    if unavailable
+                    else "frozen research selection; no proven profitability",
+                }
         experimental = (
             max(
                 (c for c in coverage if c["experimental_plan"] and c["symbol"] in authorized),
@@ -678,6 +738,17 @@ class DailyResearch:
             "orders_submitted": 0,
             "news_is_calibrated_return_prediction": False,
         }
+        if shadow_protocol:
+            result.update(
+                research_protocol=shadow_protocol,
+                assessment_status=assessment_status,
+                random_seed=seed,
+                comparison_universe=[c["symbol"] for c in eligible],
+                final_decision="NO_TRADE",
+                selected_plan=None,
+                decision_status="SHADOW_ONLY",
+                freeze_time=now,
+            )
         result["decision_id"] = identity(result)
         self.save("decisions", result, result["decision_id"], now)
         return result
@@ -842,9 +913,13 @@ class DailyResearch:
                 )
                 continue
             arms = {
-                name: observed.get(arm["symbol"])
-                if arm["shadow_direction"]
-                else {"gross": 0, "base_net": 0, "stress_net": 0}
+                name: (
+                    None
+                    if arm.get("status") == "UNAVAILABLE"
+                    else observed.get(arm["symbol"])
+                    if arm["shadow_direction"]
+                    else {"gross": 0, "base_net": 0, "stress_net": 0}
+                )
                 for name, arm in decision["comparisons"].items()
             }
             item = {
@@ -880,6 +955,7 @@ class DailyResearch:
             for o in all_outcomes
             if o.get("execution_policy", EVIDENCE_GATED) == EVIDENCE_GATED
             and o["decision_id"] not in terminal_ids
+            and "seeded_random" not in o["comparisons"]
         ]
 
         def paired_stats(subset):
@@ -1004,6 +1080,8 @@ def prediction_from_dict(value):
 
 
 def selected_execution(decision, mode="quant_codex"):
+    if decision.get("research_protocol"):
+        raise ValueError("scheduled SHADOW arms cannot authorize execution")
     policy = decision.get("execution_policy", EVIDENCE_GATED)
     if (mode == "experimental") != (policy == EXPERIMENTAL):
         raise ValueError("explicit execution mode must match frozen decision policy")

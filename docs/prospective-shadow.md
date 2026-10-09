@@ -112,3 +112,35 @@ or physical sleep/power recovery.
 
 Stop with systemctl --user disable --now tradeagent-prospective.service and disable
 the named Windows lifetime task. Preserve state and external authentication.
+
+
+## Daily opportunity research
+
+`scripts/install_shadow.py --daily --python /absolute/installed-venv/bin/python
+--state-dir /absolute/daily-research-state` installs one user systemd timer. It captures
+at 10:00 New York time and must freeze decisions before 10:03. XNYS calendars handle
+holidays and early closes; systemd's named timezone handles DST. Later ticks at 11:30
+and 17:00 resolve matured paths, including pending earlier sessions. Persistent catch-up
+records a missed window rather than creating backdated predictions. Keep the existing
+WSL lifetime anchor installed; the machine must be powered and network/auth available.
+
+The frozen `daily-four-arm-v1` experiment uses the scanner's same top-three candidate
+universe and feasible 5-minute delayed entry plus unchanged 60-minute holding horizon.
+Quant ranks positive frozen Alpha signals; Codex ranks independently; combined requires
+both support; seeded Random samples the sorted eligible candidates plus cash using a
+predeclared session seed. All share contemporaneous evidence and frozen spread/slippage
+costs. All 31 research symbols retain forecasts and later counterfactuals. These are
+non-executable SHADOW selections, independent of the unchanged evidence-gated LIVE gate.
+
+Codex uses ChatGPT-authenticated `codex exec`, structured output, a 60-second deadline,
+read-only sandbox, ignored user configuration, and disabled tools/apps/plugins/hooks.
+It sees supplied evidence only, without quantitative plan/economic ranks. No valid
+assessment means unavailable Codex/combined arms, not manufactured cash returns. Valid
+watch/avoid decisions remain cash abstentions. `daily-status.json` reports paired base
+and stress net returns, differences against Quant/Random, coverage and valid daily
+counts separately by evidence pool. Missing paths stay pending; impossible old windows
+retain separate terminal evidence. No v2 fitting or automatic promotion occurs.
+
+Semantic `alpha-v1` identity covers numerical/feature rules rather than file text.
+The exact original implementation hash `228456be7e1ac282` is a reviewed read-time alias;
+old rows and active plans remain unchanged. Unknown versions still fail closed.
