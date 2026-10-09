@@ -1,118 +1,132 @@
 # TradeAgent
 
-**An open-source trading agent for market research and live execution.**
+**Open-source quantitative trading, from market signals to live execution.**
 
-TradeAgent scans US stocks and ETFs, combines quantitative signals with Codex research, and turns eligible opportunities into trade plans and Robinhood orders. Research, execution, and observed outcomes share one workflow.
+TradeAgent scans US stocks and ETFs, evaluates intraday trading strategies, tracks realized market outcomes, and executes eligible trade plans through Robinhood Trading MCP.
 
 [![CI](https://github.com/danielye0010/TradeAgent/actions/workflows/ci.yml/badge.svg)](https://github.com/danielye0010/TradeAgent/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.12%E2%80%933.14-blue)
 [![License](https://img.shields.io/badge/License-Apache--2.0-blue)](LICENSE)
 
-[Quick start](#quick-start) · [Codex workflow](#codex-workflow) · [Architecture](#architecture) · [Research](#research-and-results) · [Documentation](#documentation)
+[Overview](#overview) · [Quick start](#quick-start) · [Trading workflow](#trading-workflow) · [Architecture](#architecture) · [Documentation](#documentation)
 
-> The latest Codex research-to-LIVE workflow is on [`feat/tradeplan-engine`](https://github.com/danielye0010/TradeAgent/tree/feat/tradeplan-engine). The default `main` branch is an earlier baseline.
+> Latest trading workflow: [`feat/tradeplan-engine`](https://github.com/danielye0010/TradeAgent/tree/feat/tradeplan-engine). The default branch retains the earlier code baseline.
 
-## Why TradeAgent?
+## Overview
 
-- **Scan broadly, investigate selectively.** Track quantitative signals across a configurable universe of 31 US stocks and ETFs; use Codex to investigate up to three candidates in depth.
-- **Make decisions with evidence.** Compare Quant Only, Codex Only, and Quant + Codex on frozen market observations, realized subsequent returns, and trading costs.
-- **Go from plan to execution.** An explicit LIVE Skill invocation presents an owner-sized purchase plan and sends eligible equity orders through the existing Robinhood engine.
-- **Keep a complete trading record.** Persist forecasts, decisions, broker-confirmed fills, exits, reconciliation, and realized P&L. Later market observations resolve pending research outcomes.
+- **Market discovery** — scan a configurable universe of US equities and ETFs (31 by default), rank opportunities, and retain signals across the full universe.
+- **Systematic strategies** — evaluate opening continuation, intraday reversal, and market-relative strength using timestamped prices and observed bid/ask spreads.
+- **Measured outcomes** — resolve forecasts against subsequent market data and compare strategies using realized returns, trading costs, and comparable historical observations.
+- **Live trading** — turn eligible plans into Robinhood equity orders with owner-defined symbols, dollar or share sizing, and portfolio risk limits.
+- **Durable execution** — journal orders, track fills, manage exits, reconcile positions and cash, and recover interrupted runs.
 
-A valid decision can also be **NO_TRADE**. The system does not turn a market anomaly or an AI opinion into an automatic buy.
+The system can return `NO_TRADE` when no opportunity meets its requirements.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    M[Market data] --> S[Opportunity scanner]
-    S --> Q[Quant signals<br/>Full universe]
-    S --> C[Codex research<br/>Top candidates]
-    Q --> P[TradePlan / NO_TRADE]
-    C --> P
-    Q --> O[Observed outcomes]
-    P -->|Explicit LIVE| R[Risk & order engine]
-    R --> B[Robinhood Trading MCP]
-    B --> X[Fills, exits & reconciliation]
-    X --> O
+    A[Market data] --> B[Scanner & strategies]
+    B --> C[TradePlan / NO_TRADE]
+    B --> D[Forecast outcomes]
+    C -->|Eligible live plan| E[Risk & order engine]
+    E --> F[Robinhood Trading MCP]
+    F --> G[Fills, exits & reconciliation]
+    G --> H[Execution records & P&L]
+    D --> H
 ```
 
-Market data and strategy evaluation are separate from account access and order placement. The execution engine owns risk checks, order identity, position management, and recovery.
+Research, broker access, and order management are separate components. The execution engine manages order identity, portfolio limits, position exits, and recovery.
 
 ## Quick start
 
-Python 3.12–3.14 on Linux or Ubuntu/WSL2.
+Requires Python 3.12–3.14 on Linux or Ubuntu/WSL2.
 
 ```bash
 git clone --branch feat/tradeplan-engine https://github.com/danielye0010/TradeAgent.git
 cd TradeAgent
+
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e ".[dev]"
 ```
 
-Explore the complete research loop offline, without a brokerage account:
+Run a complete offline research demonstration without a brokerage account:
 
 ```bash
 tradeagent demo --demo-dir data/demo
 tradeagent inspect --state-dir data/demo
 ```
 
-## Codex workflow
+## Trading workflow
 
-Open Codex in the repository. One Skill provides two modes.
+### 1. Scan and evaluate
 
-**RESEARCH — analyze and save a decision, without placing orders:**
-
-```text
-$trade-opportunity-analyst 分析今天的交易机会，生成 TradePlan。
+```bash
+tradeagent opportunity scan --candidates 3
+tradeagent opportunity evidence --template
 ```
 
-**LIVE — generate a purchase plan and execute if it qualifies:**
+Complete the candidate assessment, then record the decision:
 
-```text
-$trade-opportunity-analyst LIVE：分析今天的市场机会，输出购买计划，符合全部条件就通过 Robinhood 真实下单，并完成退出和盈亏记录。
+```bash
+tradeagent opportunity assess --input assessment.json
+tradeagent opportunity decide --refresh
+tradeagent opportunity show
+tradeagent opportunity compare
 ```
 
-The LIVE workflow uses the owner's existing private configuration, authorized symbol list, and risk limits. It submits an order only when a prospective TradePlan passes the economic and execution checks. Otherwise it returns `NO_TRADE`. LIVE requires a configured Robinhood connection; see [one-shot execution](docs/one-shot.md) and the [opportunity workflow](docs/opportunity-workflow.md).
+The scanner records quantitative forecasts across all available symbols, while the shortlist focuses detailed review on the highest-ranked opportunities. Subsequent market observations resolve matured predictions. Research records are stored locally in `data/opportunities/`.
 
-For a quick view of recorded decisions and strategy comparisons:
+### 2. Execute an eligible plan
+
+With an existing owner-configured Robinhood connection and a valid decision:
+
+```bash
+tradeagent opportunity execute \
+  --decision-id <DECISION_ID> \
+  --config /path/to/tradeagent.toml \
+  --live
+```
+
+This command may place real orders. It displays the purchase plan before submission, refreshes market and account checks, and runs the existing entry/exit lifecycle. The authorized trading universe and order budget come from the owner's private configuration.
+
+### 3. Inspect performance
 
 ```bash
 tradeagent opportunity show
 tradeagent opportunity compare
 ```
 
-Research data and immutable decision records live under the ignored local `data/opportunities/` directory.
+Market-modeled outcomes and broker-confirmed P&L are recorded separately.
 
-## Research and results
+## Strategies
 
-Three frozen intraday hypotheses currently power opportunity forecasts:
-
-| Strategy | Hypothesis |
+| Strategy | Signal |
 | --- | --- |
-| **Opening continuation** | Opening momentum continues when aligned with the gap and broader market. |
-| **Stabilized reversal** | A strong opening move may reverse when short-term price action turns. |
-| **Residual strength** | Relative strength after accounting for broad-market movement may persist. |
+| **Opening continuation** | Momentum aligned with the opening gap and broader market |
+| **Stabilized reversal** | A strong opening move followed by short-term reversal |
+| **Residual strength** | Price movement relative to the broader market |
 
-The scanner records predictions across the full universe; Codex examines a smaller shortlist. Later observations update matched comparisons, keeping modeled research returns separate from actual broker P&L.
-
-**Current research status:** No repeatable net trading edge has been established. Evidence-gated LIVE decisions require sufficiently comparable prior prospective outcomes and a positive conservative return estimate after stressed costs. See [alpha findings](docs/alpha-findings.md) and the [research protocol](docs/opportunity-workflow.md).
+These are active research hypotheses. The [published experiment](docs/alpha-findings.md) has not established a repeatable net trading edge.
 
 ## Project structure
 
 ```text
-.agents/skills/trade-opportunity-analyst/  Codex research and LIVE interface
-src/tradeagent/research/                 Signals, TradePlans, evidence, outcomes
-src/tradeagent/prospective/              Live market-data collection and SHADOW
-src/tradeagent/opportunity_live.py       Research-to-execution orchestration
-src/tradeagent/oneshot.py                Owner-operated broker lifecycle
-tests/                                   Offline research and execution tests
+src/tradeagent/research/           Signals, TradePlans, forecasts and outcomes
+src/tradeagent/prospective/        Market-data collection and shadow trading
+src/tradeagent/opportunity_live.py Opportunity-to-execution workflow
+src/tradeagent/oneshot.py          Broker orders, exits and reconciliation
+tests/                             Research and execution tests
 ```
 
 ## Documentation
 
-[Getting started](docs/getting-started.md) · [Opportunity workflow](docs/opportunity-workflow.md) · [Architecture](docs/architecture.md) · [Live execution](docs/one-shot.md) · [Shadow trading](docs/prospective-shadow.md)
+[Getting started](docs/getting-started.md) ·
+[Trading workflow](docs/opportunity-workflow.md) ·
+[Architecture](docs/architecture.md) ·
+[Live execution](docs/one-shot.md) ·
+[Shadow trading](docs/prospective-shadow.md)
 
 ## Development
 
@@ -122,10 +136,8 @@ ruff check src tests scripts
 ruff format --check src tests scripts
 ```
 
-See [Contributing](CONTRIBUTING.md) for development conventions.
-
 ## License
 
-[Apache 2.0](LICENSE). Vendored components retain their respective licenses; see [THIRD_PARTY.md](THIRD_PARTY.md).
+[Apache 2.0](LICENSE). See [third-party licenses](THIRD_PARTY.md).
 
 TradeAgent is independent of Robinhood Markets, Inc. Trading involves risk of loss.
