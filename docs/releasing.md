@@ -2,8 +2,8 @@
 
 Use a focused preparation branch and a pull request into current `main`. Preserve
 strategy identities, persisted schemas/protocols and operator state. Python metadata
-uses PEP 440 (`1.0.0b1`); Git tags use semantic pre-release names
-(`v1.0.0-beta.1`). Future public releases increment major for incompatible public
+uses PEP 440 (`1.0.0b2`); Git tags use semantic pre-release names
+(`v1.0.0-beta.2`). Future public releases increment major for incompatible public
 interfaces, minor for compatible features and patch for compatible fixes. A beta
 tag remains a pre-release; the major number does not establish operational maturity.
 
@@ -12,7 +12,7 @@ tag remains a pre-release; the major number does not establish operational matur
    Keep release notes limited to features, installation, platforms and limitations.
 3. Run the complete suite, Ruff lint/format, compile, project checks, build and Twine.
    Regenerate the legacy deployment manifest when its inputs change.
-4. Run `python scripts/check_release.py --tag v1.0.0-beta.1 --dist dist`.
+4. Run `python scripts/check_release.py --tag v1.0.0-beta.2 --dist dist`.
    It checks tracked source, packaged contents, version consistency and known
    credential/runtime patterns, then writes `dist/SHA256SUMS`. Inspect examples and
    configuration too; pattern scanning cannot detect every possible secret.
