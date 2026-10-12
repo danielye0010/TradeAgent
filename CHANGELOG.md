@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.0-beta.3 — 2026-10-12
+
+Python distribution version: `1.0.0b3`.
+
+- Review and pin the authenticated Robinhood MCP 1.7.3 broker contracts.
+- Retain any-agent provenance without filtering account orders or changing ownership.
+- Permit exact legacy-contract journal inspection through read-only reconciliation; saved reviews and write recovery remain blocked on contract mismatch.
+- Preserve owner limits, execution authorization, SHADOW capability and frozen research protocols.
+
 ## 1.0.0-beta.2 — 2026-10-12
 
 Python distribution version: `1.0.0b2`.

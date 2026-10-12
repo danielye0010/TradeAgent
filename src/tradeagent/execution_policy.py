@@ -21,6 +21,13 @@ VERSION = "local-owner-one-shot-v2"
 STATE_SCHEMA_VERSION = 1
 EXECUTION_PROTOCOL_VERSION = 2
 COMPATIBLE_EXECUTION_PROTOCOLS = {1, 2}
+# Reviewed additive 1.7.3 order provenance delta permits old journal READS only.
+# Saved reviews and every write/recovery authorization retain exact current hashes.
+READ_ONLY_LEGACY_SCHEMA_HASHES = frozenset(
+    {
+        "5f792616b70b47abd382e3aa403ee5f6d5f7ae672cfa07dfd75697f6330ad03a",
+    }
+)
 
 
 def package_hash():
@@ -305,7 +312,7 @@ def create_policy(
     }
 
 
-def check_compatibility(policy):
+def check_compatibility(policy, *, reconciliation_only=False):
     if policy.get("version") != VERSION:
         raise Halt(
             "unsupported execution policy; preserve state and install a compatible application"
@@ -318,15 +325,17 @@ def check_compatibility(policy):
         raise Halt(
             "incompatible execution protocol; preserve state and install a compatible version for recover"
         )
-    if policy.get("schema_hash") != Contracts().hash:
+    if policy.get("schema_hash") != Contracts().hash and not (
+        reconciliation_only and policy.get("schema_hash") in READ_ONLY_LEGACY_SCHEMA_HASHES
+    ):
         raise Halt(
             "broker contracts incompatible with active state; preserve evidence and update contract adapter before recover"
         )
 
 
-def active_settings(settings):
+def active_settings(settings, *, reconciliation_only=False):
     """New TOML applies to the next lifecycle; active requirements come from its journal."""
-    artifact = check_run_state(settings)
+    artifact = check_run_state(settings, reconciliation_only=reconciliation_only)
     if artifact is None:
         return settings
     policy = artifact["policy"]
@@ -372,7 +381,7 @@ def check_run_state(settings, *, reconciliation_only=False):
         }:
             raise Halt("owner run state binding changed; restore the matching journal/receipt")
         policy = artifact.get("policy", {})
-        check_compatibility(policy)
+        check_compatibility(policy, reconciliation_only=reconciliation_only)
         if artifact.get("actor") != "LOCAL_OWNER" or policy.get("simulation") is not False:
             raise Halt("invalid owner execution context")
         if policy.get("state_dir") != str(directory):

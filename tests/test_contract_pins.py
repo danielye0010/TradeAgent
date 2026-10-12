@@ -12,6 +12,10 @@ from tradeagent.schema import Contracts
 
 def test_reviewed_170_preserves_inputs_and_adds_authenticated_approval_outputs():
     contracts = Contracts()
+    contracts.manifest = json.loads(
+        files("tradeagent").joinpath("contracts/official-1.7.0.json").read_text()
+    )
+    contracts.tools = contracts.manifest["tools"]
     old = json.loads(files("tradeagent").joinpath("contracts/official-1.6.2.json").read_text())
     assert contracts.manifest["server_version"] == "1.7.0"
     current = copy.deepcopy(contracts.tools)
@@ -27,7 +31,7 @@ def test_reviewed_170_preserves_inputs_and_adds_authenticated_approval_outputs()
     contracts.check_current(contracts.tools, "1.7.0")
 
 
-@pytest.mark.parametrize("version", ["1.6.2", "1.7.1", "2.0.0", None])
+@pytest.mark.parametrize("version", ["1.6.2", "1.7.0", "1.7.1", "2.0.0", None])
 def test_unreviewed_server_versions_fail_closed(version):
     contracts = Contracts()
     with pytest.raises(Halt, match="server version drift"):
@@ -43,7 +47,7 @@ def test_every_required_schema_drift_fails_closed(name, field):
         "additionalProperties", True
     )
     with pytest.raises(Halt, match="official schema drift"):
-        contracts.check_current(changed, "1.7.0")
+        contracts.check_current(changed, "1.7.3")
 
 
 @pytest.mark.parametrize("name", list(Contracts().tools))
@@ -52,7 +56,7 @@ def test_missing_required_tool_fails_closed(name):
     changed = copy.deepcopy(contracts.tools)
     del changed[name]
     with pytest.raises(Halt, match="unavailable tool"):
-        contracts.check_current(changed, "1.7.0")
+        contracts.check_current(changed, "1.7.3")
 
 
 @pytest.mark.parametrize(
@@ -63,7 +67,7 @@ def test_read_only_annotation_drift_fails_closed(name):
     changed = copy.deepcopy(contracts.tools)
     changed[name]["annotations"]["readOnlyHint"] = False
     with pytest.raises(Halt, match="official schema drift"):
-        contracts.check_current(changed, "1.7.0")
+        contracts.check_current(changed, "1.7.3")
 
 
 def test_description_only_changes_remain_ignored():
@@ -73,4 +77,4 @@ def test_description_only_changes_remain_ignored():
         tool["description"] = "Updated provider prose"
         tool["inputSchema"]["description"] = "Updated input prose"
         tool["outputSchema"]["description"] = "Updated output prose"
-    contracts.check_current(changed, "1.7.0")
+    contracts.check_current(changed, "1.7.3")

@@ -42,8 +42,8 @@ def live_check(oauth_helper=None, root=None, timeout=10, settings=None):
     try:
         if settings:
             settings.validate()
-            check_run_state(settings)
-            settings = active_settings(settings)
+            check_run_state(settings, reconciliation_only=True)
+            settings = active_settings(settings, reconciliation_only=True)
             oauth_helper, timeout = settings.oauth_helper, settings.timeout
             root = Path(__file__).parent
         tokens = ExternalOAuthToken(oauth_helper, root or Path.cwd())
@@ -105,6 +105,46 @@ def live_check(oauth_helper=None, root=None, timeout=10, settings=None):
                 if artifact["policy"]["account_digest"] != account_digest:
                     raise Halt("authenticated account differs from existing owner run")
             result["account_verified"] = True
+            if settings and (settings.directory / "live-run.json").exists():
+                import sqlite3
+                from types import SimpleNamespace
+
+                from .oneshot import OneShotRun
+
+                with sqlite3.connect(
+                    f"file:{settings.directory / 'agent/state.sqlite3'}?mode=ro", uri=True
+                ) as database:
+                    database.row_factory = sqlite3.Row
+                    database.execute("PRAGMA query_only=ON")
+                    audit = OneShotRun.__new__(OneShotRun)
+                    audit.state = SimpleNamespace(db=database)
+                    audit.risk, audit.clock = risk, time.time
+                    try:
+                        proof = audit.audit(snapshot, allow_open=True)
+                        result["lifecycle_reconciliation"] = {
+                            key: proof[key]
+                            for key in (
+                                "submission_status",
+                                "reconciliation_status",
+                                "cash_reconciled",
+                                "flat_bot_position",
+                                "unrelated_holdings_unchanged",
+                            )
+                        }
+                    except Halt as error:
+                        result["lifecycle_reconciliation"] = {
+                            "reconciliation_status": "BLOCKED",
+                            "reason": str(error),
+                        }
+                        result["blockers"].append(
+                            "Existing lifecycle reconciliation blocked: " + str(error)
+                        )
+                artifact = json.loads((settings.directory / "live-run.json").read_text())
+                if artifact["policy"]["schema_hash"] != Contracts().hash:
+                    result["blockers"].append(
+                        "Existing lifecycle uses legacy broker contracts; read-only reconciliation allowed, "
+                        "write recovery remains blocked; preserve journal and obtain operator recovery"
+                    )
             result["account_sha256"] = account_digest
             setting = bridge.read(
                 "get_trade_approval_setting",

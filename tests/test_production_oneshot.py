@@ -233,10 +233,10 @@ def test_read_only_contract_validation_ignores_write_drift_only():
     bridge = ReadOnlyMCP(lambda: "TEST_ONLY_TOKEN")
     actual = Contracts().tools
     actual["place_equity_order"]["inputSchema"] = {"type": "INVALID_TEST_WRITE"}
-    bridge.contracts.check_current(actual, "1.7.0")
+    bridge.contracts.check_current(actual, "1.7.3")
     actual["get_equity_quotes"]["annotations"] = {"readOnlyHint": False}
     with pytest.raises(Halt, match="schema drift"):
-        bridge.contracts.check_current(actual, "1.7.0")
+        bridge.contracts.check_current(actual, "1.7.3")
 
 
 def test_live_controller_recovers_confirmed_fill_before_ack_without_rebuy(tmp_path, monkeypatch):

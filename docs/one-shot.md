@@ -236,3 +236,20 @@ tradeagent run-once --paper --state-dir /absolute/fresh/synthetic-state
 ```
 
 It is software validation, not an execution replacement or market-performance claim.
+
+## Robinhood MCP 1.7.3 compatibility
+
+The execution adapter pins the authenticated 1.7.3 input/output schemas and safety
+annotations, including the required boolean `agent_initiated` order metadata.
+The optional order-read filter is deliberately omitted: reconciliation includes
+all account orders through every page. The flag describes orders initiated by
+any agent, including customer-approved orders; it never proves this agent's ownership.
+Ownership continues to require the exact durable client reference and broker identity.
+
+The exact reviewed 1.7.0 journal hash permits read-only inspection and reconciliation.
+It does not permit new review/place/cancel calls, revive saved reviews or change the
+journal's contract binding. `live-check` preserves the old lifecycle and reports the
+write recovery blocker. An operator must resolve or archive a reconciled prior lifecycle
+through the existing explicit workflow before starting another entry. Unknown contract,
+state or execution-protocol hashes still fail closed. SHADOW retains its independent
+two-tool market-data capability and frozen research schedule.

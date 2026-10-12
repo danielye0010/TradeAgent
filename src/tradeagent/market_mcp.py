@@ -12,6 +12,8 @@ MARKET_TOOLS = frozenset({"get_equity_historicals", "get_equity_quotes"})
 class MarketDataMCP(StandaloneMCP):
     """Two pinned read tools; every other tool is denied before token or HTTP use."""
 
+    require_server_version = False
+
     def __init__(self, token_source, timeout=20):
         super().__init__(token_source, timeout)
         pin = json.loads(
