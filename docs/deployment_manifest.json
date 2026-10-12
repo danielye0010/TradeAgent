@@ -44,7 +44,7 @@
     "src/tradeagent/market_mcp.py": "d14224d1a50dea3916c747b5a95621e4b0e9e5d9adc9008cf65b8d4c5fef88c4",
     "src/tradeagent/model.py": "f42fa78c2cf72659bfad725b6efbb8f6871309f3cb19cf01ae836367cb4c5a4f",
     "src/tradeagent/oneshot.py": "0a2131bfc53a559d1fdcc96793af9635bbdedbbdd9a64f0e7dbb0c9a0028b152",
-    "src/tradeagent/oneshot_cli.py": "6b89dae82364e81c5e8342718066166c7ec8d71313bd11ec32c0e923f978d30d",
+    "src/tradeagent/oneshot_cli.py": "4d93a527a0872e3374693af88d95942c87fc7ada2caa6444960c9cd0535aa90c",
     "src/tradeagent/opportunity_cli.py": "0396fd79e7ea32840bafd2e47f76d2bcd121eb90ed6ee46b4414a279ba0e657e",
     "src/tradeagent/opportunity_live.py": "51fb4b55756b1de18ab9e0612bf495a4e3e86996dac5d74a615ddfbed29302ce",
     "src/tradeagent/options.py": "a603efb4823b16d4a60c54752be888c6711c572c288c5f979b6b32c7970b9061",
@@ -100,7 +100,7 @@
     "tests/test_canary_reference.py": "d1cc61aea7954f39a51e8f6dfcec0c1a36d7fd9d1e473c8125c3996699685442",
     "tests/test_canary_review.py": "84e2c3b188deb097a3a6a8c8a6949f0c8c44142cddb18f28aafc409b5b5ec7ca",
     "tests/test_commissioning.py": "83b54169dd739c0f8653d4a1d63a28cb184892cf6038277ef8a4a4e6c0d922da",
-    "tests/test_contract_173.py": "16a068a0f6b7225d6e0dbfcaa10a31c4447ed5a382095942461ad9a98a890027",
+    "tests/test_contract_173.py": "f940b64d9cd2ae63be7fc3398ee50eda2b2f486395be7057632555462e161664",
     "tests/test_contract_pins.py": "6b4abbd7220629bac7a6df5e4e6e6323cea1a88987fecbe70b549eb41621f939",
     "tests/test_daily_research.py": "f8f59118500905cd4bc8742a85938f7dd01234c5d45fede64fa8a4f7e1bf11b0",
     "tests/test_daily_signal_timing.py": "9a6a876884a3d99081a39131bee4458087b1f7f5b1f837a3d13a60354dd79919",
@@ -129,5 +129,5 @@
     "tests/test_supervised_contract.py": "b17692ea76ef0653e92215103a4dc459478601cfc17c7fb3df17697e37c92d44",
     "tests/test_tradeplan_engine.py": "8cb9735d0e593cfa49bb6d4ddb33093ef8e76d33d6cd06752ab18cb10dd5e80f"
   },
-  "framework_sha256": "208581c77a5a8ddb0081da9c69ab5e79196e875af069c2b5d75060fccb900b65"
+  "framework_sha256": "a439802c678d1ec51536489d6b1e760eaaab03b5da340bcfeec90118560ef070"
 }

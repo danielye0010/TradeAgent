@@ -162,7 +162,10 @@ def test_legacy_journal_hash_only_allows_read_only_inspection():
         check_compatibility({**policy, "schema_hash": "unknown"}, reconciliation_only=True)
 
 
-def test_legacy_lifecycle_live_check_reconciles_without_mutating_or_rearming(tmp_path, monkeypatch):
+@pytest.mark.parametrize("cash_drift", [False, True])
+def test_legacy_lifecycle_live_check_reconciles_without_mutating_or_rearming(
+    tmp_path, monkeypatch, cash_drift
+):
     from test_production_oneshot import owner_mock_runtime
 
     from tradeagent.execution_policy import load_live_config
@@ -184,6 +187,16 @@ def test_legacy_lifecycle_live_check_reconciles_without_mutating_or_rearming(tmp
             for p in target.rglob("*")
             if p.is_file()
         }
+        if cash_drift:
+            from dataclasses import replace
+
+            original_snapshot = sim.snapshot
+
+            def drifted_snapshot(*args, **kwargs):
+                snapshot = original_snapshot(*args, **kwargs)
+                return replace(snapshot, cash=snapshot.cash + 1)
+
+            monkeypatch.setattr(sim, "snapshot", drifted_snapshot)
         calls.clear()
         monkeypatch.setattr(
             "tradeagent.oneshot_cli.ExternalOAuthToken", lambda *args: lambda: "TEST_ONLY_TOKEN"
@@ -192,8 +205,13 @@ def test_legacy_lifecycle_live_check_reconciles_without_mutating_or_rearming(tmp
         result = live_check(settings=settings)
         assert result["status"] == "LIVE BLOCKED"
         assert result["authenticated"] and result["snapshot_normalized"]
-        assert result["lifecycle_reconciliation"]["cash_reconciled"]
-        assert result["lifecycle_reconciliation"]["flat_bot_position"]
+        assert result["account_verified"] and result["broker_approval_setting_verified"]
+        if cash_drift:
+            assert result["lifecycle_reconciliation"]["reconciliation_status"] == "BLOCKED"
+            assert any("do not reconcile cash" in b for b in result["blockers"])
+        else:
+            assert result["lifecycle_reconciliation"]["cash_reconciled"]
+            assert result["lifecycle_reconciliation"]["flat_bot_position"]
         assert any("legacy broker contracts" in b for b in result["blockers"])
         after = {
             str(p): hashlib.sha256(p.read_bytes()).hexdigest()
@@ -212,6 +230,10 @@ def test_legacy_lifecycle_live_check_reconciles_without_mutating_or_rearming(tmp
         from tradeagent.oneshot import new_live_run
 
         calls.clear()
+        if cash_drift:
+            with pytest.raises(Halt, match="do not reconcile cash"):
+                new_live_run(settings)
+            return
         archived = new_live_run(settings)
         assert archived["status"] == "NEW_RUN_READY"
         from pathlib import Path
