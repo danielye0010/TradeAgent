@@ -67,6 +67,9 @@ def test_small_funded_shadow_records_no_broker_writes_and_suppresses_repeat(tmp_
     broker = Broker(bridge, config, Risk())
     native_snapshot = broker.snapshot
     broker.snapshot = lambda: native_snapshot(NOW.timestamp())
+    # The default history clock is bound at import; freeze it explicitly as well.
+    native_histories = broker.histories
+    broker.histories = lambda: native_histories(NOW.timestamp())
     writes = []
 
     def forbid(*args):

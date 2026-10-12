@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.0-beta.2 — 2026-10-12
+
+Python distribution version: `1.0.0b2`.
+
+- Isolate SHADOW market collection to the two existing pinned market-data contracts.
+- Batch quote requests at 20 symbols to preserve previous-session close references.
+- Preserve full LIVE broker contract validation and review/place/cancel authorization.
+- Preserve strategy identities, daily-four-arm-v1, scheduled windows and existing evidence.
+
 ## [1.0.0-beta.1](https://github.com/danielye0010/TradeAgent/releases/tag/v1.0.0-beta.1) — 2026-10-09
 
 First packaged beta release. Python distribution version: `1.0.0b1`.

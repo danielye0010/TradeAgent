@@ -106,32 +106,35 @@ def capture(symbols, provider="robinhood", oauth_helper=None, *, clock=time.time
                                 )
                             )
                         )
-            response = adapter.bridge.read("get_equity_quotes", {"symbols": requested})["data"]
-            received = clock()
-            for item in response.get("results") or []:
-                raw = item["quote"]
-                symbol = raw["symbol"]
-                if symbol not in requested or symbol in quotes:
-                    raise ValueError("unexpected or duplicate quote identity")
-                try:
-                    quotes[symbol] = {
-                        "bid": float(raw["bid_price"]),
-                        "ask": float(raw["ask_price"]),
-                        "asof": min(
-                            timestamp(raw["venue_bid_time"]), timestamp(raw["venue_ask_time"])
-                        ),
-                        "observed_at": received,
-                    }
-                    previous = session_bounds(
-                        datetime.fromisoformat(raw["previous_close_date"]).date()
-                    )
-                    if previous:
-                        references[symbol] = {
-                            "previous_close": float(raw["previous_close"]),
-                            "previous_close_time": previous[1],
+            # Above 20 quotes the provider omits previous-session closes.
+            for index in range(0, len(requested), 20):
+                batch = requested[index : index + 20]
+                response = adapter.bridge.read("get_equity_quotes", {"symbols": batch})["data"]
+                received = clock()
+                for item in response.get("results") or []:
+                    raw = item["quote"]
+                    symbol = raw["symbol"]
+                    if symbol not in batch or symbol in quotes:
+                        raise ValueError("unexpected or duplicate quote identity")
+                    try:
+                        quotes[symbol] = {
+                            "bid": float(raw["bid_price"]),
+                            "ask": float(raw["ask_price"]),
+                            "asof": min(
+                                timestamp(raw["venue_bid_time"]), timestamp(raw["venue_ask_time"])
+                            ),
+                            "observed_at": received,
                         }
-                except (KeyError, ValueError, TypeError):
-                    missing.append(symbol + ": quote/reference unavailable")
+                        previous = session_bounds(
+                            datetime.fromisoformat(raw["previous_close_date"]).date()
+                        )
+                        if previous:
+                            references[symbol] = {
+                                "previous_close": float(raw["previous_close"]),
+                                "previous_close_time": previous[1],
+                            }
+                    except (KeyError, ValueError, TypeError):
+                        missing.append(symbol + ": quote/reference unavailable")
         elif provider == "alpaca":
             # Existing external credential loader/opener; no new auth or paid feed.
             def get(path, params):

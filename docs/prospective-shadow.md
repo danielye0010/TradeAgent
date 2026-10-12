@@ -53,7 +53,12 @@ cat work/prospective-robinhood/STATUS.md
 
 The default helper path is $HOME/.local/libexec/robinhood-mcp-oauth-helper.
 The service has no Alpaca credential directive. Missing Robinhood authentication or
-a changed official schema fails closed with a sanitized blocker.
+a changed market-data schema fails closed with a sanitized blocker.
+The market capability validates only the existing historicals and quotes contracts
+and rejects account reads, reviews, placements and cancellations before network use.
+Order-contract drift cannot block SHADOW market collection; full broker validation
+remains required for LIVE execution. Quote batches contain at most 20 symbols so
+the provider retains previous-session close references.
 No silent fallback, login prompt, redirect or order operation is introduced.
 
 ## Optional Alpaca setup
