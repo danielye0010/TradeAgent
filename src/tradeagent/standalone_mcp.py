@@ -142,6 +142,10 @@ class StandaloneMCP:
             self.server_info.get("version"),
             require_version=self.require_server_version,
         )
+        # Schemas above are always enforced. A bare version bump only blocks new entries.
+        self.server_version_reviewed = (
+            self.server_info.get("version") == self.contracts.manifest["server_version"]
+        )
         self.auth_status = "external OAuth token; authenticated catalog validated"
         return self
 
@@ -322,6 +326,10 @@ class StandaloneMCP:
 
 class ReadOnlyMCP(StandaloneMCP):
     """Validate only frozen read contracts; writes rejected before credentials/HTTP."""
+
+    # Reads stay available across a schema-identical server version bump so an
+    # existing position can always be inspected and reconciled.
+    require_server_version = False
 
     def __init__(self, token_source, timeout=20):
         from .model import digest

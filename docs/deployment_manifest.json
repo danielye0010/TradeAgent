@@ -43,8 +43,8 @@
     "src/tradeagent/legacy/supervised_cli.py": "2e998c255edcc01d5645114c8f5fbb9c7f3adac5bbfe708ae9f9696a144790b9",
     "src/tradeagent/market_mcp.py": "d14224d1a50dea3916c747b5a95621e4b0e9e5d9adc9008cf65b8d4c5fef88c4",
     "src/tradeagent/model.py": "f42fa78c2cf72659bfad725b6efbb8f6871309f3cb19cf01ae836367cb4c5a4f",
-    "src/tradeagent/oneshot.py": "0a2131bfc53a559d1fdcc96793af9635bbdedbbdd9a64f0e7dbb0c9a0028b152",
-    "src/tradeagent/oneshot_cli.py": "4d93a527a0872e3374693af88d95942c87fc7ada2caa6444960c9cd0535aa90c",
+    "src/tradeagent/oneshot.py": "51d98e3cf0a57bf5b755d7991a49b9f4a654757bd5596973dc5e609ce883aa39",
+    "src/tradeagent/oneshot_cli.py": "01ba51a8983934bdc5da7c0afccd56704256dcec9acfce34d3b4217dfae4ef5c",
     "src/tradeagent/opportunity_cli.py": "0396fd79e7ea32840bafd2e47f76d2bcd121eb90ed6ee46b4414a279ba0e657e",
     "src/tradeagent/opportunity_live.py": "51fb4b55756b1de18ab9e0612bf495a4e3e86996dac5d74a615ddfbed29302ce",
     "src/tradeagent/options.py": "a603efb4823b16d4a60c54752be888c6711c572c288c5f979b6b32c7970b9061",
@@ -83,7 +83,7 @@
     "src/tradeagent/risk.py": "f833a547e590d45de80f2c7bccfc251bcb3a2f93f4ad3af2af8ea8a8acd0873b",
     "src/tradeagent/schema.py": "4045d9bfb77157a3550e822b41be2f49f53e1474b7131bd695edfdea52fbb560",
     "src/tradeagent/simulator.py": "8b6e36c8cd6fd966d1ed320a4ddf99a87603c02bea3cdacd4c873246a2ac9ba8",
-    "src/tradeagent/standalone_mcp.py": "e98dc81b5a3bbace4c6acc2be3a3df89f2bc7f59456be618dff33db6cf69bc27",
+    "src/tradeagent/standalone_mcp.py": "090b8dab0217a4132809f4674831b4241b147d293feff34a284b3abd098a77f5",
     "src/tradeagent/state.py": "5c060114117e9e52ed0e6f6b06b0346386936faedd3af4f6023862e09cd02d8f",
     "src/tradeagent/strategy.py": "4a6a7008611f172a98ba6204efa3ce79a24c27691299e73c2691e42803dea76d",
     "src/tradeagent/supervised.py": "e85533e9c2c54647975eff040f18c6de95f688adedafb0ac30d71463197f32f8",
@@ -125,9 +125,10 @@
     "tests/test_research_loop.py": "bd863a6df5f40260072dac426bb4041dfb9fa2df2d02ae278bc36c2820478b72",
     "tests/test_review_expiry_recovery.py": "dbdbb126032b1be86c82a566dae509bf55ebf32624404b665213cab84d9f4def",
     "tests/test_safety.py": "2e39731b22202db34ab412a414a0e1227b71a4e38bb8db7ad15f6764958ef4d0",
+    "tests/test_server_version_drift.py": "f49922ad8d0460142323adc43972c48256067b4596bb45716f18678a63fade04",
     "tests/test_standalone.py": "8ba67a1357f652d91b03a573a7d924514de9aeb27325e6a3b90454a5efc0ddcd",
     "tests/test_supervised_contract.py": "b17692ea76ef0653e92215103a4dc459478601cfc17c7fb3df17697e37c92d44",
     "tests/test_tradeplan_engine.py": "8cb9735d0e593cfa49bb6d4ddb33093ef8e76d33d6cd06752ab18cb10dd5e80f"
   },
-  "framework_sha256": "a439802c678d1ec51536489d6b1e760eaaab03b5da340bcfeec90118560ef070"
+  "framework_sha256": "349a1a162289db65f844aec471fc8e531bbed183fef48e824109404d317dc63f"
 }

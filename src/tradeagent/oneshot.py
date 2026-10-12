@@ -882,9 +882,13 @@ def _run_live(settings, *, recover=False, observer=None, plan=None, prediction=N
     state, run_id = None, None
     os.umask(0o077)
     try:
-        with StandaloneMCP(
+        mcp = StandaloneMCP(
             ExternalOAuthToken(settings.oauth_helper, Path(__file__).parent), settings.timeout
-        ) as bridge:
+        )
+        # Exit-only recovery must survive a schema-identical server version bump;
+        # every tool schema is still validated. New entries keep the exact version pin.
+        mcp.require_server_version = not recover
+        with mcp as bridge:
             broker = Broker(bridge, config, risk)
             broker.snapshot()
             account = digest(broker.account["account_number"])

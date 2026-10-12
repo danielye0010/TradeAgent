@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Exit-only recovery and read-only reconciliation keep working when Robinhood bumps the MCP
+  server version without changing tool schemas. New entries still require the reviewed version.
+
 ## 1.0.0-beta.3 — 2026-10-12
 
 Python distribution version: `1.0.0b3`.
