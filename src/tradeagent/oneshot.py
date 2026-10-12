@@ -1047,7 +1047,7 @@ def reconcile_live(settings, *, persist=True):
                     "broker_calls": bridge.calls,
                     "recovery_instruction": "run live-check, then owner-operated run-once for a new entry",
                 }
-        settings = active_settings(settings)
+        settings = active_settings(settings, reconciliation_only=True)
         marker = json.loads(owner_file(settings.directory / "live-run.json").read_text())
         db = sqlite3.connect(f"file:{settings.directory / 'agent/state.sqlite3'}?mode=ro", uri=True)
         db.row_factory = sqlite3.Row
@@ -1145,7 +1145,7 @@ def new_live_run(settings):
                 "already_ready": True,
                 "real_review_place_cancel_calls": 0,
             }
-        settings = active_settings(settings)
+        settings = active_settings(settings, reconciliation_only=True)
         marker = json.loads(owner_file(settings.directory / "live-run.json").read_text())
         # Archiving verifies closure without migrating historical SQLite bytes.
         # The existing durable-completion guard below remains mandatory.

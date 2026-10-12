@@ -44,9 +44,7 @@ def transport(monkeypatch, tools):
 
 def test_order_drift_does_not_block_market_but_still_blocks_broker(monkeypatch):
     tools = catalog()
-    tools["get_equity_orders"]["inputSchema"]["properties"]["agent_initiated"] = {
-        "type": ["null", "boolean"]
-    }
+    tools["get_equity_orders"]["inputSchema"]["properties"]["agent_initiated"] = {"type": "string"}
     calls = transport(monkeypatch, tools)
     with MarketDataMCP(lambda: pytest.fail("credentials unexpectedly requested")) as bridge:
         assert set(bridge.contracts.tools) == MARKET_TOOLS

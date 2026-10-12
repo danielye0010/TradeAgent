@@ -99,6 +99,7 @@ class ExternalOAuthToken:
 
 class StandaloneMCP:
     is_simulation = False
+    require_server_version = True
 
     def __init__(self, token_source, timeout=60):
         self.token_source, self.timeout = token_source, timeout
@@ -137,7 +138,9 @@ class StandaloneMCP:
         else:
             raise Halt("official catalog pagination limit")
         self.contracts.check_current(
-            self.tools, self.server_info.get("version"), require_version=False
+            self.tools,
+            self.server_info.get("version"),
+            require_version=self.require_server_version,
         )
         self.auth_status = "external OAuth token; authenticated catalog validated"
         return self

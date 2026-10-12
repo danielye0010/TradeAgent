@@ -283,6 +283,7 @@ class SimulatedMCP:
             market_hours="regular_hours",
             trigger="immediate",
             placed_agent="agentic",
+            agent_initiated=True,
             created_at=self.clock.iso(),
             last_transaction_at=None,
         )

@@ -84,6 +84,7 @@ def check(tag=None, dist=None):
             required = {
                 "tradeagent/owner.example.toml",
                 "tradeagent/contracts/official-1.7.0.json",
+                "tradeagent/contracts/official-1.7.3.json",
             }
         else:
             prefix = f"tradeagent-{version}/"

@@ -85,7 +85,7 @@ def review_response(clock, **changes):
 def bridge(tmp_path, monkeypatch, clock, response=None, lose=False):
     b = CanaryReviewBridge(tmp_path, lambda: "SYNTHETIC_TOKEN")
     b.tools = copy.deepcopy(Contracts().tools)
-    b.inventory = {"data": [{"name": SERVER, "serverInfo": {"version": "1.7.0"}}]}
+    b.inventory = {"data": [{"name": SERVER, "serverInfo": {"version": "1.7.3"}}]}
     b.thread_id = "synthetic"
     b.before_review = lambda: None
     b.review_arguments_hash = digest(arguments())
@@ -336,7 +336,7 @@ def test_new_cli_route_is_separate_from_placement_cli(monkeypatch):
 
 def test_metadata_parity_ignores_codex_null_presentation_fields(tmp_path, monkeypatch):
     complete = copy.deepcopy(Contracts().tools)
-    server = {"name": SERVER, "version": "1.7.0"}
+    server = {"name": SERVER, "version": "1.7.3"}
 
     class Catalog:
         def __init__(self, *args):
@@ -375,7 +375,7 @@ def test_metadata_parity_ignores_codex_null_presentation_fields(tmp_path, monkey
 @pytest.mark.parametrize("fault", ["name", "version", "schema"])
 def test_dual_catalog_parity_still_fails_closed(tmp_path, monkeypatch, fault):
     complete = copy.deepcopy(Contracts().tools)
-    server = {"name": SERVER, "version": "1.7.0"}
+    server = {"name": SERVER, "version": "1.7.3"}
 
     class Catalog:
         def __init__(self, *args):

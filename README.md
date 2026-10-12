@@ -10,7 +10,7 @@ execution through the official Robinhood Trading MCP.
 
 [Quick start](#quick-start) · [Research](#research) · [Scheduled SHADOW](#scheduled-shadow) · [LIVE execution](#live-execution) · [Docs](#documentation)
 
-**v1.0.0-beta.2 is a pre-release. Prospective profitability and Codex uplift are
+**v1.0.0-beta.3 is a pre-release. Prospective profitability and Codex uplift are
 not established.** Synthetic tests and historical results validate specific software
 behavior and research assumptions; they do not establish a repeatable trading edge.
 
@@ -20,13 +20,13 @@ Supported: Linux with Python 3.12–3.14, including Linux under WSL2. Native Win
 and macOS are not supported. Scheduling requires systemd user services.
 
 Download the wheel and `SHA256SUMS` from the
-[GitHub pre-release](https://github.com/danielye0010/TradeAgent/releases/tag/v1.0.0-beta.2).
+[GitHub pre-release](https://github.com/danielye0010/TradeAgent/releases/tag/v1.0.0-beta.3).
 Verify the wheel's SHA-256 against `SHA256SUMS`, then install in a fresh environment:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install ./tradeagent-1.0.0b2-py3-none-any.whl
+python -m pip install ./tradeagent-1.0.0b3-py3-none-any.whl
 
 # Synthetic research and a simulated broker lifecycle; no accounts needed
 tradeagent demo --demo-dir work/demo
@@ -92,7 +92,7 @@ or cancels orders, and never promotes a research selection into LIVE execution.*
 For a new installation, clone the release tag and use the installed wheel interpreter:
 
 ```bash
-git clone --branch v1.0.0-beta.2 https://github.com/danielye0010/TradeAgent.git
+git clone --branch v1.0.0-beta.3 https://github.com/danielye0010/TradeAgent.git
 cd TradeAgent
 python scripts/install_shadow.py --daily \
   --python /absolute/linux/venv/bin/python \

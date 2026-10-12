@@ -229,6 +229,11 @@ def normalize_order(row, asset="equity"):
             "legs": legs,
         }
         fills = rows(leg.get("executions"), "option executions")
+    # Any-agent provenance is metadata, never a ref_id or ownership proof.
+    if "agent_initiated" in row:
+        if type(row["agent_initiated"]) is not bool:
+            raise Halt("invalid broker agent-initiated provenance")
+        result["agent_initiated"] = row["agent_initiated"]
     if (
         not result.get("id")
         or result.get("side") not in {"buy", "sell"}
@@ -238,6 +243,10 @@ def normalize_order(row, asset="equity"):
         or (result.get("type") == "limit" and dec(result.get("price")) <= 0)
     ):
         raise Halt("malformed/unsupported broker order")
+    from .risk import TERMINAL
+
+    if result["state"] not in TERMINAL | {"queued", "unconfirmed", "confirmed", "partially_filled"}:
+        raise Halt("unknown broker order lifecycle state")
     cumulative = dec(result["cumulative_quantity"])
     dollars = result.get("dollar_based_amount")
     if dollars is not None:
