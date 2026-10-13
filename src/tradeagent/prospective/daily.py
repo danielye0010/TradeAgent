@@ -358,17 +358,20 @@ class Pipeline:
                 for c in report["candidates"]:
                     if self.clock() >= deadline:
                         break
-                    snapshot = research_snapshot(data, c["symbol"], self.clock())
-                    from ..research.alpha_signals import FAMILIES, AlphaStrategy
+                    try:
+                        snapshot = research_snapshot(data, c["symbol"], self.clock())
+                        from ..research.alpha_signals import FAMILIES, AlphaStrategy
 
-                    negative = any(
-                        AlphaStrategy(f, 3900).predict(snapshot, self.clock()).direction == -1
-                        for f in FAMILIES
-                    )
-                    if negative:
-                        selections[c["symbol"]] = reader.select(
-                            c["symbol"], (snapshot.ask + snapshot.bid) / 2, deadline=deadline
+                        negative = any(
+                            AlphaStrategy(f, 3900).predict(snapshot, self.clock()).direction == -1
+                            for f in FAMILIES
                         )
+                        if negative:
+                            selections[c["symbol"]] = reader.select(
+                                c["symbol"], (snapshot.ask + snapshot.bid) / 2, deadline=deadline
+                            )
+                    except (Halt, ValueError, OSError, KeyError, TypeError):
+                        selections[c["symbol"]] = None
         except (Halt, ValueError, OSError, KeyError, TypeError):
             pass  # Missing options are explicit UNAVAILABLE outcomes, never cash or underlying-derived Put returns.
         return selections

@@ -457,3 +457,176 @@ def test_missed_put_quote_window_is_unavailable_without_late_read(tmp_path):
         assert all(q["status"] == "UNAVAILABLE" for q in store.records("option_observations"))
     finally:
         store.close()
+
+
+@pytest.mark.parametrize("row", [None, {"quote": None}])
+def test_nullable_quote_rows_record_unavailable_endpoint(tmp_path, row):
+    from tradeagent.research.opportunity_workflow import DailyResearch
+    from tradeagent.research.put_shadow import OptionsResearchMCP
+
+    bridge = OptionsResearchMCP(lambda: pytest.fail("no authentication in regression tests"))
+    response = {"data": {"results": [row]}, "guide": "synthetic"}
+    bridge.contracts.validate("get_option_quotes", response, "outputSchema")
+    bridge.read = lambda name, arguments: response
+    reader = PutReader(bridge, lambda: 1791900300)
+    contract = {"id": "put"}
+    assert reader.quotes([contract]) == []
+    selection = {**quote(1791900000), "contract": contract}
+    store = DailyResearch(tmp_path)
+    try:
+        store.save(
+            "decisions",
+            {
+                "decision_id": "nullable",
+                "research_protocol": bidirectional.PROTOCOL,
+                "put_selections": {"QQQ": selection},
+                "outcome_entry_time": 1791900300,
+                "outcome_exit_time": 1791903900,
+            },
+            "nullable",
+            1791900000,
+        )
+        bidirectional.observe_options(store, reader, 1791900300)
+        saved = store.records("option_observations")
+        assert len(saved) == 1
+        assert saved[0]["status"] == "UNAVAILABLE" and saved[0]["quote"] is None
+        assert (
+            put_outcome(selection, saved[0]["quote"], quote(1791903900), 1791900300, 1791903900)[
+                "net_return"
+            ]
+            is None
+        )
+        # Null rows must not discard a usable quote elsewhere in the same response.
+        response["data"]["results"].append(
+            {
+                "quote": {
+                    "instrument_id": "put",
+                    "updated_at": "2026-10-13T14:00:00+00:00",
+                    "bid_price": "1.95",
+                    "ask_price": "2",
+                    "bid_size": 10,
+                    "ask_size": 10,
+                    "volume": 100,
+                    "open_interest": 1000,
+                }
+            }
+        )
+        reader.clock = lambda: 1791900300
+        valid = reader.quotes(
+            [
+                {
+                    **contract,
+                    "chain_symbol": "QQQ",
+                    "type": "put",
+                    "expiration_date": "2026-11-20",
+                    "strike_price": "100",
+                    "trade_value_multiplier": "100",
+                }
+            ]
+        )
+        assert len(valid) == 1 and valid[0]["book"]["contract_id"] == "put"
+    finally:
+        store.close()
+
+
+@pytest.mark.parametrize("error_type", [ValueError, daily.Halt])
+@pytest.mark.parametrize("exhaust_deadline", [False, True])
+def test_put_discovery_continues_per_candidate_until_shared_deadline(
+    tmp_path, monkeypatch, error_type, exhaust_deadline
+):
+    from types import SimpleNamespace
+
+    from tradeagent.research import alpha_signals
+
+    clock = [100]
+    calls = []
+
+    @contextmanager
+    def factory(*args):
+        yield None
+
+    class Reader:
+        def __init__(self, bridge, clock):
+            pass
+
+        def select(self, symbol, spot, *, deadline):
+            calls.append((symbol, deadline))
+            if symbol == "AAPL":
+                clock[0] += 10 if exhaust_deadline else 1
+                raise error_type("synthetic chain/quote failure")
+            return {"symbol": symbol}
+
+    monkeypatch.setattr(daily, "PutReader", Reader)
+    monkeypatch.setattr(daily, "research_snapshot", lambda *args: SimpleNamespace(bid=100, ask=101))
+    monkeypatch.setattr(
+        alpha_signals,
+        "AlphaStrategy",
+        lambda *args: SimpleNamespace(predict=lambda *args: SimpleNamespace(direction=-1)),
+    )
+    pipeline = daily.Pipeline(
+        tmp_path, clock=lambda: clock[0], put_reader_factory=factory, evidence_kind="synthetic"
+    )
+    try:
+        selections = pipeline.select_puts(
+            {"candidates": [{"symbol": s} for s in ("AAPL", "QQQ", "IWM")]}, {}, 110
+        )
+        assert selections["AAPL"] is None
+        if exhaust_deadline:
+            assert calls == [("AAPL", 110)] and set(selections) == {"AAPL"}
+        else:
+            assert calls == [("AAPL", 110), ("QQQ", 110), ("IWM", 110)]
+            assert selections["QQQ"] == {"symbol": "QQQ"}
+            assert selections["IWM"] == {"symbol": "IWM"}
+    finally:
+        pipeline.store.close()
+
+
+def test_individual_results_remain_visible_without_complete_case_pairs(tmp_path):
+    from tradeagent.research.opportunity_workflow import DailyResearch
+
+    known = {"status": "AVAILABLE", "net_return": 0.01, "pnl_dollars": 10}
+    comparisons = {
+        name: {"direction": 1, "directional_benchmark": known, "instrument_simulation": known}
+        for name in bidirectional.ARMS
+    }
+    comparisons["codex_news"] = {
+        "direction": -1,
+        "directional_benchmark": known,
+        "instrument_simulation": {"status": "UNAVAILABLE", "net_return": None, "pnl_dollars": None},
+    }
+    store = DailyResearch(tmp_path)
+    try:
+        store.save(
+            "decisions",
+            {
+                "decision_id": "partial",
+                "research_protocol": bidirectional.PROTOCOL,
+                "evidence_kind": "synthetic",
+            },
+            "partial",
+            100,
+        )
+        store.save(
+            "outcomes",
+            {"decision_id": "partial", "evidence_kind": "synthetic", "comparisons": comparisons},
+            "partial",
+            200,
+        )
+        report = bidirectional.compare(store)["evidence_pools"]["synthetic"]["comparisons"]
+        instruments = report["instrument_simulation"]
+        quant = instruments["arms"]["quant_only"]
+        assert quant["observed_days"] == 1 and quant["observed_mean_net_return"] == 0.01
+        assert quant["observed_mean_pnl_dollars"] == 10
+        assert quant["paired_days"] == 0 and quant["mean_net_return"] is None
+        missing = instruments["arms"]["codex_news"]
+        assert missing["observed_days"] == 0 and missing["observed_mean_net_return"] is None
+        assert missing["observed_mean_pnl_dollars"] is None and missing["unavailable_days"] == 1
+        paired = instruments["paired_differences"]["quant_only"]["cash"]
+        assert paired["paired_days"] == 0
+        assert (
+            paired["mean_net_return_difference"] is None
+            and paired["mean_pnl_difference_dollars"] is None
+        )
+        assert report["directional_benchmark"]["arms"]["quant_only"]["paired_days"] == 1
+    finally:
+        store.close()

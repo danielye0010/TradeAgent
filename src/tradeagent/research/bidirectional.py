@@ -250,7 +250,22 @@ def compare(store):
                     if o["comparisons"].get(name)
                     and o["comparisons"][name][sleeve]["status"] == "AVAILABLE"
                 ]
+                observed = [
+                    o["comparisons"][name][sleeve]
+                    for o in rows
+                    if o["comparisons"].get(name)
+                    and o["comparisons"][name][sleeve]["status"] == "AVAILABLE"
+                ]
                 stats[name] = {
+                    "observed_days": len(observed),
+                    "observed_mean_net_return": sum(v["net_return"] for v in observed)
+                    / len(observed)
+                    if observed
+                    else None,
+                    "observed_mean_pnl_dollars": sum(v["pnl_dollars"] for v in observed)
+                    / len(observed)
+                    if observed
+                    else None,
                     "paired_days": len(values),
                     "mean_net_return": sum(v["net_return"] for v in values) / len(values)
                     if values

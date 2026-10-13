@@ -82,7 +82,9 @@ class PutReader:
         result = []
         seen = set()
         for item in raw.get("results") or []:
-            q = item.get("quote") or {}
+            if item is None or item.get("quote") is None:
+                continue
+            q = item["quote"]
             cid = q.get("instrument_id")
             if cid not in by_id or cid in seen:
                 raise ValueError("unexpected or duplicate option quote")
