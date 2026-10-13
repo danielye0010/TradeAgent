@@ -133,7 +133,7 @@ The six-month RSI thesis needs genuinely prospective generation comparisons,
 cost-sensitive results and selector controls. A passing synthetic demo cannot answer it.
 
 
-## Bidirectional daily SHADOW research (manual, v3)
+## Bidirectional daily SHADOW research (v3)
 
 `daily-bidirectional-v3` reuses the daily pipeline and three Alpha families. The
 frozen `daily-four-arm-v1` and `daily-news-v2` decisions, configuration and timers
@@ -162,8 +162,22 @@ python -m tradeagent.prospective.daily --protocol daily-bidirectional-v3 \
 Run the capture tick during 10:30–10:37 New York time. Inspect its frozen decision
 for `outcome_entry_time` and `outcome_exit_time`; run the same manual command at
 each endpoint to capture actual option quotes, then at least sixty seconds after
-exit to resolve. No v3 timer is installed or enabled. Missed quotes are UNAVAILABLE.
+exit to resolve. Missed quotes are UNAVAILABLE.
 Do not point this command at an existing experiment directory.
+
+`scripts/install_shadow.py --daily --protocol daily-bidirectional-v3 --python PATH
+--state-dir PATH --universe-profile config/research-universe-profile.json
+--prepare-only` prepares and verifies a separate disabled timer. Its minute ticks
+at 10:30–11:59 ET cover the variable frozen entry/exit minutes; 12:00 and 17:10
+ET resolve later observations. The existing one-shot service and research lock
+prevent overlapping capture; ticks never recreate a missed observation. Enable
+only after genuine option access and both Codex modes are verified.
+
+The same CLI model and Code Mode host configuration serves both price/news arms;
+shell, broker and filesystem tools remain disabled. A v3 news result requires an
+actual search event and a cited HTTPS source. The price arm keeps search disabled.
+`daily-pnl.md` gives readable instrument P&L and a separate theoretical benchmark;
+the append-only experience journal remains the source of truth.
 
 A Put contract is chosen before the decision freezes: earliest expiry 14–35 calendar
 days away, nearest liquid of three strikes to contemporaneous spot, standard 100

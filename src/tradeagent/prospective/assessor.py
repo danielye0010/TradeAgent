@@ -142,7 +142,7 @@ def assess_news(report, *, executable="codex", timeout=300, now=None, search=Tru
         prompt = prompt.replace("one-hour long trade", "one-hour LONG or BEARISH opportunity")
         prompt = prompt.replace("long, watch or avoid", "long, bearish, watch or avoid")
         prompt += "\nBearish means a negative directional hypothesis for Put SHADOW research. Rising or falling price alone is insufficient: abstain without an attractive supported opportunity."
-    return run(
+    document, provenance = run(
         prompt,
         schema,
         candidates,
@@ -152,6 +152,13 @@ def assess_news(report, *, executable="codex", timeout=300, now=None, search=Tru
         allowed_items={"web_search"} if search else set(),
         report_search=True,
     )
+    if report.get("research_protocol") == "daily-bidirectional-v3" and search:
+        sources = [s for item in document["assessments"] for s in item["sources"]]
+        if not provenance["web_searches"] or not any(
+            s["url"].startswith("https://") for s in sources
+        ):
+            raise ValueError("live news requires an observed web search and cited HTTPS source")
+    return document, provenance
 
 
 def run(
@@ -190,12 +197,15 @@ def run(
             "--config",
             f'web_search="{web_search}"',
             "--config",
+            "features.code_mode=true",
+            "--config",
+            "features.code_mode_host=true",
+            "--config",
             "features.skip_host_skill_discovery=true",
             "--config",
             "suppress_unstable_features_warning=true",
         ]
         for feature in (
-            "code_mode",
             "shell_tool",
             "unified_exec",
             "apps",
@@ -208,7 +218,6 @@ def run(
             "multi_agent_v2",
             "skill_search",
             "workspace_dependencies",
-            "code_mode_host",
             "image_generation",
             "view_image",
         ):

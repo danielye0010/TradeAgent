@@ -377,3 +377,126 @@ def test_price_arm_rejects_any_search_activity(tmp_path):
     )
     with pytest.raises(ValueError, match="tool activity"):
         assess_news(report, executable=str(executable), now=NOW, search=False)
+
+
+def test_v3_news_requires_actual_search_and_cited_source(tmp_path):
+    report = scan(market(), now=NOW, candidate_count=1)
+    report["research_protocol"] = "daily-bidirectional-v3"
+    doc = cli_document(report)
+    for searches, sources in (
+        ([], doc["assessments"][0]["sources"]),
+        ([{"item": {"type": "web_search", "id": "one"}}], []),
+    ):
+        document = {"assessments": [{**doc["assessments"][0], "sources": sources}]}
+        executable = fake_codex(tmp_path, document, searches)
+        with pytest.raises(ValueError, match="observed web search"):
+            assess_news(report, executable=str(executable), now=NOW)
+        assert (
+            assess_news(
+                report, executable=str(fake_codex(tmp_path, document, [])), now=NOW, search=False
+            )[1]["web_searches"]
+            == 0
+        )
+
+
+def test_installer_prepares_minute_aligned_v3_without_enabling_or_changing_v1_v2(
+    tmp_path, monkeypatch
+):
+    spec = importlib.util.spec_from_file_location("install_v3", "scripts/install_shadow.py")
+    installer = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(installer)
+    from test_bidirectional import profile
+
+    interpreter = tmp_path / "venv/bin/python"
+    interpreter.parent.mkdir(parents=True)
+    interpreter.touch()
+    measured = tmp_path / "profile.json"
+    measured.write_text(json.dumps(profile()))
+    monkeypatch.setattr(installer.Path, "home", lambda: tmp_path)
+    calls = []
+    monkeypatch.setattr(installer.subprocess, "run", lambda args, **kwargs: calls.append(args))
+    units = tmp_path / ".config/systemd/user"
+    units.mkdir(parents=True)
+    v1, v2 = units / "tradeagent-daily-research.timer", units / "tradeagent-daily-news.timer"
+    v1.write_text("frozen v1")
+    v2.write_text("frozen v2")
+    installer.install_daily(
+        tmp_path / "state",
+        tmp_path / "helper",
+        interpreter,
+        "daily-bidirectional-v3",
+        universe_profile=measured,
+        enable=False,
+    )
+    timer = (units / "tradeagent-daily-bidirectional.timer").read_text()
+    service = (units / "tradeagent-daily-bidirectional.service").read_text()
+    assert "10:30..59:00 America/New_York" in timer and "11:00..59:00 America/New_York" in timer
+    assert "12:00:00 America/New_York" in timer and "17:10:00 America/New_York" in timer
+    assert "--universe-profile " + str(measured) in service
+    assert "--protocol daily-bidirectional-v3" in service
+    assert "--user" in calls[0] and "verify" in calls[0]
+    assert not any("enable" in command for command in calls)
+    assert v1.read_text() == "frozen v1" and v2.read_text() == "frozen v2"
+
+
+def test_code_mode_configuration_keeps_price_news_arms_identical_and_shell_disabled(tmp_path):
+    report = scan(market(), now=NOW, candidate_count=1)
+    doc = cli_document(report)
+    executable, log = recording_codex(tmp_path, doc)
+    assess_news(report, executable=str(executable), now=NOW, search=False)
+    assess_news(report, executable=str(executable), now=NOW, search=True)
+    first, second = (json.loads(line) for line in log.read_text().splitlines())
+    for call in (first, second):
+        args = call["argv"]
+        assert "features.code_mode=true" in args and "features.code_mode_host=true" in args
+        assert args.index("features.code_mode=true") > args.index("exec")
+        assert [args[i + 1] for i, a in enumerate(args[:-1]) if a == "--disable"].count(
+            "shell_tool"
+        ) == 1
+        assert "unified_exec" in args and "apps" in args and "plugins" in args
+
+
+def test_readable_pnl_preserves_pending_and_unavailable_without_bearish_substitution(tmp_path):
+    from test_bidirectional import assessment, candidate
+
+    from tradeagent.research import bidirectional
+    from tradeagent.research.opportunity_workflow import DailyResearch
+
+    store = DailyResearch(tmp_path)
+    arms = bidirectional.select(
+        [candidate()],
+        assessment("bearish"),
+        assessment("bearish"),
+        "VALID",
+        "VALID",
+        "seed",
+        1791900000,
+    )
+    decision = {
+        "decision_id": "report",
+        "research_protocol": bidirectional.PROTOCOL,
+        "decision_time": 1791900000,
+        "outcome_entry_time": 1791900300,
+        "outcome_exit_time": 1791903900,
+        "comparisons": arms,
+        "put_selections": {},
+        "quantitative_observations": [candidate(), {**candidate(), "symbol": "SPY"}],
+    }
+    try:
+        store.save("decisions", decision, "report", 1791900000)
+        assert "PENDING" in bidirectional.pnl_report(store)
+        observed = {
+            s: {"gross": -0.02, "entry_price": 100, "exit_price": 98} for s in ("QQQ", "SPY")
+        }
+        prices = bidirectional.resolve_arms(decision, observed, [])
+        store.save(
+            "outcomes", {"decision_id": "report", "comparisons": prices}, "report", 1791903960
+        )
+        text = bidirectional.pnl_report(store)
+        funded, theory = text.split("## Theoretical underlying benchmark")
+        assert "| QQQ | BEARISH | LONG_PUT | — | — |" in funded
+        assert "UNAVAILABLE" in funded and "18.02" not in funded
+        assert "18.02" in theory and "non-executable" in theory
+        assert "SPY" in funded and "CASH" in funded
+    finally:
+        store.close()

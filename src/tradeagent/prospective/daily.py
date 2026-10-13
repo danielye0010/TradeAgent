@@ -625,6 +625,10 @@ class Pipeline:
                 "orders_submitted": 0,
             }
             write(self.directory / "daily-status.json", status)
+            if self.bidirectional:
+                (self.directory / "daily-pnl.md").write_text(
+                    bidirectional.pnl_report(self.store), encoding="utf-8"
+                )
             return status
 
 

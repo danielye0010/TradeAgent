@@ -334,3 +334,101 @@ def compare(store):
         "evidence_pools": pools,
         "orders_submitted": 0,
     }
+
+
+def pnl_report(store):
+    """Readable derivative of frozen decisions/outcomes; no substitutes for missing prices."""
+    decisions = [d for d in store.records("decisions") if d.get("research_protocol") == PROTOCOL]
+    lines = [
+        "# Bidirectional SHADOW P&L",
+        "",
+        "$1,000 capital per strategy, including unused option cash. Modeled prices/P&L, not broker fills.",
+        "",
+    ]
+    if not decisions:
+        return "\n".join(lines + ["PENDING: no prospective decision recorded.", ""])
+    decision = decisions[-1]
+    from .domain import iso
+
+    lines += [
+        f"Decision: {iso(decision['decision_time'])}",
+        f"Entry window: {iso(decision['outcome_entry_time'])}; exit window: {iso(decision['outcome_exit_time'])} (60 seconds each).",
+        "",
+    ]
+    outcome = next(
+        (o for o in store.records("outcomes") if o["decision_id"] == decision["decision_id"]), None
+    )
+    labels = {
+        "quant_only": "Quant Only",
+        "codex_price": "Codex Price",
+        "codex_news": "Codex News",
+        "quant_codex": "Quant + Codex",
+        "spy": "SPY",
+        "cash": "CASH",
+        "seeded_random": "Random (secondary)",
+    }
+
+    def number(value, percent=False):
+        return (
+            "—"
+            if value is None
+            else f"{value * 100 if percent else value:.2f}" + ("%" if percent else "")
+        )
+
+    for sleeve, title in (
+        ("instrument_simulation", "Funded equity/Put/cash simulations"),
+        (
+            "directional_benchmark",
+            "Theoretical underlying benchmark — bearish exposure is non-executable, not Put P&L",
+        ),
+    ):
+        lines += [
+            f"## {title}",
+            "",
+            "| Strategy | Symbol | Direction | Instrument | Entry | Exit | Put contracts | Premium $ | Idle cash $ | P&L $ | Return | Status |",
+            "| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
+        ]
+        notes = []
+        for name in ARMS:
+            arm = decision["comparisons"][name]
+            resolved = (outcome or {}).get("comparisons", {}).get(name)
+            price = resolved[sleeve] if resolved else {}
+            status = price.get(
+                "status", "UNAVAILABLE" if arm["status"] == "UNAVAILABLE" else "PENDING"
+            )
+            instrument = price.get(
+                "instrument",
+                arm["instrument"]
+                if sleeve == "instrument_simulation"
+                else "THEORETICAL_BEARISH_UNDERLYING"
+                if arm["shadow_direction"] < 0
+                else arm["instrument"],
+            )
+            lines.append(
+                "| "
+                + " | ".join(
+                    [
+                        labels[name],
+                        arm["symbol"] or "—",
+                        arm["decision"],
+                        instrument,
+                        number(price.get("entry_price")),
+                        number(price.get("exit_price")),
+                        str(price.get("contracts", "—")),
+                        number(price.get("premium_required")),
+                        number(price.get("idle_cash")),
+                        number(price.get("pnl_dollars")),
+                        number(price.get("net_return"), True),
+                        status,
+                    ]
+                )
+                + " |"
+            )
+            if price.get("reason"):
+                notes.append(f"{name}: {price['reason']}")
+        lines += ["", *notes, ""]
+    lines += [
+        "Equity uses minute prices and frozen estimated costs. Put uses observed entry ask / exit bid, multiplier 100; unknown option fees remain unobserved. Missing prices/P&L are not zero.",
+        "",
+    ]
+    return "\n".join(lines)
