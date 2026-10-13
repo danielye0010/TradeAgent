@@ -440,11 +440,17 @@ class Pipeline:
                                 report, lambda: self.assessor(report), None
                             )
                             news_status, news_error, news_provenance = "UNAVAILABLE", None, {}
+                        if news:
+                            # Keep the assessed shortlist frozen; refresh once for every
+                            # arm after both Codex calls, which can outlive quote freshness.
+                            data = self.collector(UNIVERSE, self.provider, self.helper)
+                            if (data["session_open"], data["session_close"]) != session_bounds(day):
+                                raise ValueError("provider session differs from XNYS calendar")
+                            write(self.directory / "captures" / (identity(data) + ".json"), data)
                         frozen = self.clock()
                         if not target[0] <= frozen < target[1]:
                             raise ValueError("assessment finished after fixed decision window")
-                        # Freshness/completion validation applies to the SAME evidence
-                        # for every arm; no extra market look given to Quant after Codex.
+                        # All arms share the same decision data and freshness checks.
                         for candidate in report["candidates"]:
                             research_snapshot(data, candidate["symbol"], frozen)
                         decision = self.store.decide(

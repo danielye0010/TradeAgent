@@ -95,6 +95,63 @@ def test_news_protocol_freezes_five_paired_arms_and_resolves(tmp_path):
         pipeline.store.close()
 
 
+def test_slow_news_refreshes_shared_market_data_without_rescanning(tmp_path):
+    working = news_assessment(["long"])
+    reports, captures = [], []
+    start = daily.window(DAY, daily.NEWS_PROTOCOL)[0]
+
+    def assessor(report, now=None, search=True):
+        reports.append((report, now))
+        if search:
+            clock[0] = start + 300  # Simulated Codex deadline; no wall-clock wait.
+        return working(report, now=now, search=search)
+
+    pipeline, clock = pipeline_for(tmp_path, assessor)
+
+    def collector(symbols, provider, helper, *, session=None):
+        assert set(symbols) == set(daily.UNIVERSE)
+        data = data_for(session or DAY, clock[0])
+        if captures:
+            for quote in data["quotes"].values():
+                quote["ask"] += 0.18  # Decision costs must use the refreshed quotes.
+            clock[0] += 2  # Freeze time must include market-data collection latency.
+        captures.append(data)
+        return data
+
+    pipeline.collector = collector
+    try:
+        result = pipeline.tick()
+        assert result["run"]["status"] == "COMPLETED"
+        decision = pipeline.store.decision()
+        assert len(captures) == 2
+        assert len(reports) == 2 and sorted(working.calls) == [False, True]
+        assert reports[0][0] is reports[1][0]
+        assert all(now == start for _, now in reports)
+        report = reports[0][0]
+        assert report["market_observed_at"] == start
+        assert decision["scan_id"] == report["scan_id"]
+        assert decision["candidate_pool"] == report["candidate_pool"]
+        assert decision["market_observed_at"] == start + 300
+        assert decision["freeze_time"] == start + 302
+        assert set(decision["comparison_universe"]) == {c["symbol"] for c in report["candidates"]}
+        assert set(decision["comparisons"]) == set(daily.NEWS_ARMS)
+        assert all(a["status"] == "VALID" for a in decision["comparisons"].values())
+        for candidate in decision["quantitative_observations"]:
+            assert candidate["predictions"] and not candidate["limitations"]
+            quote = captures[-1]["quotes"][candidate["symbol"]]
+            spread = (quote["ask"] - quote["bid"]) / ((quote["ask"] + quote["bid"]) / 2) * 10000
+            assert all(
+                p["features"]["observed_spread_bps"] == pytest.approx(spread)
+                and p["decision_time"] == decision["freeze_time"]
+                for p in candidate["predictions"]
+            )
+        assert len(pipeline.store.records("scans")) == 1
+        assert len(list((tmp_path / "captures").glob("*.json"))) == 2
+        assert decision["selected_plan"] is None and result["orders_submitted"] == 0
+    finally:
+        pipeline.store.close()
+
+
 def test_news_failure_leaves_price_arms_valid(tmp_path):
     working = news_assessment(["long"])
 
