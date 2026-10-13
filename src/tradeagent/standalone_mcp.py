@@ -98,6 +98,7 @@ class ExternalOAuthToken:
 
 
 class StandaloneMCP:
+    read_tools = READ_TOOLS
     is_simulation = False
     require_server_version = True
 
@@ -156,7 +157,7 @@ class StandaloneMCP:
     def rpc(self, method, params, *, notification=False, before_send=None):
         if method not in {"initialize", "notifications/initialized", "tools/list", "tools/call"}:
             raise Halt("unsupported standalone protocol method")
-        if method == "tools/call" and params.get("name") not in READ_TOOLS:
+        if method == "tools/call" and params.get("name") not in self.read_tools:
             if type(before_send) is not WireAuthorization:
                 raise Halt("execution requires the single owner lifecycle boundary")
         self.serial += 1
@@ -203,7 +204,7 @@ class StandaloneMCP:
             if response.status not in ({202} if notification else {200}):
                 if (
                     method == "tools/call"
-                    and params.get("name") in READ_TOOLS
+                    and params.get("name") in self.read_tools
                     and response.status in {429, 502, 503, 504}
                 ):
                     raise TransientReadFailure(f"idempotent read HTTP {response.status}")
@@ -245,14 +246,14 @@ class StandaloneMCP:
         except Halt as exc:
             if (
                 method == "tools/call"
-                and params.get("name") in READ_TOOLS
+                and params.get("name") in self.read_tools
                 and str(exc)
                 in {"MCP stream disconnected; no replay", "MCP stream deadline; no replay"}
             ):
                 raise TransientReadFailure("idempotent read stream interrupted") from exc
             raise
         except (OSError, http.client.HTTPException) as exc:
-            if method == "tools/call" and params.get("name") in READ_TOOLS:
+            if method == "tools/call" and params.get("name") in self.read_tools:
                 raise TransientReadFailure("idempotent read network failure") from exc
             raise Halt("MCP network/response failure; outcome unresolved; no replay") from exc
         except ValueError as exc:
@@ -311,7 +312,7 @@ class StandaloneMCP:
 
     def read(self, name, arguments=None):
         if (
-            name not in READ_TOOLS
+            name not in self.read_tools
             or self.tools.get(name, {}).get("annotations", {}).get("readOnlyHint") is not True
         ):
             raise Halt("standalone read capability rejects writes")
@@ -340,7 +341,7 @@ class ReadOnlyMCP(StandaloneMCP):
 
     def rpc(self, method, params, *, notification=False, before_send=None):
         if before_send is not None or (
-            method == "tools/call" and params.get("name") not in READ_TOOLS
+            method == "tools/call" and params.get("name") not in self.read_tools
         ):
             raise Halt("read-only preflight cannot review, place, cancel or authorize writes")
         return super().rpc(method, params, notification=notification)

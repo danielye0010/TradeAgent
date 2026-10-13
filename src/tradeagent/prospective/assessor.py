@@ -128,9 +128,23 @@ def assess_news(report, *, executable="codex", timeout=300, now=None, search=Tru
         "already priced in. Do not estimate returns or give numerical confidence.\n"
         + json.dumps({"candidates": candidates}, allow_nan=False)
     )
+    schema = NEWS_SCHEMA
+    if report.get("research_protocol") == "daily-bidirectional-v3":
+        import copy
+
+        schema = copy.deepcopy(NEWS_SCHEMA)
+        schema["properties"]["assessments"]["items"]["properties"]["stance"]["enum"] = [
+            "long",
+            "bearish",
+            "watch",
+            "avoid",
+        ]
+        prompt = prompt.replace("one-hour long trade", "one-hour LONG or BEARISH opportunity")
+        prompt = prompt.replace("long, watch or avoid", "long, bearish, watch or avoid")
+        prompt += "\nBearish means a negative directional hypothesis for Put SHADOW research. Rising or falling price alone is insufficient: abstain without an attractive supported opportunity."
     return run(
         prompt,
-        NEWS_SCHEMA,
+        schema,
         candidates,
         executable=executable,
         timeout=timeout,

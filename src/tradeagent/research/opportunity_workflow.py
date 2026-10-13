@@ -25,11 +25,12 @@ from .tradeplan import (
 
 SKILL_VERSION = "trade-opportunity-analyst-v4"
 NEWS_PROTOCOL = "daily-news-v2"
-SHADOW_PROTOCOLS = ("daily-four-arm-v1", NEWS_PROTOCOL)
+BIDIRECTIONAL_PROTOCOL = "daily-bidirectional-v3"
+SHADOW_PROTOCOLS = ("daily-four-arm-v1", NEWS_PROTOCOL, BIDIRECTIONAL_PROTOCOL)
 ARMS = ("quant_only", "codex_only", "quant_codex")
 
 
-def research_support(candidate, assessment, now):
+def research_support(candidate, assessment, now, *, allow_bearish=False):
     """Price action can support a thesis without news; event-only claims need proof."""
     event = candidate.get("event_evidence") or {}
     event_only = set(candidate["categories"]) == {"verified_event"}
@@ -57,7 +58,7 @@ def research_support(candidate, assessment, now):
     reasons = []
     if not assessment:
         reasons.append("Codex abstained: no frozen assessment")
-    elif assessment["stance"] != "long":
+    elif assessment["stance"] not in ({"long", "bearish"} if allow_bearish else {"long"}):
         reasons.append(
             "Codex challenged the thesis"
             if assessment["stance"] == "avoid"
@@ -117,6 +118,7 @@ class DailyResearch:
             "symbol_outcomes",
             "resolution_failures",
             "sessions",
+            "option_observations",
         ):
             table = "opportunity_" + name
             self.db.execute(
@@ -144,6 +146,7 @@ class DailyResearch:
             "symbol_outcomes",
             "resolution_failures",
             "sessions",
+            "option_observations",
         }:
             raise ValueError("unknown daily research record")
         key = key or identity(item)
@@ -174,6 +177,7 @@ class DailyResearch:
             "symbol_outcomes",
             "resolution_failures",
             "sessions",
+            "option_observations",
         }:
             raise ValueError("unknown daily research record")
         return [
@@ -221,7 +225,12 @@ class DailyResearch:
         if not report["decision_time"] <= observed <= now:
             raise ValueError("assessment observation is outside the actual research window")
         if (
-            item["stance"] not in {"long", "watch", "avoid"}
+            item["stance"]
+            not in (
+                {"long", "bearish", "watch", "avoid"}
+                if report.get("research_protocol") == BIDIRECTIONAL_PROTOCOL
+                else {"long", "watch", "avoid"}
+            )
             or type(item["rank"]) is not int
             or item["rank"] < 1
         ):
@@ -261,6 +270,11 @@ class DailyResearch:
             for p in c["predictions"]
         }
         invalid_decisions = {r["decision_id"] for r in self.records("resolution_failures")}
+        invalid_decisions |= {
+            d["decision_id"]
+            for d in self.records("decisions")
+            if d.get("research_protocol") == BIDIRECTIONAL_PROTOCOL
+        }
         rows = [
             {
                 **r,
@@ -431,6 +445,7 @@ class DailyResearch:
         shadow_protocol=None,
         assessment_status="VALID",
         news_assessment_status="UNAVAILABLE",
+        put_selections=None,
     ):
         failure = scan_failure(report)
         if failure:
@@ -545,7 +560,9 @@ class DailyResearch:
                 errors.append(str(error))
             approved = [p for p in plans if p["decision"]["kind"] == "UNDERLYING"]
             best = max(approved, key=lambda p: p["economics"]["lower_net_estimate"], default=None)
-            support = research_support(candidate, research, now)
+            support = research_support(
+                candidate, research, now, allow_bearish=shadow_protocol == BIDIRECTIONAL_PROTOCOL
+            )
             combined = best if support["supported"] else None
             coverage.append(
                 {
@@ -663,12 +680,15 @@ class DailyResearch:
             randomized = random.Random(seed).choice(
                 [None, *sorted(eligible, key=lambda c: c["symbol"])]
             )
-            if shadow_protocol == NEWS_PROTOCOL:
+            if shadow_protocol in {NEWS_PROTOCOL, BIDIRECTIONAL_PROTOCOL}:
                 # Same candidates, timestamp, entry/exit and costs: the only difference
                 # between codex_price and codex_news is whether Codex could read the news.
                 for c in eligible:
                     c["news_support"] = research_support(
-                        c["scanner"], news_assessments.get(c["symbol"]), now
+                        c["scanner"],
+                        news_assessments.get(c["symbol"]),
+                        now,
+                        allow_bearish=shadow_protocol == BIDIRECTIONAL_PROTOCOL,
                     )
                 news_ai = min(
                     (c for c in eligible if c["news_support"]["supported"]),
@@ -716,6 +736,18 @@ class DailyResearch:
                     if unavailable
                     else "frozen research selection; no proven profitability",
                 }
+        if shadow_protocol == BIDIRECTIONAL_PROTOCOL:
+            from .bidirectional import select
+
+            arms = select(
+                eligible,
+                assessments,
+                news_assessments,
+                assessment_status,
+                news_assessment_status,
+                seed,
+                now,
+            )
         experimental = (
             max(
                 (c for c in coverage if c["experimental_plan"] and c["symbol"] in authorized),
@@ -800,8 +832,11 @@ class DailyResearch:
                 decision_status="SHADOW_ONLY",
                 freeze_time=now,
             )
-            if shadow_protocol == NEWS_PROTOCOL:
+            if shadow_protocol in {NEWS_PROTOCOL, BIDIRECTIONAL_PROTOCOL}:
                 result["news_assessment_status"] = news_assessment_status
+        if shadow_protocol == BIDIRECTIONAL_PROTOCOL:
+            result["put_selections"] = put_selections or {}
+            result["research_decision"] = arms["quant_codex"]["decision"]
         result["decision_id"] = identity(result)
         self.save("decisions", result, result["decision_id"], now)
         return result
@@ -845,6 +880,11 @@ class DailyResearch:
                         "reason": "source/evidence pool mismatch",
                     }
                 )
+                continue
+            if (
+                decision.get("research_protocol") == BIDIRECTIONAL_PROTOCOL
+                and now < decision["outcome_exit_time"] + 60
+            ):
                 continue
             observed, economic = {}, []
             for candidate in decision.get(
@@ -926,8 +966,18 @@ class DailyResearch:
                             "regime": prediction["context"].get("regime"),
                             "comparison_context": comparison_context(prediction["features"], costs),
                             "sampling_key": prediction["features"].get("sampling_key"),
-                            "active": prediction["direction"] > 0,
+                            "active": bool(prediction["direction"])
+                            if decision.get("research_protocol") == BIDIRECTIONAL_PROTOCOL
+                            else prediction["direction"] > 0,
                             "gross": gross,
+                            **(
+                                {
+                                    "predicted_direction": prediction["direction"],
+                                    "directional_gross": prediction["direction"] * gross,
+                                }
+                                if decision.get("research_protocol") == BIDIRECTIONAL_PROTOCOL
+                                else {}
+                            ),
                         }
                     )
                 if candidate["predictions"] and "quantitative_observations" in decision:
@@ -975,6 +1025,10 @@ class DailyResearch:
                 )
                 for name, arm in decision["comparisons"].items()
             }
+            if decision.get("research_protocol") == BIDIRECTIONAL_PROTOCOL:
+                from .bidirectional import resolve_arms
+
+                arms = resolve_arms(decision, observed, self.records("option_observations"))
             item = {
                 "decision_id": decision["decision_id"],
                 "resolved_at": now,

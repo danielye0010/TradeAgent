@@ -1,0 +1,696 @@
+{
+  "server_version": "1.8.0",
+  "tools": {
+    "get_option_chains": {
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "type": "string"
+          },
+          "underlying_symbol": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "chains": {
+                "type": [
+                  "null",
+                  "array"
+                ],
+                "items": {
+                  "type": [
+                    "null",
+                    "object"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "symbol": {
+                      "type": "string"
+                    },
+                    "can_open_position": {
+                      "type": "boolean"
+                    },
+                    "cash_component": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "expiration_dates": {
+                      "type": [
+                        "null",
+                        "array"
+                      ],
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "trade_value_multiplier": {
+                      "type": "string"
+                    },
+                    "underlying_instruments": {
+                      "type": [
+                        "null",
+                        "array"
+                      ],
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "instrument": {
+                            "type": "string"
+                          },
+                          "symbol": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "instrument",
+                          "symbol"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "min_ticks": {
+                      "type": "object",
+                      "properties": {
+                        "above_tick": {
+                          "type": "string"
+                        },
+                        "below_tick": {
+                          "type": "string"
+                        },
+                        "cutoff_price": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "above_tick",
+                        "below_tick",
+                        "cutoff_price"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "late_close_state": {
+                      "type": "string"
+                    },
+                    "extended_hours_state": {
+                      "type": "string"
+                    },
+                    "settle_on_open": {
+                      "type": "boolean"
+                    },
+                    "sellout_time_to_expiration": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "symbol",
+                    "can_open_position",
+                    "cash_component",
+                    "expiration_dates",
+                    "trade_value_multiplier",
+                    "underlying_instruments",
+                    "min_ticks",
+                    "late_close_state",
+                    "extended_hours_state",
+                    "settle_on_open",
+                    "sellout_time_to_expiration"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "chains"
+            ],
+            "additionalProperties": false
+          },
+          "guide": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "guide"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    "get_option_instruments": {
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "chain_id": {
+            "type": "string"
+          },
+          "chain_symbol": {
+            "type": "string"
+          },
+          "expiration_dates": {
+            "type": "string"
+          },
+          "strike_price": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "tradability": {
+            "type": "string"
+          },
+          "ids": {
+            "type": "string"
+          },
+          "cursor": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "instruments": {
+                "type": [
+                  "null",
+                  "array"
+                ],
+                "items": {
+                  "type": [
+                    "null",
+                    "object"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "chain_id": {
+                      "type": "string"
+                    },
+                    "chain_symbol": {
+                      "type": "string"
+                    },
+                    "underlying_type": {
+                      "type": "string"
+                    },
+                    "expiration_date": {
+                      "type": "string"
+                    },
+                    "sellout_datetime": {
+                      "type": "string"
+                    },
+                    "strike_price": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    },
+                    "state": {
+                      "type": "string"
+                    },
+                    "tradability": {
+                      "type": "string"
+                    },
+                    "trade_value_multiplier": {
+                      "type": "string"
+                    },
+                    "min_ticks": {
+                      "type": "object",
+                      "properties": {
+                        "above_tick": {
+                          "type": "string"
+                        },
+                        "below_tick": {
+                          "type": "string"
+                        },
+                        "cutoff_price": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "above_tick",
+                        "below_tick",
+                        "cutoff_price"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "chain_id",
+                    "chain_symbol",
+                    "underlying_type",
+                    "expiration_date",
+                    "sellout_datetime",
+                    "strike_price",
+                    "type",
+                    "state",
+                    "tradability",
+                    "trade_value_multiplier",
+                    "min_ticks"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "next": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "instruments"
+            ],
+            "additionalProperties": false
+          },
+          "guide": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "guide"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    "get_option_quotes": {
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "instrument_ids": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "instrument_ids"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "results": {
+                "type": [
+                  "null",
+                  "array"
+                ],
+                "items": {
+                  "type": [
+                    "null",
+                    "object"
+                  ],
+                  "properties": {
+                    "quote": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "properties": {
+                        "instrument_id": {
+                          "type": "string"
+                        },
+                        "ask_price": {
+                          "type": "string"
+                        },
+                        "ask_size": {
+                          "type": "integer"
+                        },
+                        "bid_price": {
+                          "type": "string"
+                        },
+                        "bid_size": {
+                          "type": "integer"
+                        },
+                        "break_even_price": {
+                          "type": "string"
+                        },
+                        "adjusted_mark_price": {
+                          "type": "string"
+                        },
+                        "mark_price": {
+                          "type": "string"
+                        },
+                        "high_fill_rate_buy_price": {
+                          "type": "string"
+                        },
+                        "low_fill_rate_buy_price": {
+                          "type": "string"
+                        },
+                        "high_fill_rate_sell_price": {
+                          "type": "string"
+                        },
+                        "low_fill_rate_sell_price": {
+                          "type": "string"
+                        },
+                        "previous_close_price": {
+                          "type": "string"
+                        },
+                        "previous_close_date": {
+                          "type": "string"
+                        },
+                        "implied_volatility": {
+                          "type": [
+                            "null",
+                            "string"
+                          ]
+                        },
+                        "delta": {
+                          "type": [
+                            "null",
+                            "string"
+                          ]
+                        },
+                        "gamma": {
+                          "type": [
+                            "null",
+                            "string"
+                          ]
+                        },
+                        "rho": {
+                          "type": [
+                            "null",
+                            "string"
+                          ]
+                        },
+                        "theta": {
+                          "type": [
+                            "null",
+                            "string"
+                          ]
+                        },
+                        "vega": {
+                          "type": [
+                            "null",
+                            "string"
+                          ]
+                        },
+                        "open_interest": {
+                          "type": "integer"
+                        },
+                        "volume": {
+                          "type": "integer"
+                        },
+                        "chance_of_profit_long": {
+                          "type": [
+                            "null",
+                            "string"
+                          ]
+                        },
+                        "chance_of_profit_short": {
+                          "type": [
+                            "null",
+                            "string"
+                          ]
+                        },
+                        "updated_at": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "instrument_id",
+                        "ask_price",
+                        "ask_size",
+                        "bid_price",
+                        "bid_size",
+                        "break_even_price",
+                        "adjusted_mark_price",
+                        "mark_price",
+                        "high_fill_rate_buy_price",
+                        "low_fill_rate_buy_price",
+                        "high_fill_rate_sell_price",
+                        "low_fill_rate_sell_price",
+                        "previous_close_price",
+                        "previous_close_date",
+                        "implied_volatility",
+                        "delta",
+                        "gamma",
+                        "rho",
+                        "theta",
+                        "vega",
+                        "open_interest",
+                        "volume",
+                        "chance_of_profit_long",
+                        "chance_of_profit_short",
+                        "updated_at"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "close": {
+                      "type": [
+                        "null",
+                        "object"
+                      ],
+                      "properties": {
+                        "instrument_id": {
+                          "type": "string"
+                        },
+                        "symbol": {
+                          "type": "string"
+                        },
+                        "date": {
+                          "type": [
+                            "null",
+                            "string"
+                          ]
+                        },
+                        "price": {
+                          "type": [
+                            "null",
+                            "string"
+                          ]
+                        },
+                        "interpolated": {
+                          "type": [
+                            "null",
+                            "boolean"
+                          ]
+                        },
+                        "source": {
+                          "type": [
+                            "null",
+                            "string"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "instrument_id",
+                        "symbol",
+                        "date",
+                        "price",
+                        "interpolated",
+                        "source"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "quote"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "closes_error": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "results"
+            ],
+            "additionalProperties": false
+          },
+          "guide": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "guide"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    "get_option_historicals": {
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "instrument_ids": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "start_time": {
+            "type": "string"
+          },
+          "end_time": {
+            "type": "string"
+          },
+          "interval": {
+            "type": "string"
+          },
+          "bounds": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "instrument_ids",
+          "start_time"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "results": {
+                "type": [
+                  "null",
+                  "array"
+                ],
+                "items": {
+                  "type": [
+                    "null",
+                    "object"
+                  ],
+                  "properties": {
+                    "instrument_id": {
+                      "type": "string"
+                    },
+                    "occ_symbol": {
+                      "type": "string"
+                    },
+                    "symbol": {
+                      "type": "string"
+                    },
+                    "interval": {
+                      "type": "string"
+                    },
+                    "bounds": {
+                      "type": "string"
+                    },
+                    "bars": {
+                      "type": [
+                        "null",
+                        "array"
+                      ],
+                      "items": {
+                        "type": [
+                          "null",
+                          "object"
+                        ],
+                        "properties": {
+                          "begins_at": {
+                            "type": "string"
+                          },
+                          "open_price": {
+                            "type": "string"
+                          },
+                          "high_price": {
+                            "type": "string"
+                          },
+                          "low_price": {
+                            "type": "string"
+                          },
+                          "close_price": {
+                            "type": "string"
+                          },
+                          "session": {
+                            "type": "string"
+                          },
+                          "interpolated": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "begins_at",
+                          "open_price",
+                          "high_price",
+                          "low_price",
+                          "close_price",
+                          "session"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "instrument_id",
+                    "occ_symbol",
+                    "symbol",
+                    "interval",
+                    "bounds",
+                    "bars"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "not_found": {
+                "type": [
+                  "null",
+                  "array"
+                ],
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "results"
+            ],
+            "additionalProperties": false
+          },
+          "guide": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "guide"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    }
+  }
+}
