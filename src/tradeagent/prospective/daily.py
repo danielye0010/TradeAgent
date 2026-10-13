@@ -16,10 +16,11 @@ from ..research.domain import identity
 from ..research.opportunities import UNIVERSE, capture, research_snapshot, scan
 from ..research.opportunity_workflow import DailyResearch
 from ..research.tradeplan import COSTS
-from .assessor import MODEL, assess
+from .assessor import MODEL, NEWS_WEB_SEARCH, assess, assess_news
 
 NY = ZoneInfo("America/New_York")
 PROTOCOL = "daily-four-arm-v1"
+ARMS = ("quant_only", "codex_only", "quant_codex", "seeded_random")
 # Frozen before outcomes. No fitting, economic gate changes or automatic promotion.
 CONFIG = {
     "protocol": PROTOCOL,
@@ -37,24 +38,81 @@ CONFIG = {
 }
 
 
-def window(day):
+NEWS_PROTOCOL = "daily-news-v2"
+NEWS_ARMS = ("quant_only", "codex_price", "codex_news", "quant_codex_news", "seeded_random")
+# Separate experiment: same candidates and window for a price-only and a news-reading
+# Codex, so their difference isolates what reading the news adds.
+NEWS_CONFIG = {
+    "protocol": NEWS_PROTOCOL,
+    "decision_window_ny": "10:30:00-10:37:00",
+    "universe": UNIVERSE,
+    "candidates": 3,
+    "holding_seconds": 3600,
+    "delay_seconds": 300,
+    "codex_timeout_seconds": 60,
+    "news_timeout_seconds": 300,
+    "web_search": NEWS_WEB_SEARCH,
+    "random_seed": "random-seed-2026-10-09",
+    "mode": "SHADOW",
+    "alpha_version": ALPHA_VERSION,
+    "codex_model": MODEL,
+    "costs": {name: asdict(cost) for name, cost in COSTS.items()},
+}
+PROTOCOLS = {
+    PROTOCOL: {
+        "config": CONFIG,
+        "arms": ARMS,
+        "baselines": ("quant_only", "seeded_random"),
+        "start": (10, 0),
+        "seconds": 180,
+    },
+    NEWS_PROTOCOL: {
+        "config": NEWS_CONFIG,
+        "arms": NEWS_ARMS,
+        "baselines": ("quant_only", "codex_price", "seeded_random"),
+        "start": (10, 30),
+        "seconds": 420,
+    },
+}
+
+
+def window(day, protocol=PROTOCOL):
     bounds = session_bounds(day)
     if not bounds:
         return None
-    start = datetime(day.year, day.month, day.day, 10, tzinfo=NY).timestamp()
+    spec = PROTOCOLS[protocol]
+    hour, minute = spec["start"]
+    start = datetime(day.year, day.month, day.day, hour, minute, tzinfo=NY).timestamp()
+    end = start + spec["seconds"]
     # Early closes use the unchanged horizon, not a shortened forecast.
-    return (start, start + 180) if start + 180 + 3900 + 60 <= bounds[1] else None
+    return (start, end) if end + 3900 + 60 <= bounds[1] else None
 
 
-def compare(store):
+def residual(outcome):
+    """Net return in excess of holding the benchmark over the same window; cash is zero."""
+    if "benchmark_gross" not in outcome:
+        return 0.0
+    return outcome["base_net"] - outcome["benchmark_gross"]
+
+
+def paired(values):
+    """Mean and standard error of daily paired values; one session is one observation."""
+    n = len(values)
+    if not n:
+        return {"days": 0, "mean": None, "standard_error": None}
+    mean = sum(values) / n
+    se = (sum((v - mean) ** 2 for v in values) / (n - 1)) ** 0.5 / n**0.5 if n > 1 else None
+    return {"days": n, "mean": mean, "standard_error": se}
+
+
+def compare(store, protocol=PROTOCOL, names=ARMS, baselines=("quant_only", "seeded_random")):
     decisions = {
         d["decision_id"]: d
         for d in store.records("decisions")
-        if d.get("research_protocol") == PROTOCOL
+        if d.get("research_protocol") == protocol
     }
     terminal = {r["decision_id"] for r in store.records("resolution_failures")}
     pools = {}
-    names = ("quant_only", "codex_only", "quant_codex", "seeded_random")
     for pool in sorted({d["evidence_kind"] for d in decisions.values()}):
         ds = [d for d in decisions.values() if d["evidence_kind"] == pool]
         outcomes = [
@@ -66,9 +124,11 @@ def compare(store):
         ]
         # A single daily session, not a trade/symbol vote. Missing Agent evidence
         # is not cash and is excluded from the paired comparison only.
-        paired = [o for o in outcomes if all(o["comparisons"].get(n) is not None for n in names)]
-        days = {decisions[o["decision_id"]]["session_open"] for o in paired}
-        if len(days) != len(paired):
+        paired_days = [
+            o for o in outcomes if all(o["comparisons"].get(n) is not None for n in names)
+        ]
+        days = {decisions[o["decision_id"]]["session_open"] for o in paired_days}
+        if len(days) != len(paired_days):
             raise ValueError("duplicate scheduled session in paired research")
 
         def mean(values):
@@ -79,8 +139,16 @@ def compare(store):
                 "observed_days": sum(o["comparisons"].get(n) is not None for o in outcomes),
                 "selected_days": sum(bool(d["comparisons"][n]["shadow_direction"]) for d in ds),
                 "unavailable_days": sum(d["comparisons"][n]["status"] == "UNAVAILABLE" for d in ds),
-                "paired_mean_base_net": mean([o["comparisons"][n]["base_net"] for o in paired]),
-                "paired_mean_stress_net": mean([o["comparisons"][n]["stress_net"] for o in paired]),
+                "long_days": sum("benchmark_gross" in o["comparisons"][n] for o in paired_days),
+                "paired_mean_base_net": mean(
+                    [o["comparisons"][n]["base_net"] for o in paired_days]
+                ),
+                "paired_mean_stress_net": mean(
+                    [o["comparisons"][n]["stress_net"] for o in paired_days]
+                ),
+                "paired_excess_over_benchmark": paired(
+                    [residual(o["comparisons"][n]) for o in paired_days]
+                ),
             }
             for n in names
         }
@@ -89,10 +157,24 @@ def compare(store):
                 baseline: mean(
                     [
                         o["comparisons"][n]["base_net"] - o["comparisons"][baseline]["base_net"]
-                        for o in paired
+                        for o in paired_days
                     ]
                 )
-                for baseline in ("quant_only", "seeded_random")
+                for baseline in baselines
+            }
+            for n in names
+        }
+        # Market-adjusted: an arm that is simply long more often than its baseline
+        # does not win when the market rises during the window.
+        excess_differences = {
+            n: {
+                baseline: paired(
+                    [
+                        residual(o["comparisons"][n]) - residual(o["comparisons"][baseline])
+                        for o in paired_days
+                    ]
+                )
+                for baseline in baselines
             }
             for n in names
         }
@@ -107,17 +189,49 @@ def compare(store):
             "valid_paired_days": len(days),
             "arms": stats,
             "paired_base_net_differences": differences,
+            "paired_excess_differences": excess_differences,
             "resolved_symbol_counterfactuals": len(full),
             "eligible_symbol_forecasts": sum(
                 bool(c["predictions"]) for d in ds for c in d["quantitative_observations"]
             ),
         }
     return {
-        "protocol": PROTOCOL,
+        "protocol": protocol,
         "evidence_pools": pools,
         "orders_submitted": 0,
-        "interpretation": "modeled returns with frozen spread/slippage; cash abstentions retained; no actual fills or established uplift",
+        "interpretation": "modeled returns with frozen spread/slippage; cash abstentions retained; "
+        "excess = arm net return minus the benchmark over the same window (cash = 0); "
+        "no actual fills or established uplift",
     }
+
+
+def cited(sources, observed):
+    """Keep only well-formed HTTPS citations; unknown or future dates become null."""
+    from urllib.parse import urlparse
+
+    from ..research.domain import timestamp
+
+    kept = []
+    for source in sources:
+        if urlparse(source.get("url", "")).scheme != "https" or not source.get("claim"):
+            continue
+        try:
+            published = timestamp(source["published_at"]) if source["published_at"] else None
+        except (TypeError, ValueError, OverflowError):
+            published = None
+        kept.append(
+            {
+                "url": source["url"],
+                "title": source.get("title") or source["url"],
+                "published_at": published
+                if published is not None and published <= observed
+                else None,
+                "observed_at": observed,
+                "claim": source["claim"],
+                "role": source["role"],
+            }
+        )
+    return kept
 
 
 class Pipeline:
@@ -131,7 +245,12 @@ class Pipeline:
         assessor=assess,
         clock=time.time,
         evidence_kind="prospective",
+        protocol=PROTOCOL,
+        news_assessor=assess_news,
     ):
+        if protocol not in PROTOCOLS:
+            raise ValueError("unknown scheduled research protocol")
+        self.protocol, self.news_assessor = protocol, news_assessor
         self.directory = Path(directory)
         self.store = DailyResearch(self.directory)
         self.provider, self.helper = provider, oauth_helper
@@ -145,14 +264,41 @@ class Pipeline:
             "session_date": day.isoformat(),
             "phase": phase,
             "recorded_at": self.clock(),
-            "protocol": PROTOCOL,
+            "protocol": self.protocol,
             "orders_submitted": 0,
             **values,
         }
-        key = identity([PROTOCOL, day.isoformat(), phase])
+        key = identity([self.protocol, day.isoformat(), phase])
         self.store.save("sessions", item, key, item["recorded_at"])
         write(self.directory / "sessions" / (key + ".json"), item)
         return item
+
+    def freeze(self, report, assessor, tag):
+        """Run one bounded assessor and freeze its output, or record it as unavailable."""
+        try:
+            if tag == "news":
+                document, provenance = assessor(report, now=self.clock())
+            else:
+                document, provenance = assessor(report)
+            frozen = self.clock()
+            with self.store.db:
+                for item in document["assessments"]:
+                    record = {
+                        **item,
+                        "scan_id": report["scan_id"],
+                        "observed_at": frozen,
+                        "sources": cited(item.get("sources", []), frozen),
+                        "hypothesis_type": item.get("hypothesis_type", "price_action"),
+                        "model": provenance["model"],
+                    }
+                    if tag:
+                        record["assessor"] = tag
+                    self.store.assessment(record, frozen)
+            return "VALID", None, provenance
+        except Exception as error:
+            # No partial assessment reaches a decision. Bounded errors, not
+            # model output or process diagnostics, are persisted.
+            return "UNAVAILABLE", type(error).__name__, {}
 
     def resolve(self):
         results = []
@@ -187,7 +333,11 @@ class Pipeline:
         self.directory.mkdir(parents=True, exist_ok=True)
         with self.store.experience.lock():
             deployment = self.directory / "daily-deployment.json"
-            config = {**CONFIG, "provider": self.provider, "evidence_kind": self.evidence_kind}
+            config = {
+                **PROTOCOLS[self.protocol]["config"],
+                "provider": self.provider,
+                "evidence_kind": self.evidence_kind,
+            }
             if deployment.exists():
                 enrolled = json.loads(deployment.read_text())
                 if enrolled["config"] != config:
@@ -204,7 +354,7 @@ class Pipeline:
             }
             past = date.fromisoformat(enrolled["first_session_date"])
             while past < day:
-                if window(past) and past.isoformat() not in old_days:
+                if window(past, self.protocol) and past.isoformat() not in old_days:
                     self.event(
                         past,
                         "FINAL",
@@ -220,7 +370,7 @@ class Pipeline:
             ]
             started = any(r.get("phase") == "STARTED" for r in records)
             finished = any(r.get("phase") == "FINAL" for r in records)
-            target = window(day)
+            target = window(day, self.protocol)
             result = next(
                 (r for r in records if r.get("phase") == "FINAL"),
                 {"status": "IDLE", "session_date": day.isoformat(), "orders_submitted": 0},
@@ -230,7 +380,7 @@ class Pipeline:
                 saved = [
                     d
                     for d in self.store.records("decisions")
-                    if d.get("research_protocol") == PROTOCOL
+                    if d.get("research_protocol") == self.protocol
                     and datetime.fromtimestamp(d["session_open"], NY).date() == day
                 ]
                 result = self.event(
@@ -268,27 +418,15 @@ class Pipeline:
                         report = scan(data, now=captured, candidate_count=3)
                         write(self.directory / "captures" / (identity(data) + ".json"), data)
                         self.store.save("scans", report, report["scan_id"], captured)
-                        agent_status, agent_error, provenance = "VALID", None, {}
-                        try:
-                            document, provenance = self.assessor(report)
-                            frozen = self.clock()
-                            with self.store.db:
-                                for item in document["assessments"]:
-                                    self.store.assessment(
-                                        {
-                                            **item,
-                                            "scan_id": report["scan_id"],
-                                            "observed_at": frozen,
-                                            "sources": [],
-                                            "hypothesis_type": "price_action",
-                                            "model": provenance["model"],
-                                        },
-                                        frozen,
-                                    )
-                        except Exception as error:
-                            # No partial assessment reaches a decision. Bounded errors, not
-                            # model output or process diagnostics, are persisted.
-                            agent_status, agent_error = "UNAVAILABLE", type(error).__name__
+                        news = self.protocol == NEWS_PROTOCOL
+                        agent_status, agent_error, provenance = self.freeze(
+                            report, self.assessor, "price" if news else None
+                        )
+                        news_status, news_error, news_provenance = (
+                            self.freeze(report, self.news_assessor, "news")
+                            if news
+                            else ("UNAVAILABLE", None, {})
+                        )
                         frozen = self.clock()
                         if not target[0] <= frozen < target[1]:
                             raise ValueError("assessment finished after fixed decision window")
@@ -300,23 +438,29 @@ class Pipeline:
                             report,
                             data,
                             now=frozen,
-                            shadow_protocol=PROTOCOL,
+                            shadow_protocol=self.protocol,
                             assessment_status=agent_status,
+                            news_assessment_status=news_status,
                         )
                         write(
                             self.directory / "decisions" / (decision["decision_id"] + ".json"),
                             decision,
                         )
+                        complete = agent_status == "VALID" and (not news or news_status == "VALID")
+                        extra = (
+                            {"news_assessment_error": news_error, "codex_news": news_provenance}
+                            if news
+                            else {}
+                        )
                         result = self.event(
                             day,
                             "FINAL",
-                            status="COMPLETED" if agent_status == "VALID" else "INCOMPLETE",
-                            failure_kind=None
-                            if agent_status == "VALID"
-                            else "CODEX_ASSESSMENT_UNAVAILABLE",
+                            status="COMPLETED" if complete else "INCOMPLETE",
+                            failure_kind=None if complete else "CODEX_ASSESSMENT_UNAVAILABLE",
                             assessment_error=agent_error,
                             codex=provenance,
                             decision_id=decision["decision_id"],
+                            **extra,
                         )
                     except (Halt, ValueError, OSError, KeyError, TypeError) as error:
                         result = self.event(
@@ -335,7 +479,13 @@ class Pipeline:
                 "costs": {name: asdict(cost) for name, cost in COSTS.items()},
                 "run": result,
                 "resolution": resolution,
-                "comparison": compare(self.store),
+                "protocol": self.protocol,
+                "comparison": compare(
+                    self.store,
+                    self.protocol,
+                    PROTOCOLS[self.protocol]["arms"],
+                    PROTOCOLS[self.protocol]["baselines"],
+                ),
                 "pending_sessions": self.store.pending_sessions(
                     self.clock(), evidence_kind=self.evidence_kind
                 ),
@@ -350,8 +500,9 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--state-dir", type=Path, required=True)
     parser.add_argument("--oauth-helper", type=Path)
+    parser.add_argument("--protocol", choices=sorted(PROTOCOLS), default=PROTOCOL)
     args = parser.parse_args(argv)
-    pipeline = Pipeline(args.state_dir, oauth_helper=args.oauth_helper)
+    pipeline = Pipeline(args.state_dir, oauth_helper=args.oauth_helper, protocol=args.protocol)
     try:
         print(json.dumps(pipeline.tick(), allow_nan=False))
     finally:

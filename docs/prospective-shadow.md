@@ -143,9 +143,36 @@ It sees supplied evidence only, without quantitative plan/economic ranks. No val
 assessment means unavailable Codex/combined arms, not manufactured cash returns. Valid
 watch/avoid decisions remain cash abstentions. `daily-status.json` reports paired base
 and stress net returns, differences against Quant/Random, coverage and valid daily
-counts separately by evidence pool. Missing paths stay pending; impossible old windows
+counts separately by evidence pool. It also reports each arm's net return in excess of
+the benchmark over the same window (cash counts as zero) and paired excess differences
+with standard errors. Use the excess numbers to judge selection skill: raw differences
+mostly reflect how often each arm was long while the market moved. Missing paths stay pending; impossible old windows
 retain separate terminal evidence. No v2 fitting or automatic promotion occurs.
 
 Semantic `alpha-v1` identity covers numerical/feature rules rather than file text.
 The exact original implementation hash `228456be7e1ac282` is a reviewed read-time alias;
 old rows and active plans remain unchanged. Unknown versions still fail closed.
+
+## News-reading experiment (daily-news-v2)
+
+```bash
+python scripts/install_shadow.py --daily --protocol daily-news-v2 \
+  --python /absolute/installed-venv/bin/python \
+  --state-dir /absolute/daily-news-state
+```
+
+This installs a second timer (`tradeagent-daily-news`) with its own state directory. It
+captures at 10:30 New York time and freezes decisions before 10:37, then resolves at 12:00
+and 17:05. Two Codex assessments run on the same scanner shortlist: the unchanged
+price-only assessor, and a news assessor with live web search (`web_search="live"`) and a
+five-minute deadline. Search is its only permitted tool; any other tool activity rejects
+the assessment. It returns a stance, rank, hypothesis type and up to five cited sources
+per symbol. Non-HTTPS citations are dropped and unknown or future publication times are
+stored as null.
+
+Five arms share the candidates, entry window, exit and costs: Quant only, Codex price,
+Codex news, Quant + Codex news and seeded Random. The comparison that matters is
+`paired_excess_differences.codex_news` against `codex_price`/`seeded_random`: it isolates
+what reading the news adds. A failed news assessment marks only the two news arms
+unavailable for that session. The protocols refuse to share a state directory.
+

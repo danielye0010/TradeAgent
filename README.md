@@ -153,9 +153,30 @@ records four competing picks:
 | **Quant + Codex** | Best name that both agree on |
 | **Random** | A seeded coin flip among the same candidates, or cash |
 
-Results land in `daily-status.json`. The random arm is the one to beat: if the agent can't
-outpick a coin flip over a few months, you'll know. The autopilot paper-trades only; real
-orders always come from one of the live modes above.
+### Does reading the news help?
+
+A second timer runs the same idea at 10:30 ET, but asks Codex twice about the same three
+candidates: once from price data only, and once with live web search for news, filings and
+analyst actions, citing every source it relied on.
+
+```bash
+python scripts/install_shadow.py --daily --protocol daily-news-v2 \
+  --python "$PWD/.venv/bin/python" \
+  --state-dir /abs/path/to/daily-news
+```
+
+Both picks get the same entry, exit and costs, so the gap between **Codex news** and
+**Codex price** is exactly what the news is worth.
+
+### Reading the results
+
+Everything lands in `daily-status.json`. Look at `paired_excess_differences`: each arm's
+return minus what SPY did over the same hour. Raw returns mostly tell you how often an arm
+was long while the market went up; the excess numbers tell you whether it picked well. The
+random arm is the one to beat. If the agent can't outpick a coin flip over a few months,
+you'll know.
+
+The autopilot paper-trades only; real orders always come from one of the live modes above.
 
 ## Strategies
 

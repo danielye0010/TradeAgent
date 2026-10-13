@@ -11,7 +11,7 @@
     "licenses/Oft3r-MIT.txt": "380775b4c1b3ec8ea691f8380e33c4f76be1c412c1444674a1b7c75af0a26797",
     "licenses/abiemann-MIT.txt": "43b87f35ac1a7d87c2a87caa4ffe37019927a1c2c2f9075bd35cf0176de7bdca",
     "licenses/cbangera2-MIT.txt": "82c7d6213c64ee4d1a906a7b5049f8d3959c481f42a63f0174534991136f2a0e",
-    "pyproject.toml": "edc787a4c6446f76dacc03768b426693e83630b311cbc2112a5fa4204dc7b801",
+    "pyproject.toml": "33163779c3c018df087417c9c7af0c65f8a06237b61c5dbd89030a0001b5040b",
     "src/tradeagent/__init__.py": "4d6ac5a1a0ad94edd128dc9e0a30a6614df73456dbdc71ddad7e777731ee9221",
     "src/tradeagent/account_policy.py": "ac872bb24842f0defcb09960bfbd78d0dd94c52725835caa8df0a7e860114020",
     "src/tradeagent/accounting.py": "901e8f4d4682817402b54f5c2cc3d8c8fbf7ca514d3c207737a269b723450615",
@@ -50,9 +50,9 @@
     "src/tradeagent/options.py": "a603efb4823b16d4a60c54752be888c6711c572c288c5f979b6b32c7970b9061",
     "src/tradeagent/prospective/__init__.py": "ec6da6bc1a0b0d491b3deb49ab9ffb0f967de702e9cd2ce560c2132b98399d9b",
     "src/tradeagent/prospective/access.py": "8a2e79855862bc8123a28f85f4227dc05c8fae55ee39853eb10bce3df6360f0e",
-    "src/tradeagent/prospective/assessor.py": "46bfe399ae9f472fce6c69f068d13a7415fe67ae4d14343bb683ee7132419f1b",
+    "src/tradeagent/prospective/assessor.py": "00a2bb20424a9dd1a7db81fd4f421ad52e98bfc5053f55646ad0648eddab18b8",
     "src/tradeagent/prospective/collector.py": "1e350381e046ae9a0735c536f45a15bdef4a8c12add560ec7ed385ac36362994",
-    "src/tradeagent/prospective/daily.py": "566b4ce264f67e5898f82b7a37fb9b28186a2f58f25c9b0e33baa395f3056735",
+    "src/tradeagent/prospective/daily.py": "8a21e72744431e1b60f8fae2a73bea8e769f1c4acd5db3290a17ea69a5d40bc7",
     "src/tradeagent/prospective/providers.py": "441378ee1e34cb43faa2249ebde5e6ce1b2048c7daf0934968ab8d33a80c575a",
     "src/tradeagent/prospective/service.py": "33cfeb5c1995263b66f3bbee8d7a1da5628f71a5c23be549325d2aed838f0f5d",
     "src/tradeagent/research/__init__.py": "c6b7d096648fdf0a1eb0233cbdf078da4a4fa3e2549e0da9f8f6a83b713ec464",
@@ -72,7 +72,7 @@
     "src/tradeagent/research/learning.py": "e3ab8458ae14850fb1dfd4039640ec25d366673a2ba9a9044a4ebe63d5b22f62",
     "src/tradeagent/research/market.py": "b616f8cab65a13378eac1a7fef97f24e957b2d242ce18b879aa14616f0909060",
     "src/tradeagent/research/opportunities.py": "9f4ad816516ecdade72a51fd9c9ba94ce499a0c2b1264ac1ae470b4fa0232315",
-    "src/tradeagent/research/opportunity_workflow.py": "0171cf8a7f395152ea1c7c4dd7c38f9b8b79ed26b30fc8da1e13aab2a6b20826",
+    "src/tradeagent/research/opportunity_workflow.py": "9a29803133522a147e56ea4c38864c2bcea5eb3d1e96bfff1dba65417c97232c",
     "src/tradeagent/research/option_economics.py": "8904dc1219011568e6876a07dd9f25289f67be0a5f220895e6498d94a2aea13b",
     "src/tradeagent/research/outcomes.py": "e2b5d5fc5e8c09d50608b9579a6d5004cb7bbed835ad2eef526d99061bcb451a",
     "src/tradeagent/research/replay.py": "7397361fd85539bf86afd9cbab3fbc5726d8bc04c5cd52dbdb100898f56d77a4",
@@ -102,6 +102,8 @@
     "tests/test_commissioning.py": "83b54169dd739c0f8653d4a1d63a28cb184892cf6038277ef8a4a4e6c0d922da",
     "tests/test_contract_173.py": "f940b64d9cd2ae63be7fc3398ee50eda2b2f486395be7057632555462e161664",
     "tests/test_contract_pins.py": "6b4abbd7220629bac7a6df5e4e6e6323cea1a88987fecbe70b549eb41621f939",
+    "tests/test_daily_excess.py": "6a2d681506d8b066eef551c906cc4d8e47006f615c031350d0c1b99d40c10425",
+    "tests/test_daily_news.py": "e66336774ac1247ce69f7f2c316fffcb8f15c1383cc8800dfe5d3e203eefb792",
     "tests/test_daily_research.py": "f8f59118500905cd4bc8742a85938f7dd01234c5d45fede64fa8a4f7e1bf11b0",
     "tests/test_daily_signal_timing.py": "9a6a876884a3d99081a39131bee4458087b1f7f5b1f837a3d13a60354dd79919",
     "tests/test_evidence_cohorts.py": "3c9b35eb2e056ebd6c5898f49dae454054d2a52eb96b1848cb33869ecf4d0dcf",
@@ -130,5 +132,5 @@
     "tests/test_supervised_contract.py": "b17692ea76ef0653e92215103a4dc459478601cfc17c7fb3df17697e37c92d44",
     "tests/test_tradeplan_engine.py": "8cb9735d0e593cfa49bb6d4ddb33093ef8e76d33d6cd06752ab18cb10dd5e80f"
   },
-  "framework_sha256": "349a1a162289db65f844aec471fc8e531bbed183fef48e824109404d317dc63f"
+  "framework_sha256": "e5e205206f44cf4fda9b7e955e7385e3d398f23dd943447045a6b05cc190129d"
 }

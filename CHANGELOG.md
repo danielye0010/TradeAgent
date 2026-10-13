@@ -1,9 +1,20 @@
 # Changelog
 
-## Unreleased
+## 1.0.0-beta.4 — 2026-10-13
 
+Python distribution version: `1.0.0b4`. Supersedes the unpublished beta.3.
+
+- New `daily-news-v2` SHADOW experiment: at 10:30 ET a price-only Codex and a news-reading
+  Codex (live web search, cited and dated sources) assess the same three candidates with the
+  same entry, exit and costs, alongside Quant only, Quant + news Codex and seeded Random.
+  Install it with `install_shadow.py --daily --protocol daily-news-v2` and its own state
+  directory. `daily-four-arm-v1` is unchanged.
+- `daily-status.json` now reports each arm's net return in excess of the benchmark over the
+  same window, and paired excess differences with standard errors, so an arm that is simply
+  long more often in a rising market no longer looks like skill.
 - Exit-only recovery and read-only reconciliation keep working when Robinhood bumps the MCP
   server version without changing tool schemas. New entries still require the reviewed version.
+- The Codex event parser ignores blank lines.
 
 ## 1.0.0-beta.3 — 2026-10-12
 
