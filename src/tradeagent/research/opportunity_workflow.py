@@ -24,6 +24,8 @@ from .tradeplan import (
 )
 
 SKILL_VERSION = "trade-opportunity-analyst-v4"
+NEWS_PROTOCOL = "daily-news-v2"
+SHADOW_PROTOCOLS = ("daily-four-arm-v1", NEWS_PROTOCOL)
 ARMS = ("quant_only", "codex_only", "quant_codex")
 
 
@@ -203,10 +205,13 @@ class DailyResearch:
             "sources",
             "model",
         }
-        if set(item) not in (required, required | {"hypothesis_type"}):
+        optional = {"hypothesis_type", "assessor"}
+        if not required <= set(item) or not set(item) - required <= optional:
             raise ValueError(
                 "assessment must match the documented schema; no subjective sizing or invented forecast fields"
             )
+        if item.get("assessor", "price") not in {"price", "news"}:
+            raise ValueError("assessor must be price or news")
         if item.get("hypothesis_type", "price_action") not in {"price_action", "event_driven"}:
             raise ValueError("hypothesis_type must be price_action or event_driven")
         report = self.scan(item["scan_id"])
@@ -242,7 +247,9 @@ class DailyResearch:
                 raise ValueError("source observation is outside this scan/research window")
             if source["published_at"] is not None and timestamp(source["published_at"]) > receipt:
                 raise ValueError("future publication timestamp")
-        return self.save("assessments", item, identity([item["scan_id"], item["symbol"]]), now)
+        # Untagged keys keep earlier records stable; tagged assessors coexist per scan.
+        key = [item["scan_id"], item["symbol"]] + ([item["assessor"]] if "assessor" in item else [])
+        return self.save("assessments", item, identity(key), now)
 
     def prior_rows(self):
         # Rehydrate comparability from ORIGINAL frozen forecasts/plans for older
@@ -423,6 +430,7 @@ class DailyResearch:
         execution_policy=EVIDENCE_GATED,
         shadow_protocol=None,
         assessment_status="VALID",
+        news_assessment_status="UNAVAILABLE",
     ):
         failure = scan_failure(report)
         if failure:
@@ -451,11 +459,15 @@ class DailyResearch:
             raise ValueError(
                 "fresh evaluation must use the same frozen source, universe and evidence pool"
             )
-        assessments = {
-            r["symbol"]: r
+        frozen = [
+            r
             for r in self.records("assessments")
             if r["scan_id"] == report["scan_id"] and timestamp(r["observed_at"]) <= now
-        }
+        ]
+        # The price-only (or manual) assessment drives the ordinary arms; a separately
+        # frozen news assessment only feeds the news arms of the scheduled v2 protocol.
+        assessments = {r["symbol"]: r for r in frozen if r.get("assessor", "price") == "price"}
+        news_assessments = {r["symbol"]: r for r in frozen if r.get("assessor") == "news"}
         # Newly obtained data can resolve old forecasts, never backfill new ones.
         self.resolve(dataset, now)
         rows, coverage = self.prior_rows(), []
@@ -616,7 +628,7 @@ class DailyResearch:
                 else "insufficient supported net edge",
             }
         if shadow_protocol is not None:
-            if shadow_protocol != "daily-four-arm-v1" or authorized is not None:
+            if shadow_protocol not in SHADOW_PROTOCOLS or authorized is not None:
                 raise ValueError("scheduled research protocol cannot use an execution universe")
             import random
 
@@ -651,14 +663,48 @@ class DailyResearch:
             randomized = random.Random(seed).choice(
                 [None, *sorted(eligible, key=lambda c: c["symbol"])]
             )
+            if shadow_protocol == NEWS_PROTOCOL:
+                # Same candidates, timestamp, entry/exit and costs: the only difference
+                # between codex_price and codex_news is whether Codex could read the news.
+                for c in eligible:
+                    c["news_support"] = research_support(
+                        c["scanner"], news_assessments.get(c["symbol"]), now
+                    )
+                news_ai = min(
+                    (c for c in eligible if c["news_support"]["supported"]),
+                    key=lambda c: (news_assessments[c["symbol"]]["rank"], c["symbol"]),
+                    default=None,
+                )
+                news_combined = min(
+                    (
+                        c
+                        for c in eligible
+                        if signals[c["symbol"]] > 0 and c["news_support"]["supported"]
+                    ),
+                    key=lambda c: (
+                        news_assessments[c["symbol"]]["rank"],
+                        -signals[c["symbol"]],
+                        c["symbol"],
+                    ),
+                    default=None,
+                )
+                selections = (
+                    ("quant_only", quant, "VALID"),
+                    ("codex_price", ai, assessment_status),
+                    ("codex_news", news_ai, news_assessment_status),
+                    ("quant_codex_news", news_combined, news_assessment_status),
+                    ("seeded_random", randomized, "VALID"),
+                )
+            else:
+                selections = (
+                    ("quant_only", quant, "VALID"),
+                    ("codex_only", ai, assessment_status),
+                    ("quant_codex", combined, assessment_status),
+                    ("seeded_random", randomized, "VALID"),
+                )
             arms = {}
-            for name, chosen in (
-                ("quant_only", quant),
-                ("codex_only", ai),
-                ("quant_codex", combined),
-                ("seeded_random", randomized),
-            ):
-                unavailable = name in {"codex_only", "quant_codex"} and assessment_status != "VALID"
+            for name, chosen, status in selections:
+                unavailable = status != "VALID"
                 arms[name] = {
                     "symbol": chosen["symbol"] if chosen and not unavailable else None,
                     "decision": "SHADOW_LONG" if chosen and not unavailable else "NO_TRADE",
@@ -698,7 +744,12 @@ class DailyResearch:
             if execution_policy == EXPERIMENTAL
             else None
         )
-        selected = experimental_arm if experimental_arm is not None else arms["quant_codex"]
+        # Scheduled SHADOW protocols never select an executable plan (overridden below).
+        selected = (
+            experimental_arm
+            if experimental_arm is not None
+            else arms.get("quant_codex") or {"decision": "NO_TRADE", "plan": None}
+        )
         result = {
             "schema_version": 1,
             "skill_version": SKILL_VERSION,
@@ -749,6 +800,8 @@ class DailyResearch:
                 decision_status="SHADOW_ONLY",
                 freeze_time=now,
             )
+            if shadow_protocol == NEWS_PROTOCOL:
+                result["news_assessment_status"] = news_assessment_status
         result["decision_id"] = identity(result)
         self.save("decisions", result, result["decision_id"], now)
         return result

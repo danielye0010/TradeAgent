@@ -251,5 +251,9 @@ It does not permit new review/place/cancel calls, revive saved reviews or change
 journal's contract binding. `live-check` preserves the old lifecycle and reports the
 write recovery blocker. An operator must resolve or archive a reconciled prior lifecycle
 through the existing explicit workflow before starting another entry. Unknown contract,
-state or execution-protocol hashes still fail closed. SHADOW retains its independent
+state or execution-protocol hashes still fail closed.
+
+A new Robinhood MCP server version with unchanged tool schemas blocks new entries
+(`live-check` reports it) but not `recover`, `reconcile-once` or `new-run`: an open
+position can still be reconciled and exited. Any schema change still fails closed. SHADOW retains its independent
 two-tool market-data capability and frozen research schedule.

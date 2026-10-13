@@ -62,6 +62,11 @@ def live_check(oauth_helper=None, root=None, timeout=10, settings=None):
                 if name not in READ_TOOLS
                 and structural({k: bridge.tools.get(name, {}).get(k) for k in expected}) != expected
             ]
+            if not getattr(bridge, "server_version_reviewed", True):
+                result["blockers"].append(
+                    f"Broker MCP server version {result['server_version']} is not the reviewed "
+                    f"{full.manifest['server_version']}; new entries are blocked, recover remains available"
+                )
             result["write_contract_drift"] = drift
             result["observed_write_input_fields"] = {
                 name: sorted(

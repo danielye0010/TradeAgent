@@ -22,6 +22,12 @@ def main():
     parser.add_argument(
         "--python", type=Path, help="installed-wheel interpreter for daily research"
     )
+    parser.add_argument(
+        "--protocol",
+        choices=("daily-four-arm-v1", "daily-news-v2"),
+        default="daily-four-arm-v1",
+        help="daily research experiment; each protocol needs its own --state-dir",
+    )
     args = parser.parse_args()
     state = (args.state_dir or repo / ("work/prospective-" + args.market_data_provider)).resolve()
     helper = args.oauth_helper or Path.home() / ".local/libexec/robinhood-mcp-oauth-helper"
@@ -45,7 +51,7 @@ def main():
     if args.daily:
         if args.market_data_provider != "robinhood" or not args.python:
             raise ValueError("daily research requires explicit installed Python and Robinhood")
-        install_daily(state, helper, args.python.absolute())
+        install_daily(state, helper, args.python.absolute(), args.protocol)
         return
     directory = Path.home() / ".config/systemd/user"
     directory.mkdir(parents=True, exist_ok=True)
@@ -85,23 +91,40 @@ WantedBy=default.target
     print("User shadow service enabled; inspect service/status for credential and data readiness.")
 
 
-def install_daily(state, helper, python):
+DAILY = {
+    "daily-four-arm-v1": {
+        "name": "tradeagent-daily-research",
+        "title": "daily four-arm",
+        "times": ("Mon..Fri *-*-* 10:00:00", "Mon..Fri *-*-* 11:30:00", "*-*-* 17:00:00"),
+        "argument": "",
+    },
+    "daily-news-v2": {
+        "name": "tradeagent-daily-news",
+        "title": "daily news-reading five-arm",
+        "times": ("Mon..Fri *-*-* 10:30:00", "Mon..Fri *-*-* 12:00:00", "*-*-* 17:05:00"),
+        "argument": " --protocol daily-news-v2",
+    },
+}
+
+
+def install_daily(state, helper, python, protocol="daily-four-arm-v1"):
     if not python.is_file() or any(c in str(python) for c in '\n\r%"\\ '):
         raise ValueError("invalid installed interpreter")
     directory = Path.home() / ".config/systemd/user"
     directory.mkdir(parents=True, exist_ok=True)
-    service = "tradeagent-daily-research.service"
-    timer = "tradeagent-daily-research.timer"
+    spec = DAILY[protocol]
+    service, timer = spec["name"] + ".service", spec["name"] + ".timer"
+    calendar = "".join(f"OnCalendar={t} America/New_York\n" for t in spec["times"])
     units = {
         service: f"""[Unit]
-Description=TradeAgent daily four-arm SHADOW research (zero broker writes)
+Description=TradeAgent {spec["title"]} SHADOW research (zero broker writes)
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=oneshot
 WorkingDirectory={state.parent}
-ExecStart={python} -m tradeagent.prospective.daily --state-dir {state} --oauth-helper {helper}
+ExecStart={python} -m tradeagent.prospective.daily --state-dir {state} --oauth-helper {helper}{spec["argument"]}
 TimeoutStartSec=15min
 UMask=0077
 NoNewPrivileges=true
@@ -110,17 +133,14 @@ Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
 StandardOutput=null
 StandardError=journal
 """,
-        timer: """[Unit]
+        timer: f"""[Unit]
 Description=TradeAgent session capture and delayed outcome resolution
 
 [Timer]
-OnCalendar=Mon..Fri *-*-* 10:00:00 America/New_York
-OnCalendar=Mon..Fri *-*-* 11:30:00 America/New_York
-OnCalendar=*-*-* 17:00:00 America/New_York
-AccuracySec=1s
+{calendar}AccuracySec=1s
 RandomizedDelaySec=0
 Persistent=true
-Unit=tradeagent-daily-research.service
+Unit={service}
 
 [Install]
 WantedBy=timers.target
