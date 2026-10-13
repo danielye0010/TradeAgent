@@ -33,16 +33,19 @@ The split is deliberate. **The model decides what is worth a look; it never touc
 broker.** Sizing, risk limits, order placement, exits and reconciliation live in plain
 Python that behaves the same way every time.
 
-A typical trading day:
+A typical day on the [daily autopilot](#daily-autopilot), which paper-trades:
 
 | Time (ET) | What happens |
 | --- | --- |
 | 10:00 | Pull fresh bars and quotes, rank the most unusual moves |
 | 10:01 | Codex reviews the top three and returns *long*, *watch* or *avoid* |
 | 10:02 | Quant signals and cost estimates are frozen into a decision |
-| 10:05 | Entry window opens for an eligible plan |
-| 11:05 | Position is closed on schedule |
-| 17:00 | Every forecast, traded or not, is scored against what actually happened |
+| 10:05 | The modeled entry window opens |
+| 11:05 | The modeled position closes |
+| 17:00 | Every forecast is scored against what the market actually did |
+
+Real orders only happen when you start a [live mode](#trading-modes) yourself; it follows
+the same entry-then-timed-exit shape for the plan you approve.
 
 ## Quick start
 

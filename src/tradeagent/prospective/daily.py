@@ -3,6 +3,7 @@
 import argparse
 import json
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -49,8 +50,9 @@ NEWS_CONFIG = {
     "candidates": 3,
     "holding_seconds": 3600,
     "delay_seconds": 300,
-    "codex_timeout_seconds": 60,
-    "news_timeout_seconds": 300,
+    "assessor": "one shared prompt, schema, model and deadline; only web search differs",
+    "assessor_timeout_seconds": 300,
+    "assessors_run": "concurrently",
     "web_search": NEWS_WEB_SEARCH,
     "random_seed": "random-seed-2026-10-09",
     "mode": "SHADOW",
@@ -273,13 +275,10 @@ class Pipeline:
         write(self.directory / "sessions" / (key + ".json"), item)
         return item
 
-    def freeze(self, report, assessor, tag):
-        """Run one bounded assessor and freeze its output, or record it as unavailable."""
+    def freeze(self, report, call, tag):
+        """Run one bounded assessor call and freeze its output, or record it unavailable."""
         try:
-            if tag == "news":
-                document, provenance = assessor(report, now=self.clock())
-            else:
-                document, provenance = assessor(report)
+            document, provenance = call() if callable(call) else call.result()
             frozen = self.clock()
             with self.store.db:
                 for item in document["assessments"]:
@@ -419,14 +418,28 @@ class Pipeline:
                         write(self.directory / "captures" / (identity(data) + ".json"), data)
                         self.store.save("scans", report, report["scan_id"], captured)
                         news = self.protocol == NEWS_PROTOCOL
-                        agent_status, agent_error, provenance = self.freeze(
-                            report, self.assessor, "price" if news else None
-                        )
-                        news_status, news_error, news_provenance = (
-                            self.freeze(report, self.news_assessor, "news")
-                            if news
-                            else ("UNAVAILABLE", None, {})
-                        )
+                        if news:
+                            # Both arms: same prompt, schema, model and deadline; only web
+                            # search differs. Run together so both fit the decision window.
+                            started = self.clock()
+                            with ThreadPoolExecutor(max_workers=2) as pool:
+                                price_call = pool.submit(
+                                    self.news_assessor, report, now=started, search=False
+                                )
+                                news_call = pool.submit(
+                                    self.news_assessor, report, now=started, search=True
+                                )
+                                agent_status, agent_error, provenance = self.freeze(
+                                    report, price_call, "price"
+                                )
+                                news_status, news_error, news_provenance = self.freeze(
+                                    report, news_call, "news"
+                                )
+                        else:
+                            agent_status, agent_error, provenance = self.freeze(
+                                report, lambda: self.assessor(report), None
+                            )
+                            news_status, news_error, news_provenance = "UNAVAILABLE", None, {}
                         frozen = self.clock()
                         if not target[0] <= frozen < target[1]:
                             raise ValueError("assessment finished after fixed decision window")

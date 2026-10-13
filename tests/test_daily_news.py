@@ -17,30 +17,36 @@ from tradeagent.research.opportunities import scan
 DAY = date(2026, 10, 12)
 
 
-def news_assessment(stances, sources=None):
-    def assessor(report, now=None):
+def news_assessment(stances, sources=None, price_stances=("long",)):
+    """One assessor for both arms, as in production; search picks the stance set."""
+    calls = []
+
+    def assessor(report, now=None, search=True):
+        calls.append(search)
+        chosen = stances if search else price_stances
         items = []
         for i, c in enumerate(report["candidates"]):
             items.append(
                 {
                     "symbol": c["symbol"],
-                    "stance": stances[i % len(stances)],
+                    "stance": chosen[i % len(chosen)],
                     "rank": i + 1,
-                    "thesis": "Synthetic news read",
-                    "catalyst": "Synthetic headline",
+                    "thesis": "Synthetic read",
+                    "catalyst": "Synthetic headline" if search else "Price action only",
                     "priced_in": "Partly",
                     "contradictions": [],
                     "invalidation": "Headline retracted",
                     "hypothesis_type": "price_action",
-                    "sources": sources or [],
+                    "sources": (sources or []) if search else [],
                 }
             )
-        return {"assessments": items}, {"model": "synthetic-news", "web_searches": 2}
+        return {"assessments": items}, {"model": "synthetic", "web_searches": 2 if search else 0}
 
+    assessor.calls = calls
     return assessor
 
 
-def pipeline_for(tmp_path, news_assessor, assessor=valid_assessment):
+def pipeline_for(tmp_path, news_assessor):
     clock = [daily.window(DAY, daily.NEWS_PROTOCOL)[0]]
 
     def collector(symbols, provider, helper, *, session=None):
@@ -49,7 +55,7 @@ def pipeline_for(tmp_path, news_assessor, assessor=valid_assessment):
     pipeline = daily.Pipeline(
         tmp_path,
         collector=collector,
-        assessor=assessor,
+        assessor=lambda report: pytest.fail("v2 must not use the v1 price-only prompt"),
         news_assessor=news_assessor,
         clock=lambda: clock[0],
         evidence_kind="synthetic",
@@ -59,7 +65,8 @@ def pipeline_for(tmp_path, news_assessor, assessor=valid_assessment):
 
 
 def test_news_protocol_freezes_five_paired_arms_and_resolves(tmp_path):
-    pipeline, clock = pipeline_for(tmp_path, news_assessment(["avoid"]))
+    assessor = news_assessment(["avoid"])
+    pipeline, clock = pipeline_for(tmp_path, assessor)
     try:
         result = pipeline.tick()
         assert result["run"]["status"] == "COMPLETED"
@@ -71,6 +78,8 @@ def test_news_protocol_freezes_five_paired_arms_and_resolves(tmp_path):
         assert decision["comparisons"]["codex_news"]["shadow_direction"] == 0
         assert decision["comparisons"]["quant_codex_news"]["shadow_direction"] == 0
         assert decision["news_assessment_status"] == "VALID"
+        # Both arms come from the same assessor; only the search flag differs.
+        assert sorted(assessor.calls) == [False, True]
         tags = {a.get("assessor") for a in pipeline.store.records("assessments")}
         assert tags == {"price", "news"}
         clock[0] = decision["outcome_exit_time"]
@@ -87,8 +96,12 @@ def test_news_protocol_freezes_five_paired_arms_and_resolves(tmp_path):
 
 
 def test_news_failure_leaves_price_arms_valid(tmp_path):
-    def broken(report, now=None):
-        raise ValueError("Codex assessment deadline exceeded")
+    working = news_assessment(["long"])
+
+    def broken(report, now=None, search=True):
+        if search:
+            raise ValueError("Codex assessment deadline exceeded")
+        return working(report, now=now, search=search)
 
     pipeline, _ = pipeline_for(tmp_path, broken)
     try:
@@ -262,3 +275,48 @@ def test_installer_writes_a_separate_news_timer(tmp_path, monkeypatch):
     assert "Unit=tradeagent-daily-news.service" in timer
     assert not (units / "tradeagent-daily-research.timer").exists()
     assert calls[-1][-1] == "tradeagent-daily-news.timer"
+
+
+def recording_codex(tmp_path, document):
+    log = tmp_path / "calls.jsonl"
+    executable = tmp_path / "codex-recorder"
+    executable.write_text(
+        "#!/usr/bin/env python3\nimport sys,json\nfrom pathlib import Path\n"
+        + "args=sys.argv\nprompt=sys.stdin.read()\n"
+        + f"with open({str(log)!r},'a') as f: f.write(json.dumps({{'argv':args,'prompt':prompt}})+'\\n')\n"
+        + "Path(args[args.index('--output-last-message')+1]).write_text("
+        + repr(json.dumps(document))
+        + ")\n"
+    )
+    executable.chmod(0o700)
+    return executable, log
+
+
+def test_price_and_news_arms_differ_only_in_search(tmp_path):
+    report = scan(market(), now=NOW, candidate_count=1)
+    document = cli_document(report)
+    document["assessments"][0]["sources"] = []
+    executable, log = recording_codex(tmp_path, document)
+    _, price = assess_news(report, executable=str(executable), now=NOW, search=False)
+    _, news = assess_news(report, executable=str(executable), now=NOW, search=True)
+    first, second = (json.loads(line) for line in log.read_text().splitlines())
+
+    def neutral(call):
+        argv = [a for a in call["argv"][1:] if not a.startswith("web_search=")]
+        # Temporary paths differ per run and carry no treatment.
+        return [a if "tradeagent-assessor-" not in a else "TMP" for a in argv]
+
+    assert neutral(first) == neutral(second)
+    assert 'web_search="disabled"' in first["argv"] and 'web_search="live"' in second["argv"]
+    shared = [p for p in first["prompt"].split(". ") if p in second["prompt"]]
+    assert len(shared) >= len(first["prompt"].split(". ")) - 1
+    assert price["web_search_mode"] == "disabled" and news["web_search_mode"] == "live"
+
+
+def test_price_arm_rejects_any_search_activity(tmp_path):
+    report = scan(market(), now=NOW, candidate_count=1)
+    executable = fake_codex(
+        tmp_path, cli_document(report), [{"item": {"id": "s", "type": "web_search"}}]
+    )
+    with pytest.raises(ValueError, match="tool activity"):
+        assess_news(report, executable=str(executable), now=NOW, search=False)

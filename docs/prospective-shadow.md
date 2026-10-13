@@ -163,10 +163,11 @@ python scripts/install_shadow.py --daily --protocol daily-news-v2 \
 
 This installs a second timer (`tradeagent-daily-news`) with its own state directory. It
 captures at 10:30 New York time and freezes decisions before 10:37, then resolves at 12:00
-and 17:05. Two Codex assessments run on the same scanner shortlist: the unchanged
-price-only assessor, and a news assessor with live web search (`web_search="live"`) and a
-five-minute deadline. Search is its only permitted tool; any other tool activity rejects
-the assessment. It returns a stance, rank, hypothesis type and up to five cited sources
+and 17:05. Two Codex assessments run concurrently on the same scanner shortlist with one
+shared prompt, output schema, model and five-minute deadline. The only difference is web
+access: the news arm has live search (`web_search="live"`), the price arm has search
+disabled and is told so. Search is the only tool the news arm may use; any other tool
+activity, or any search by the price arm, rejects that assessment. It returns a stance, rank, hypothesis type and up to five cited sources
 per symbol. Non-HTTPS citations are dropped and unknown or future publication times are
 stored as null.
 
