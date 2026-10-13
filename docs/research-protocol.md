@@ -131,3 +131,65 @@ the operational cost, clipping and promotion policy here are project choices.
 
 The six-month RSI thesis needs genuinely prospective generation comparisons,
 cost-sensitive results and selector controls. A passing synthetic demo cannot answer it.
+
+
+## Bidirectional daily SHADOW research (manual, v3)
+
+`daily-bidirectional-v3` reuses the daily pipeline and three Alpha families. The
+frozen `daily-four-arm-v1` and `daily-news-v2` decisions, configuration and timers
+retain their original long-only semantics. Use a separate state directory.
+
+The v3 shortlist remains three symbols. A signed point forecast must exceed its
+estimated round-trip underlying cost plus 10bp. LONG, BEARISH and CASH persist in
+each arm; Codex Price/News must support the same signal direction. Quant + Codex
+ranks the news-supported signals by quantitative edge. Estimates remain uncalibrated;
+passing this screen does not establish profitability.
+
+The frozen discovery pool contains 106 stocks/ETFs. The official Robinhood minute
+history/quote interface covered 31/60/106 symbols in 13.4/18.4/33.3 seconds on
+2026-10-13. See `config/research-universe-profile.json`. Choose the largest complete
+measured prefix within 45 seconds; each runtime capture retains that deadline.
+Collection uses five-symbol history batches and twenty-symbol quote batches.
+Shortlisting also requires observed spread <=0.5% and trailing thirty-minute mean
+dollar volume >=$1m/minute. One observation is not a future latency guarantee.
+
+```bash
+python -m tradeagent.prospective.daily --protocol daily-bidirectional-v3 \
+  --state-dir work/bidirectional-shadow \
+  --universe-profile config/research-universe-profile.json
+```
+
+Run the capture tick during 10:30–10:37 New York time. Inspect its frozen decision
+for `outcome_entry_time` and `outcome_exit_time`; run the same manual command at
+each endpoint to capture actual option quotes, then at least sixty seconds after
+exit to resolve. No v3 timer is installed or enabled. Missed quotes are UNAVAILABLE.
+Do not point this command at an existing experiment directory.
+
+A Put contract is chosen before the decision freezes: earliest expiry 14–35 calendar
+days away, nearest liquid of three strikes to contemporaneous spot, standard 100
+multiplier, bid/ask spread <=10%, open interest >=100, volume >=10 and both sizes
+>=1. Entry requires that same contract's genuine ask; exit requires its genuine
+bid. Quote and receipt timestamps must fall in the first sixty seconds of the
+planned endpoint minute. Actual times are retained; this is a bounded window
+simulation, not an exact-time fill. Quantity is fixed from entry premium/ask size;
+insufficient exit bid size makes the outcome unavailable rather than resizing.
+
+Quant Only, Codex Price, Codex News, Quant + Codex, SPY and CASH use paired sessions
+and a $1,000 funded instrument budget: fractional unleveraged equity or whole Puts
+with unused cash. Reported return is dollar P&L divided by $1,000. Put premium
+returns are separately labeled. Spreads are included; unknown option fees are
+explicitly unobserved. The arithmetic accepts explicit per-contract costs when
+observed. Equity simulations use minute open/close and frozen estimated costs.
+Random remains a secondary record and does not determine primary paired coverage.
+
+The separate directional comparison uses $1,000 underlying reference notional.
+Its bearish leg is a theoretical negative exposure, excluding borrow/margin costs
+and with unbounded short risk; it is neither an executable stock short nor Put P&L
+and never enters the funded instrument comparison.
+
+Authenticated server 1.8.0 advertised timestamped option bid/ask quotes but only
+OHLC historical bars. The inspected QQQ quote and historical calls returned tool
+errors; no usable option pricing observation was obtained. Historical OHLC cannot
+substitute for entry/exit sides. Prospective successful quotes are still required
+before claiming observed Put performance. Options access is a separate market-only
+capability; it cannot read accounts, review/place/cancel orders or authorize LIVE.

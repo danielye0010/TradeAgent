@@ -12,10 +12,17 @@ from zoneinfo import ZoneInfo
 from ..calendar import session_bounds
 from ..model import Halt
 from ..opportunity_cli import write
+from ..research import bidirectional
 from ..research.alpha_signals import ALPHA_VERSION
 from ..research.domain import identity
 from ..research.opportunities import UNIVERSE, capture, research_snapshot, scan
 from ..research.opportunity_workflow import DailyResearch
+from ..research.put_shadow import PUT_RULE, PutReader, open_put_reader
+from ..research.research_universe import (
+    COLLECTION_BUDGET_SECONDS,
+    feasible_universe,
+    liquid_candidates,
+)
 from ..research.tradeplan import COSTS
 from .assessor import MODEL, NEWS_WEB_SEARCH, assess, assess_news
 
@@ -60,6 +67,15 @@ NEWS_CONFIG = {
     "codex_model": MODEL,
     "costs": {name: asdict(cost) for name, cost in COSTS.items()},
 }
+BIDIRECTIONAL_CONFIG = {
+    **NEWS_CONFIG,
+    "protocol": bidirectional.PROTOCOL,
+    "universe": "measured prefix from --universe-profile",
+    "capital_dollars": bidirectional.CAPITAL,
+    "minimum_point_net_edge": bidirectional.MIN_NET_EDGE,
+    "put_rule": PUT_RULE,
+    "collection_budget_seconds": COLLECTION_BUDGET_SECONDS,
+}
 PROTOCOLS = {
     PROTOCOL: {
         "config": CONFIG,
@@ -75,6 +91,13 @@ PROTOCOLS = {
         "start": (10, 30),
         "seconds": 420,
     },
+}
+PROTOCOLS[bidirectional.PROTOCOL] = {
+    "config": BIDIRECTIONAL_CONFIG,
+    "arms": bidirectional.ARMS,
+    "baselines": ("quant_only", "spy", "cash"),
+    "start": (10, 30),
+    "seconds": 420,
 }
 
 
@@ -249,10 +272,23 @@ class Pipeline:
         evidence_kind="prospective",
         protocol=PROTOCOL,
         news_assessor=assess_news,
+        universe_profile=None,
+        put_reader_factory=open_put_reader,
     ):
         if protocol not in PROTOCOLS:
             raise ValueError("unknown scheduled research protocol")
         self.protocol, self.news_assessor = protocol, news_assessor
+        self.bidirectional = protocol == bidirectional.PROTOCOL
+        self.universe = UNIVERSE
+        self.profile = None
+        self.put_reader_factory = put_reader_factory
+        if self.bidirectional:
+            if provider != "robinhood" or universe_profile is None:
+                raise ValueError(
+                    "bidirectional research requires a measured Robinhood universe profile"
+                )
+            self.profile = json.loads(Path(universe_profile).read_text())
+            self.universe = list(feasible_universe(self.profile))
         self.directory = Path(directory)
         self.store = DailyResearch(self.directory)
         self.provider, self.helper = provider, oauth_helper
@@ -299,17 +335,79 @@ class Pipeline:
             # model output or process diagnostics, are persisted.
             return "UNAVAILABLE", type(error).__name__, {}
 
+    def collect(self, symbols, *, session=None):
+        if not self.bidirectional:
+            return self.collector(
+                symbols, self.provider, self.helper, **({"session": session} if session else {})
+            )
+        return self.collector(
+            symbols,
+            self.provider,
+            self.helper,
+            session=session,
+            deadline=self.clock() + COLLECTION_BUDGET_SECONDS,
+        )
+
+    def select_puts(self, report, data, deadline):
+        selections = {}
+        try:
+            with self.put_reader_factory(
+                Path(__file__).resolve().parents[3], self.helper
+            ) as bridge:
+                reader = PutReader(bridge, self.clock)
+                for c in report["candidates"]:
+                    if self.clock() >= deadline:
+                        break
+                    try:
+                        snapshot = research_snapshot(data, c["symbol"], self.clock())
+                        from ..research.alpha_signals import FAMILIES, AlphaStrategy
+
+                        negative = any(
+                            AlphaStrategy(f, 3900).predict(snapshot, self.clock()).direction == -1
+                            for f in FAMILIES
+                        )
+                        if negative:
+                            selections[c["symbol"]] = reader.select(
+                                c["symbol"], (snapshot.ask + snapshot.bid) / 2, deadline=deadline
+                            )
+                    except (Halt, ValueError, OSError, KeyError, TypeError):
+                        selections[c["symbol"]] = None
+        except (Halt, ValueError, OSError, KeyError, TypeError):
+            pass  # Missing options are explicit UNAVAILABLE outcomes, never cash or underlying-derived Put returns.
+        return selections
+
+    def observe_puts(self):
+        now = self.clock()
+        due = any(
+            d.get("research_protocol") == bidirectional.PROTOCOL
+            and any(d.get("put_selections", {}).values())
+            and any(
+                d[f"outcome_{p}_time"] <= now < d[f"outcome_{p}_time"] + 60
+                for p in ("entry", "exit")
+            )
+            for d in self.store.records("decisions")
+        )
+        if due:
+            try:
+                with self.put_reader_factory(
+                    Path(__file__).resolve().parents[3], self.helper
+                ) as bridge:
+                    bidirectional.observe_options(
+                        self.store, PutReader(bridge, self.clock), self.clock()
+                    )
+                    return
+            except (Halt, ValueError, OSError, KeyError, TypeError):
+                pass
+        bidirectional.observe_options(self.store, None, self.clock())
+
     def resolve(self):
         results = []
         for request in self.store.pending_sessions(self.clock(), evidence_kind=self.evidence_kind):
             if request["source"] != self.provider + "-opportunity-minute-v1":
                 continue
             try:
-                data = self.collector(
-                    request["symbols"],
-                    self.provider,
-                    self.helper,
-                    session=date.fromisoformat(request["session_date"]),
+                data = self.collect(
+                    request["symbols"], session=date.fromisoformat(request["session_date"])
                 )
                 write(self.directory / "captures" / (identity(data) + ".json"), data)
                 results.append(self.store.resolve(data, self.clock()))
@@ -337,6 +435,8 @@ class Pipeline:
                 "provider": self.provider,
                 "evidence_kind": self.evidence_kind,
             }
+            if self.bidirectional:
+                config.update(universe=self.universe, universe_profile_hash=identity(self.profile))
             if deployment.exists():
                 enrolled = json.loads(deployment.read_text())
                 if enrolled["config"] != config:
@@ -401,7 +501,7 @@ class Pipeline:
                 else:
                     self.event(day, "STARTED", status="STARTED")
                     try:
-                        data = self.collector(UNIVERSE, self.provider, self.helper)
+                        data = self.collect(self.universe)
                         captured = self.clock()
                         if (
                             not target[0] <= captured < target[1]
@@ -410,14 +510,17 @@ class Pipeline:
                             raise ValueError("capture outside prospective decision window")
                         if (data["session_open"], data["session_close"]) != session_bounds(day):
                             raise ValueError("provider session differs from XNYS calendar")
-                        if set(data["symbols"]) != set(UNIVERSE):
+                        if set(data["symbols"]) != set(self.universe):
                             raise ValueError(
                                 "provider capture differs from frozen research universe"
                             )
                         report = scan(data, now=captured, candidate_count=3)
+                        if self.bidirectional:
+                            report["research_protocol"] = self.protocol
+                            report = liquid_candidates(report, data)
                         write(self.directory / "captures" / (identity(data) + ".json"), data)
                         self.store.save("scans", report, report["scan_id"], captured)
-                        news = self.protocol == NEWS_PROTOCOL
+                        news = self.protocol in {NEWS_PROTOCOL, bidirectional.PROTOCOL}
                         if news:
                             # Both arms: same prompt, schema, model and deadline; only web
                             # search differs. Run together so both fit the decision window.
@@ -443,10 +546,15 @@ class Pipeline:
                         if news:
                             # Keep the assessed shortlist frozen; refresh once for every
                             # arm after both Codex calls, which can outlive quote freshness.
-                            data = self.collector(UNIVERSE, self.provider, self.helper)
+                            data = self.collect(self.universe)
                             if (data["session_open"], data["session_close"]) != session_bounds(day):
                                 raise ValueError("provider session differs from XNYS calendar")
                             write(self.directory / "captures" / (identity(data) + ".json"), data)
+                        puts = (
+                            self.select_puts(report, data, min(target[1], self.clock() + 20))
+                            if self.bidirectional
+                            else None
+                        )
                         frozen = self.clock()
                         if not target[0] <= frozen < target[1]:
                             raise ValueError("assessment finished after fixed decision window")
@@ -460,6 +568,7 @@ class Pipeline:
                             shadow_protocol=self.protocol,
                             assessment_status=agent_status,
                             news_assessment_status=news_status,
+                            **({"put_selections": puts} if self.bidirectional else {}),
                         )
                         write(
                             self.directory / "decisions" / (decision["decision_id"] + ".json"),
@@ -490,6 +599,8 @@ class Pipeline:
                             failure_kind="MARKET_EVIDENCE_UNAVAILABLE",
                             reason=str(error),
                         )
+            if self.bidirectional:
+                self.observe_puts()
             resolution = self.resolve()
             status = {
                 "mode": "SHADOW",
@@ -499,7 +610,9 @@ class Pipeline:
                 "run": result,
                 "resolution": resolution,
                 "protocol": self.protocol,
-                "comparison": compare(
+                "comparison": bidirectional.compare(self.store)
+                if self.bidirectional
+                else compare(
                     self.store,
                     self.protocol,
                     PROTOCOLS[self.protocol]["arms"],
@@ -520,8 +633,14 @@ def main(argv=None):
     parser.add_argument("--state-dir", type=Path, required=True)
     parser.add_argument("--oauth-helper", type=Path)
     parser.add_argument("--protocol", choices=sorted(PROTOCOLS), default=PROTOCOL)
+    parser.add_argument("--universe-profile", type=Path)
     args = parser.parse_args(argv)
-    pipeline = Pipeline(args.state_dir, oauth_helper=args.oauth_helper, protocol=args.protocol)
+    pipeline = Pipeline(
+        args.state_dir,
+        oauth_helper=args.oauth_helper,
+        protocol=args.protocol,
+        universe_profile=args.universe_profile,
+    )
     try:
         print(json.dumps(pipeline.tick(), allow_nan=False))
     finally:

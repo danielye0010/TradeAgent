@@ -44,7 +44,15 @@ def latest_session(now):
     raise ValueError("no recent XNYS session available")
 
 
-def capture(symbols, provider="robinhood", oauth_helper=None, *, clock=time.time, session=None):
+def capture(
+    symbols,
+    provider="robinhood",
+    oauth_helper=None,
+    *,
+    clock=time.time,
+    session=None,
+    deadline=None,
+):
     """Reuse provider authentication and read transport; market tools only."""
     symbols = universe(symbols)
     requested = list(dict.fromkeys([*symbols, "SPY", *(["QQQ"] if "SPY" in symbols else [])]))
@@ -55,10 +63,22 @@ def capture(symbols, provider="robinhood", oauth_helper=None, *, clock=time.time
     end = min(started, bounds[1])
     bars, quotes, references, missing = [], {}, {}, []
     with open_provider(provider, Path(__file__).resolve().parents[3], oauth_helper) as adapter:
+
+        def market_read(name, arguments):
+            if deadline is not None:
+                remaining = deadline - clock()
+                if remaining <= 0:
+                    raise ValueError("research collection deadline exceeded")
+                adapter.bridge.timeout = min(adapter.bridge.timeout, remaining)
+            result = adapter.bridge.read(name, arguments)
+            if deadline is not None and clock() >= deadline:
+                raise ValueError("research collection deadline exceeded")
+            return result
+
         if provider == "robinhood":
             for index in range(0, len(requested), 5):
                 batch = requested[index : index + 5]
-                history = adapter.bridge.read(
+                history = market_read(
                     "get_equity_historicals",
                     {
                         "symbols": batch,
@@ -109,7 +129,7 @@ def capture(symbols, provider="robinhood", oauth_helper=None, *, clock=time.time
             # Above 20 quotes the provider omits previous-session closes.
             for index in range(0, len(requested), 20):
                 batch = requested[index : index + 20]
-                response = adapter.bridge.read("get_equity_quotes", {"symbols": batch})["data"]
+                response = market_read("get_equity_quotes", {"symbols": batch})["data"]
                 received = clock()
                 for item in response.get("results") or []:
                     raw = item["quote"]
