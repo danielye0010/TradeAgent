@@ -55,15 +55,101 @@ def test_signed_selection_and_cost_screened_cash(direction, expected, stance, de
         "seed",
         100,
     )
-    for name in ("quant_only", "codex_price", "codex_news", "quant_codex"):
+    for name in ("quant_only", "quant_codex"):
         assert arms[name]["decision"] == decision
         assert arms[name]["shadow_direction"] == (direction if decision != "CASH" else 0)
         assert arms[name]["plan"] is None
+    for name in ("codex_price", "codex_news"):
+        codex_direction = {"long": 1, "bearish": -1}.get(stance, 0)
+        assert arms[name]["shadow_direction"] == codex_direction
+        assert arms[name]["decision"] == {1: "LONG", -1: "BEARISH", 0: "CASH"}[codex_direction]
     disagreement = bidirectional.select(
         [candidate()], assessment("long"), assessment("watch"), "VALID", "VALID", "seed", 100
     )
     assert disagreement["quant_only"]["shadow_direction"] == -1
-    assert disagreement["codex_price"]["decision"] == "CASH"
+    assert disagreement["codex_price"]["decision"] == "LONG"
+    assert disagreement["codex_price"]["prediction_id"] is None
+    assert disagreement["codex_price"]["expected_return"] is None
+    assert disagreement["codex_news"]["decision"] == "CASH"
+    assert disagreement["quant_codex"]["decision"] == "CASH"
+
+
+def test_codex_independent_directions_ranks_and_nullable_quant_fields(tmp_path):
+    from tradeagent.research.opportunity_workflow import DailyResearch
+
+    candidates = [
+        candidate(1, 0.0001),
+        {**candidate(-1, -0.03), "symbol": "IWM"},
+        {**candidate(), "symbol": "AAPL", "predictions": []},
+    ]
+    price = {
+        symbol: {**assessment(stance)["QQQ"], "rank": rank}
+        for symbol, stance, rank in (("QQQ", "bearish", 1), ("IWM", "long", 2), ("AAPL", "long", 3))
+    }
+    news = {
+        symbol: {**assessment(stance)["QQQ"], "rank": rank}
+        for symbol, stance, rank in (("QQQ", "long", 3), ("IWM", "bearish", 2), ("AAPL", "long", 1))
+    }
+    arms = bidirectional.select(candidates, price, news, "VALID", "VALID", "seed", 100)
+    assert arms["quant_only"]["symbol"] == arms["quant_codex"]["symbol"] == "IWM"
+    assert arms["codex_price"]["symbol"] == "QQQ" and arms["codex_price"]["shadow_direction"] == -1
+    assert arms["codex_news"]["symbol"] == "AAPL" and arms["codex_news"]["shadow_direction"] == 1
+    for name in ("codex_price", "codex_news"):
+        assert arms[name]["codex_rank"] == 1
+        assert arms[name]["prediction_id"] is None and arms[name]["expected_return"] is None
+    below_cost = bidirectional.select(
+        [candidate(1, 0.0001)],
+        assessment("long"),
+        assessment("long"),
+        "VALID",
+        "VALID",
+        "seed",
+        100,
+    )
+    assert below_cost["codex_news"]["expected_return"] == 0.0001
+    assert below_cost["quant_codex"]["decision"] == "CASH"
+    invalid = bidirectional.select(
+        candidates, price, news, "UNAVAILABLE", "UNAVAILABLE", "seed", 100
+    )
+    assert invalid["codex_price"]["status"] == invalid["codex_news"]["status"] == "UNAVAILABLE"
+    assert invalid["quant_codex"]["symbol"] is None
+
+    store = DailyResearch(tmp_path)
+    decision = {
+        "decision_id": "independent",
+        "decision_time": 100,
+        "research_protocol": bidirectional.PROTOCOL,
+        "comparisons": arms,
+        "quantitative_observations": [*candidates, {**candidate(), "symbol": "SPY"}],
+        "outcome_entry_time": 100,
+        "outcome_exit_time": 3700,
+        "evidence_kind": "synthetic",
+    }
+    try:
+        observed = {
+            s: {"gross": 0.01, "entry_price": 100, "exit_price": 101}
+            for s in ("QQQ", "IWM", "AAPL", "SPY")
+        }
+        resolved = bidirectional.resolve_arms(decision, observed, [])
+        assert resolved["codex_price"]["directional_benchmark"]["status"] == "AVAILABLE"
+        assert resolved["codex_price"]["instrument_simulation"]["status"] == "UNAVAILABLE"
+        assert resolved["codex_price"]["instrument_simulation"]["pnl_dollars"] is None
+        assert resolved["codex_news"]["instrument_simulation"]["status"] == "AVAILABLE"
+        store.save("decisions", decision, "independent", 100)
+        store.save(
+            "outcomes",
+            {"decision_id": "independent", "evidence_kind": "synthetic", "comparisons": resolved},
+            "independent",
+            3800,
+        )
+        stats = bidirectional.compare(store)["evidence_pools"]["synthetic"]["comparisons"]
+        assert stats["instrument_simulation"]["arms"]["codex_price"]["unavailable_days"] == 1
+        assert stats["directional_benchmark"]["arms"]["codex_news"]["paired_days"] == 1
+        report = bidirectional.pnl_report(store)
+        assert "Codex Price | QQQ | BEARISH | LONG_PUT" in report and "UNAVAILABLE" in report
+        assert "Codex News | AAPL | LONG | LONG_EQUITY" in report
+    finally:
+        store.close()
 
 
 @pytest.mark.parametrize(
@@ -561,7 +647,7 @@ def test_put_discovery_continues_per_candidate_until_shared_deadline(
     monkeypatch.setattr(
         alpha_signals,
         "AlphaStrategy",
-        lambda *args: SimpleNamespace(predict=lambda *args: SimpleNamespace(direction=-1)),
+        lambda *args: SimpleNamespace(predict=lambda *args: SimpleNamespace(direction=1)),
     )
     pipeline = daily.Pipeline(
         tmp_path, clock=lambda: clock[0], put_reader_factory=factory, evidence_kind="synthetic"

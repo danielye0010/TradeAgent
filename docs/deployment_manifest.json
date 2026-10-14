@@ -51,9 +51,9 @@
     "src/tradeagent/options.py": "a603efb4823b16d4a60c54752be888c6711c572c288c5f979b6b32c7970b9061",
     "src/tradeagent/prospective/__init__.py": "ec6da6bc1a0b0d491b3deb49ab9ffb0f967de702e9cd2ce560c2132b98399d9b",
     "src/tradeagent/prospective/access.py": "8a2e79855862bc8123a28f85f4227dc05c8fae55ee39853eb10bce3df6360f0e",
-    "src/tradeagent/prospective/assessor.py": "ce18200d71eb1a3d45a2700070c21c8fae5066fb7d04c1ad8451f034a1662d6d",
+    "src/tradeagent/prospective/assessor.py": "784530cb924010d6dd4c3b65c89505fd58c43bae6855113e3ba4344ea740e8ae",
     "src/tradeagent/prospective/collector.py": "1e350381e046ae9a0735c536f45a15bdef4a8c12add560ec7ed385ac36362994",
-    "src/tradeagent/prospective/daily.py": "afce47fee477ea79b0b222046b6737dc7e97c37dbfc06fc567d95f23da62292c",
+    "src/tradeagent/prospective/daily.py": "70f906482101dee0b87403c71cbdc1772256d46a2a6ee96108837fb54910e6ef",
     "src/tradeagent/prospective/providers.py": "441378ee1e34cb43faa2249ebde5e6ce1b2048c7daf0934968ab8d33a80c575a",
     "src/tradeagent/prospective/service.py": "33cfeb5c1995263b66f3bbee8d7a1da5628f71a5c23be549325d2aed838f0f5d",
     "src/tradeagent/research/__init__.py": "c6b7d096648fdf0a1eb0233cbdf078da4a4fa3e2549e0da9f8f6a83b713ec464",
@@ -62,7 +62,7 @@
     "src/tradeagent/research/alpha_experiment.py": "8eea3428f7144716b263cba6b025e76aa18d48e7857a6296e858e14a02c655e2",
     "src/tradeagent/research/alpha_signals.py": "2c73e6c4041184ab4041799726e67386bc2ccb20309f79010e0558fa19e0353e",
     "src/tradeagent/research/attribution.py": "29f6844442b8b1bc29072ee904203a311d7b8f3b092e2f2d7a18297390b604f0",
-    "src/tradeagent/research/bidirectional.py": "a348d22d670e3e1155035cde775c475898afe4c28ddbb21ff47a1abe0a18df8c",
+    "src/tradeagent/research/bidirectional.py": "a4f15e23eeea185a7d06d3f93a0f70d6dfa9529d2818f6ae4a07991393eed467",
     "src/tradeagent/research/demo.py": "daa19c16f9eb2bcaece2019e7f77c7f03a16566c332e2d81842aa77cdf9f9af2",
     "src/tradeagent/research/domain.py": "4225a9c92f6e050a9a9ecc062d032c977b99b43f0dac08e4d057e08686520ebc",
     "src/tradeagent/research/evidence_cohorts.py": "debd8e9990c1912c1ef1394c230c3966446ea3038085597362dd91e6293b0062",
@@ -99,7 +99,7 @@
     "src/tradeagent/vendor/trend.py": "04eac1dad150cfaccaad3c095da02e7ccfc96de4c6b8fcc0e33d7ab6e34f3355",
     "tests/conftest.py": "1334805f24fee223b8e0066e04761fac9d53407bd69a13051e32afcf3f28f0ae",
     "tests/test_account_and_market_rules.py": "ebdb3d63a660990930473ae5dc847b8f9079fb5ee555d0552ad5b6170d2d465e",
-    "tests/test_bidirectional.py": "46a22e252df0824b2251285a0f3fcd16e9305ca102783035fd698167392153da",
+    "tests/test_bidirectional.py": "45da54cd96543aba4889f684857bb91fcab6bc86096b1a6bb7f0fad3b1c9b043",
     "tests/test_broker_contract.py": "187d61ecf92092889d54718471f4772cb2a8d650d38b479cef76ede97b2984f0",
     "tests/test_canary_execution.py": "a2344761daa78e350d4a515fc3246690afaba9464626d3a6fa5ed84661c14f81",
     "tests/test_canary_reference.py": "d1cc61aea7954f39a51e8f6dfcec0c1a36d7fd9d1e473c8125c3996699685442",
@@ -108,7 +108,7 @@
     "tests/test_contract_173.py": "f940b64d9cd2ae63be7fc3398ee50eda2b2f486395be7057632555462e161664",
     "tests/test_contract_pins.py": "6b4abbd7220629bac7a6df5e4e6e6323cea1a88987fecbe70b549eb41621f939",
     "tests/test_daily_excess.py": "6a2d681506d8b066eef551c906cc4d8e47006f615c031350d0c1b99d40c10425",
-    "tests/test_daily_news.py": "f348414e260ca39590952e46a281435b725653644c3476ea2c84ac48a602c128",
+    "tests/test_daily_news.py": "b2f05e3443c546854e12df2624105304659a43882bf388c97ac70cd5d5d0bdce",
     "tests/test_daily_research.py": "f8f59118500905cd4bc8742a85938f7dd01234c5d45fede64fa8a4f7e1bf11b0",
     "tests/test_daily_signal_timing.py": "9a6a876884a3d99081a39131bee4458087b1f7f5b1f837a3d13a60354dd79919",
     "tests/test_evidence_cohorts.py": "3c9b35eb2e056ebd6c5898f49dae454054d2a52eb96b1848cb33869ecf4d0dcf",
@@ -137,5 +137,5 @@
     "tests/test_supervised_contract.py": "b17692ea76ef0653e92215103a4dc459478601cfc17c7fb3df17697e37c92d44",
     "tests/test_tradeplan_engine.py": "8cb9735d0e593cfa49bb6d4ddb33093ef8e76d33d6cd06752ab18cb10dd5e80f"
   },
-  "framework_sha256": "2435a56ce676149dbffde32cfcdc7a10673113d659a36ee09da9eaa985a94a98"
+  "framework_sha256": "a3b1509d823616d4ca49da2c108783dd246cbe9c0867efd75c3c5e3a4e93f3d0"
 }

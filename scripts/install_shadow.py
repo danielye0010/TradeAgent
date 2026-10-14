@@ -199,10 +199,24 @@ WantedBy=timers.target
         subprocess.run(command, check=True)
     if enable:
         subprocess.run(["systemctl", "--user", "enable", "--now", timer], check=True)
+    else:
+        subprocess.run(["systemctl", "--user", "disable", "--now", timer], check=True)
+        result = subprocess.run(
+            ["systemctl", "--user", "show", timer, "--property=UnitFileState,ActiveState"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        properties = dict(line.split("=", 1) for line in result.stdout.splitlines() if "=" in line)
+        if (
+            properties.get("UnitFileState") != "disabled"
+            or properties.get("ActiveState") != "inactive"
+        ):
+            raise RuntimeError("requested timer is not disabled and inactive after preparation")
     print(
         "Daily SHADOW units verified; timer enabled."
         if enable
-        else "Daily SHADOW units prepared; timer remains disabled."
+        else "Daily SHADOW units prepared; requested timer confirmed disabled and inactive."
     )
 
 

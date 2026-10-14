@@ -360,16 +360,11 @@ class Pipeline:
                         break
                     try:
                         snapshot = research_snapshot(data, c["symbol"], self.clock())
-                        from ..research.alpha_signals import FAMILIES, AlphaStrategy
-
-                        negative = any(
-                            AlphaStrategy(f, 3900).predict(snapshot, self.clock()).direction == -1
-                            for f in FAMILIES
+                        # Any of the same three candidates can be independently bearish
+                        # for Codex, even when every Quant family disagrees.
+                        selections[c["symbol"]] = reader.select(
+                            c["symbol"], (snapshot.ask + snapshot.bid) / 2, deadline=deadline
                         )
-                        if negative:
-                            selections[c["symbol"]] = reader.select(
-                                c["symbol"], (snapshot.ask + snapshot.bid) / 2, deadline=deadline
-                            )
                     except (Halt, ValueError, OSError, KeyError, TypeError):
                         selections[c["symbol"]] = None
         except (Halt, ValueError, OSError, KeyError, TypeError):

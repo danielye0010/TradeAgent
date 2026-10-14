@@ -139,11 +139,16 @@ cost-sensitive results and selector controls. A passing synthetic demo cannot an
 frozen `daily-four-arm-v1` and `daily-news-v2` decisions, configuration and timers
 retain their original long-only semantics. Use a separate state directory.
 
-The v3 shortlist remains three symbols. A signed point forecast must exceed its
-estimated round-trip underlying cost plus 10bp. LONG, BEARISH and CASH persist in
-each arm; Codex Price/News must support the same signal direction. Quant + Codex
-ranks the news-supported signals by quantitative edge. Estimates remain uncalibrated;
-passing this screen does not establish profitability.
+The v3 shortlist remains three liquid symbols with valid market data. Quant Only
+requires a signed point forecast exceeding estimated round-trip underlying cost plus
+10bp. Codex Price/News independently select supported stances by rank, without a
+matching Quant forecast or its cost threshold; missing Quant fields remain null.
+LONG, BEARISH and CASH persist in each arm. Quant + Codex retains same-direction
+news agreement and quantitative eligibility, ranked by quantitative edge. Estimates
+remain uncalibrated; an underlying cost screen does not establish positive Put
+expected value. News requires an observed completed web search, but no relevant
+news may legitimately yield empty sources. Shared Codex host configuration hashes
+are retained with assessment provenance to distinguish runtime conditions.
 
 The frozen discovery pool contains 106 stocks/ETFs. The official Robinhood minute
 history/quote interface covered 31/60/106 symbols in 13.4/18.4/33.3 seconds on
