@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.0-beta.5 — 2026-10-14
+
+Python distribution version: `1.0.0b5`.
+
+- Existing daily SHADOW ticks generate `daily-report.md` with frozen P&L, quote/cost
+  details, candidate coverage, and separately labeled exploratory basket, ranking,
+  disagreement and news comparisons. Missing evidence remains explicit.
+- `python -m tradeagent.prospective.daily --report-only --state-dir PATH --protocol NAME`
+  regenerates the derived report without collection, inference or a decision tick.
+- Preserve v1/v2 selection rules, frozen observations, windows and costs; v3 remains
+  dependent on genuine option quotes and explicit operator enablement.
+
 ## 1.0.0-beta.4 — 2026-10-13
 
 Python distribution version: `1.0.0b4`. Supersedes the unpublished beta.3.

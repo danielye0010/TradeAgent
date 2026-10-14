@@ -173,11 +173,27 @@ Both picks get the same entry, exit and costs, so the gap between **Codex news**
 
 ### Reading the results
 
-Everything lands in `daily-status.json`. Look at `paired_excess_differences`: each arm's
-return minus what SPY did over the same hour. Raw returns mostly tell you how often an arm
-was long while the market went up; the excess numbers tell you whether it picked well. The
-random arm is the one to beat. If the agent can't outpick a coin flip over a few months,
-you'll know.
+Each existing v1/v2 timer writes `daily-status.json` and `daily-report.md` after its
+normal tick. The report separates frozen modeled P&L from exploratory candidate
+selection statistics: a cost-adjusted equal-weight basket of the same eligible
+candidates, complete Price/News rankings, daily rank association, ordering accuracy,
+selection disagreement and observed news-search activity. Missing evidence remains
+PENDING or UNAVAILABLE; failed assessments are never counted as profitable CASH.
+
+Quant + Codex requires a positive Quant signal and Codex support for the selected
+symbol, without requiring identical first choices. Ranking statistics describe the
+entire frozen shortlist; candidate pairs do not count as independent trading days.
+Longitudinal differences use matched daily sessions, separated by evidence pool.
+These exploratory diagnostics do not change the original trading metrics or establish
+a repeatable edge. Reports retain each final decision quote and its frozen costs;
+v2's refreshed quote may differ from its earlier scanner quote.
+
+Regenerate a report from saved evidence without collecting data or calling Codex:
+
+```bash
+python -m tradeagent.prospective.daily --report-only \
+  --state-dir /abs/path/to/daily-news --protocol daily-news-v2
+```
 
 The autopilot paper-trades only; real orders always come from one of the live modes above.
 
