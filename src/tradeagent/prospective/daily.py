@@ -618,7 +618,19 @@ class Pipeline:
                 ),
                 "terminal_unresolvable": self.store.terminal_windows(self.clock()),
                 "orders_submitted": 0,
+                "tick_completed_at": self.clock(),
             }
+            if not self.bidirectional:
+                from .daily_reporting import SavedCaptures, evaluate, render, write_report
+
+                evaluation = evaluate(
+                    self.store,
+                    self.protocol,
+                    self.clock(),
+                    SavedCaptures(self.directory, self.clock()),
+                )
+                status["exploratory_selection"] = evaluation
+                write_report(self.directory, render(evaluation, status))
             write(self.directory / "daily-status.json", status)
             if self.bidirectional:
                 (self.directory / "daily-pnl.md").write_text(
@@ -633,7 +645,18 @@ def main(argv=None):
     parser.add_argument("--oauth-helper", type=Path)
     parser.add_argument("--protocol", choices=sorted(PROTOCOLS), default=PROTOCOL)
     parser.add_argument("--universe-profile", type=Path)
+    parser.add_argument(
+        "--report-only",
+        action="store_true",
+        help="regenerate daily-report.md from saved records only; no inference, collection or decision tick",
+    )
     args = parser.parse_args(argv)
+    if args.report_only:
+        from .daily_reporting import regenerate
+
+        result = regenerate(args.state_dir, args.protocol)
+        print(json.dumps({k: v for k, v in result.items() if k != "today"}, allow_nan=False))
+        return
     pipeline = Pipeline(
         args.state_dir,
         oauth_helper=args.oauth_helper,
