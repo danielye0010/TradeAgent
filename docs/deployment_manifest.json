@@ -54,7 +54,7 @@
     "src/tradeagent/prospective/assessor.py": "784530cb924010d6dd4c3b65c89505fd58c43bae6855113e3ba4344ea740e8ae",
     "src/tradeagent/prospective/collector.py": "1e350381e046ae9a0735c536f45a15bdef4a8c12add560ec7ed385ac36362994",
     "src/tradeagent/prospective/daily.py": "1140141226a5381c26a7a4183fa6bef833024a0c6167ef30a27b2569a533a45b",
-    "src/tradeagent/prospective/daily_reporting.py": "74a26239bce2ddf2b47e1691eac1674d8ef8c79464d78487913990d8ebb547a5",
+    "src/tradeagent/prospective/daily_reporting.py": "10a5d4ed170462cc171968b53e9a649540cf71b61095e8df46d749671e0154f5",
     "src/tradeagent/prospective/providers.py": "441378ee1e34cb43faa2249ebde5e6ce1b2048c7daf0934968ab8d33a80c575a",
     "src/tradeagent/prospective/service.py": "33cfeb5c1995263b66f3bbee8d7a1da5628f71a5c23be549325d2aed838f0f5d",
     "src/tradeagent/research/__init__.py": "c6b7d096648fdf0a1eb0233cbdf078da4a4fa3e2549e0da9f8f6a83b713ec464",
@@ -110,7 +110,7 @@
     "tests/test_contract_pins.py": "6b4abbd7220629bac7a6df5e4e6e6323cea1a88987fecbe70b549eb41621f939",
     "tests/test_daily_excess.py": "6a2d681506d8b066eef551c906cc4d8e47006f615c031350d0c1b99d40c10425",
     "tests/test_daily_news.py": "b2f05e3443c546854e12df2624105304659a43882bf388c97ac70cd5d5d0bdce",
-    "tests/test_daily_reporting.py": "8b452a802cd25661db0f166e046dc2499add4adcc85f2cfc36f227ef37945fbf",
+    "tests/test_daily_reporting.py": "b11acdcd2ce21b21aa7ea2c633ae5747c604cfabdf59b707ef02d7cfdf2785ee",
     "tests/test_daily_research.py": "f8f59118500905cd4bc8742a85938f7dd01234c5d45fede64fa8a4f7e1bf11b0",
     "tests/test_daily_signal_timing.py": "9a6a876884a3d99081a39131bee4458087b1f7f5b1f837a3d13a60354dd79919",
     "tests/test_evidence_cohorts.py": "3c9b35eb2e056ebd6c5898f49dae454054d2a52eb96b1848cb33869ecf4d0dcf",
@@ -139,5 +139,5 @@
     "tests/test_supervised_contract.py": "b17692ea76ef0653e92215103a4dc459478601cfc17c7fb3df17697e37c92d44",
     "tests/test_tradeplan_engine.py": "8cb9735d0e593cfa49bb6d4ddb33093ef8e76d33d6cd06752ab18cb10dd5e80f"
   },
-  "framework_sha256": "cd1bb8887979d14cbc61e539b0d369555a7a21bc59fa24f0fc310e37c960d091"
+  "framework_sha256": "b1ec1e8b5aa12ede9259eb4f3f1bdadb7da95ed6c4eee9e97d1bf3fbc3931d81"
 }

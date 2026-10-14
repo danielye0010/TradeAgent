@@ -35,6 +35,7 @@ def fixture():
     returns = {
         s: {
             "base_net": net,
+            "stress_net": net,
             "gross": (1 + net) * (1 + side) / (1 - side) - 1,
             "entry_price": 100,
             "exit_price": 100 * (1 + net),
@@ -103,7 +104,7 @@ def fixture():
         "resolved_at": NOW + 5400,
         "candidate_outcomes": returns,
         "comparisons": {
-            n: returns[a["symbol"]] if a["symbol"] else {"gross": 0, "base_net": 0}
+            n: returns[a["symbol"]] if a["symbol"] else {"gross": 0, "base_net": 0, "stress_net": 0}
             for n, a in comparisons.items()
         },
     }
@@ -293,7 +294,11 @@ def test_report_only_uses_read_only_database_and_never_initializes_pipeline(tmp_
         )
     db.commit()
     db.close()
-    status = {"protocol": PROTOCOL, "run": store.records("sessions")[0]}
+    status = {
+        "protocol": PROTOCOL,
+        "run": store.records("sessions")[0],
+        "comparison": {"evidence_pools": {"synthetic": {"resolved_sessions": 0}}},
+    }
     (tmp_path / "daily-status.json").write_text(json.dumps(status))
     original = {p.name: p.read_bytes() for p in tmp_path.iterdir()}
     monkeypatch.setattr(
@@ -309,6 +314,7 @@ def test_report_only_uses_read_only_database_and_never_initializes_pipeline(tmp_
         and "Original frozen trading metrics" in report
     )
     assert "First choices need not match" in report
+    assert "resolved=1; valid paired days=1" in report
     daily.main(["--report-only", "--state-dir", str(tmp_path), "--protocol", PROTOCOL])
 
 
@@ -342,6 +348,28 @@ def test_terminal_outcome_is_unavailable_and_never_cash_or_pending(tmp_path):
         a["status"] == "UNAVAILABLE" and a["net_return"] is None for a in row["arms"].values()
     )
     assert all(m["status"] == "UNAVAILABLE" for m in row["missing_outcomes"])
+
+
+def test_concurrent_report_writers_have_independent_temporary_files(tmp_path, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    from pathlib import Path
+    from threading import Barrier
+
+    from tradeagent.prospective.daily_reporting import write_report
+
+    barrier = Barrier(2)
+    original_replace = Path.replace
+
+    def overlapping_replace(path, target):
+        barrier.wait(timeout=5)
+        return original_replace(path, target)
+
+    monkeypatch.setattr(Path, "replace", overlapping_replace)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        paths = list(pool.map(lambda text: write_report(tmp_path, text), ["first", "second"]))
+    assert paths[0] == paths[1]
+    assert paths[0].read_text() in {"first", "second"}
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["daily-report.md"]
 
 
 def test_normal_ticks_generate_reports_without_extra_model_or_market_calls(tmp_path):

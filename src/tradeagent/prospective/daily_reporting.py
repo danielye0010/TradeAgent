@@ -4,6 +4,7 @@ import json
 import math
 import sqlite3
 import statistics
+import tempfile
 import time
 from datetime import datetime
 from itertools import combinations
@@ -596,9 +597,19 @@ def render(evaluation, status):
 
 def write_report(directory, text):
     path = Path(directory) / "daily-report.md"
-    temporary = path.with_suffix(".md.tmp")
-    temporary.write_text(text, encoding="utf-8")
-    temporary.replace(path)
+    with tempfile.NamedTemporaryFile(
+        mode="w", encoding="utf-8", dir=path.parent, prefix=".daily-report-", delete=False
+    ) as stream:
+        temporary = Path(stream.name)
+        try:
+            stream.write(text)
+        except BaseException:
+            temporary.unlink(missing_ok=True)
+            raise
+    try:
+        temporary.replace(path)
+    finally:
+        temporary.unlink(missing_ok=True)
     return path
 
 
@@ -647,7 +658,12 @@ def regenerate(directory, protocol, now=None):
         text = pnl_report(Snapshot())
         result = {"protocol": protocol, "status": "SAVED_DATA_ONLY"}
     else:
-        result = evaluate(Snapshot(), protocol, now, SavedCaptures(directory, now))
+        from .daily import PROTOCOLS, compare
+
+        snapshot = Snapshot()
+        spec = PROTOCOLS[protocol]
+        status["comparison"] = compare(snapshot, protocol, spec["arms"], spec["baselines"])
+        result = evaluate(snapshot, protocol, now, SavedCaptures(directory, now))
         text = render(result, status)
     path = write_report(directory, text)
     return {
