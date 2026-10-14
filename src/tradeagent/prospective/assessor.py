@@ -1,15 +1,17 @@
 """Bounded subscription Codex CLI assessment: supplied evidence only, no tools."""
 
+import hashlib
 import json
 import os
 import signal
 import subprocess
 import tempfile
 from pathlib import Path
+from urllib.parse import urlparse
 
 from jsonschema import validate
 
-from ..research.domain import identity
+from ..research.domain import identity, timestamp
 
 ITEM_SCHEMA = {
     "type": "object",
@@ -142,7 +144,7 @@ def assess_news(report, *, executable="codex", timeout=300, now=None, search=Tru
         prompt = prompt.replace("one-hour long trade", "one-hour LONG or BEARISH opportunity")
         prompt = prompt.replace("long, watch or avoid", "long, bearish, watch or avoid")
         prompt += "\nBearish means a negative directional hypothesis for Put SHADOW research. Rising or falling price alone is insufficient: abstain without an attractive supported opportunity."
-    return run(
+    document, provenance = run(
         prompt,
         schema,
         candidates,
@@ -152,6 +154,29 @@ def assess_news(report, *, executable="codex", timeout=300, now=None, search=Tru
         allowed_items={"web_search"} if search else set(),
         report_search=True,
     )
+    if report.get("research_protocol") == "daily-bidirectional-v3" and search:
+        if not provenance["web_searches"]:
+            raise ValueError("live news requires an observed web search")
+        sources = [s for item in document["assessments"] for s in item["sources"]]
+        for source in sources:
+            url = urlparse(source["url"])
+            if url.scheme != "https" or not url.hostname or not source["title"].strip():
+                raise ValueError("invalid cited news source")
+            if source["published_at"] is not None:
+                published = timestamp(source["published_at"])
+                if now is not None and published > now:
+                    raise ValueError("future publication timestamp")
+        provenance["news_status"] = "CITED_NEWS" if sources else "NO_RELEVANT_NEWS"
+    return document, provenance
+
+
+def host_config_hash():
+    """Fingerprint shared CLI configuration without retaining its potentially private text."""
+    root = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex"))
+    try:
+        return hashlib.sha256((root / "config.toml").read_bytes()).hexdigest()
+    except FileNotFoundError:
+        return None
 
 
 def run(
@@ -190,12 +215,15 @@ def run(
             "--config",
             f'web_search="{web_search}"',
             "--config",
+            "features.code_mode=true",
+            "--config",
+            "features.code_mode_host=true",
+            "--config",
             "features.skip_host_skill_discovery=true",
             "--config",
             "suppress_unstable_features_warning=true",
         ]
         for feature in (
-            "code_mode",
             "shell_tool",
             "unified_exec",
             "apps",
@@ -208,7 +236,6 @@ def run(
             "multi_agent_v2",
             "skill_search",
             "workspace_dependencies",
-            "code_mode_host",
             "image_generation",
             "view_image",
         ):
@@ -221,6 +248,7 @@ def run(
             str(output),
             "-",
         ]
+        host_before = host_config_hash()
         with events.open("wb") as stream:
             process = subprocess.Popen(
                 command,
@@ -246,7 +274,11 @@ def run(
             raise ValueError("Codex assessment output exceeds bound")
         event_rows = [json.loads(line) for line in events.read_text().splitlines() if line.strip()]
         # Defense in depth: even an unexpected tool request invalidates the assessment.
-        errors = [r["item"] for r in event_rows if (r.get("item") or {}).get("type") == "error"]
+        errors = [
+            r.get("item") or r
+            for r in event_rows
+            if r.get("type") == "error" or (r.get("item") or {}).get("type") == "error"
+        ]
         for error in errors:
             message = error.get("message", "")
             if not message.startswith(
@@ -264,10 +296,20 @@ def run(
         ]
         if tool_items:
             raise ValueError("unexpected Codex tool activity; assessment rejected")
+        search_items = [
+            r["item"] for r in event_rows if (r.get("item") or {}).get("type") == "web_search"
+        ]
+        if any(
+            item.get("status") in {"failed", "incomplete"} or item.get("error")
+            for item in search_items
+        ):
+            raise ValueError("Codex web search failed; assessment rejected")
         searches = {
             (r.get("item") or {}).get("id")
             for r in event_rows
             if (r.get("item") or {}).get("type") == "web_search"
+            and r.get("type") == "item.completed"
+            and (r.get("item") or {}).get("id")
         }
         document = json.loads(output.read_text())
         validate(document, schema_value)
@@ -283,6 +325,8 @@ def run(
             "tool_calls": len(searches),
             "prompt_hash": identity(prompt),
             "output_hash": identity(document),
+            "codex_host_config_hash_before": host_before,
+            "codex_host_config_hash_after": host_config_hash(),
         }
         if report_search:
             provenance["web_searches"] = len(searches)

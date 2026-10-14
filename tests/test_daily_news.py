@@ -4,6 +4,7 @@ import importlib.util
 import json
 import sys
 from datetime import date
+from types import SimpleNamespace
 
 import pytest
 from jsonschema.exceptions import ValidationError
@@ -377,3 +378,217 @@ def test_price_arm_rejects_any_search_activity(tmp_path):
     )
     with pytest.raises(ValueError, match="tool activity"):
         assess_news(report, executable=str(executable), now=NOW, search=False)
+
+
+@pytest.mark.parametrize(
+    "events",
+    [
+        [],
+        [{"type": "item.started", "item": {"type": "web_search", "id": "one"}}],
+        [{"type": "item.completed", "item": {"type": "web_search"}}],
+    ],
+)
+def test_v3_news_requires_observed_completed_search(tmp_path, events):
+    report = scan(market(), now=NOW, candidate_count=1)
+    report["research_protocol"] = "daily-bidirectional-v3"
+    doc = cli_document(report)
+    executable = fake_codex(tmp_path, doc, events)
+    with pytest.raises(ValueError, match="observed web search"):
+        assess_news(report, executable=str(executable), now=NOW)
+    assert (
+        assess_news(report, executable=str(fake_codex(tmp_path, doc, [])), now=NOW, search=False)[
+            1
+        ]["web_searches"]
+        == 0
+    )
+
+
+def test_v3_searched_no_news_is_valid_and_failed_search_is_unavailable(tmp_path):
+    report = scan(market(), now=NOW, candidate_count=1)
+    report["research_protocol"] = "daily-bidirectional-v3"
+    doc = cli_document(report)
+    doc["assessments"][0].update(hypothesis_type="price_action", sources=[])
+    search = {"type": "item.completed", "item": {"type": "web_search", "id": "one"}}
+    executable = fake_codex(tmp_path, doc, [search])
+    document, provenance = assess_news(report, executable=str(executable), now=NOW)
+    assert document["assessments"][0]["sources"] == []
+    assert provenance["news_status"] == "NO_RELEVANT_NEWS" and provenance["web_searches"] == 1
+    for failure in ({"status": "failed"}, {"error": "synthetic search failure"}):
+        failed = {**search, "item": {**search["item"], **failure}}
+        with pytest.raises(ValueError, match="web search failed"):
+            assess_news(report, executable=str(fake_codex(tmp_path, doc, [failed])), now=NOW)
+    error = {"type": "error", "message": "synthetic search failure"}
+    with pytest.raises(ValueError, match="CLI reported an error"):
+        assess_news(report, executable=str(fake_codex(tmp_path, doc, [search, error])), now=NOW)
+
+
+@pytest.mark.parametrize("invalid", ["url", "published_at", "missing_claim"])
+def test_v3_cited_news_still_requires_valid_sources(tmp_path, invalid):
+    report = scan(market(), now=NOW, candidate_count=1)
+    report["research_protocol"] = "daily-bidirectional-v3"
+    doc = cli_document(report)
+    search = {"type": "item.completed", "item": {"type": "web_search", "id": "one"}}
+    executable = fake_codex(tmp_path, doc, [search])
+    assert (
+        assess_news(report, executable=str(executable), now=NOW)[1]["news_status"] == "CITED_NEWS"
+    )
+    source = doc["assessments"][0]["sources"][0]
+    if invalid == "missing_claim":
+        del source["claim"]
+    else:
+        source[invalid] = "http://example.com/x" if invalid == "url" else "2099-01-01T00:00:00Z"
+    with pytest.raises((ValueError, ValidationError)):
+        assess_news(report, executable=str(fake_codex(tmp_path, doc, [search])), now=NOW)
+
+
+def test_assessment_provenance_records_shared_host_configuration_changes(tmp_path, monkeypatch):
+    import hashlib
+
+    host = tmp_path / "host"
+    host.mkdir()
+    monkeypatch.setenv("CODEX_HOME", str(host))
+    config = host / "config.toml"
+    report = scan(market(), now=NOW, candidate_count=1)
+    executable = fake_codex(tmp_path, cli_document(report), [])
+    hashes = []
+    for text in ("[features]\ncode_mode_host = false\n", "[features]\ncode_mode_host = true\n"):
+        config.write_text(text)
+        provenance = assess_news(report, executable=str(executable), now=NOW, search=False)[1]
+        expected = hashlib.sha256(config.read_bytes()).hexdigest()
+        assert provenance["codex_host_config_hash_before"] == expected
+        assert provenance["codex_host_config_hash_after"] == expected
+        hashes.append(expected)
+        assert text not in json.dumps(provenance)
+    assert hashes[0] != hashes[1]
+
+
+@pytest.mark.parametrize("initially_enabled", [False, True])
+@pytest.mark.parametrize("stop_succeeds", [False, True])
+def test_installer_prepares_minute_aligned_v3_disables_only_requested_timer(
+    tmp_path, monkeypatch, initially_enabled, stop_succeeds
+):
+    spec = importlib.util.spec_from_file_location("install_v3", "scripts/install_shadow.py")
+    installer = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(installer)
+    from test_bidirectional import profile
+
+    interpreter = tmp_path / "venv/bin/python"
+    interpreter.parent.mkdir(parents=True)
+    interpreter.touch()
+    measured = tmp_path / "profile.json"
+    measured.write_text(json.dumps(profile()))
+    monkeypatch.setattr(installer.Path, "home", lambda: tmp_path)
+    calls = []
+    state = [initially_enabled, initially_enabled]
+    timer_name = "tradeagent-daily-bidirectional.timer"
+
+    def systemctl(args, **kwargs):
+        calls.append(args)
+        if "disable" in args:
+            assert args == ["systemctl", "--user", "disable", "--now", timer_name]
+            if stop_succeeds:
+                state[:] = [False, False]
+        if "show" in args:
+            assert kwargs == {"check": True, "capture_output": True, "text": True}
+            return SimpleNamespace(
+                stdout=f"UnitFileState={'enabled' if state[0] else 'disabled'}\n"
+                f"ActiveState={'active' if state[1] else 'inactive'}\n"
+            )
+
+    monkeypatch.setattr(installer.subprocess, "run", systemctl)
+    units = tmp_path / ".config/systemd/user"
+    units.mkdir(parents=True)
+    v1, v2 = units / "tradeagent-daily-research.timer", units / "tradeagent-daily-news.timer"
+    v1.write_text("frozen v1")
+    v2.write_text("frozen v2")
+
+    def prepare():
+        installer.install_daily(
+            tmp_path / "state",
+            tmp_path / "helper",
+            interpreter,
+            "daily-bidirectional-v3",
+            universe_profile=measured,
+            enable=False,
+        )
+
+    if initially_enabled and not stop_succeeds:
+        with pytest.raises(RuntimeError, match="not disabled and inactive"):
+            prepare()
+    else:
+        prepare()
+        assert state == [False, False]
+    timer = (units / "tradeagent-daily-bidirectional.timer").read_text()
+    service = (units / "tradeagent-daily-bidirectional.service").read_text()
+    assert "10:30..59:00 America/New_York" in timer and "11:00..59:00 America/New_York" in timer
+    assert "12:00:00 America/New_York" in timer and "17:10:00 America/New_York" in timer
+    assert "--universe-profile " + str(measured) in service
+    assert "--protocol daily-bidirectional-v3" in service
+    assert "--user" in calls[0] and "verify" in calls[0]
+    assert not any("enable" in command for command in calls)
+    assert [command[2] for command in calls[1:]] == ["daemon-reload", "disable", "show"]
+    assert not any(v1.name in command or v2.name in command for command in calls)
+    assert v1.read_text() == "frozen v1" and v2.read_text() == "frozen v2"
+
+
+def test_code_mode_configuration_keeps_price_news_arms_identical_and_shell_disabled(tmp_path):
+    report = scan(market(), now=NOW, candidate_count=1)
+    doc = cli_document(report)
+    executable, log = recording_codex(tmp_path, doc)
+    assess_news(report, executable=str(executable), now=NOW, search=False)
+    assess_news(report, executable=str(executable), now=NOW, search=True)
+    first, second = (json.loads(line) for line in log.read_text().splitlines())
+    for call in (first, second):
+        args = call["argv"]
+        assert "features.code_mode=true" in args and "features.code_mode_host=true" in args
+        assert args.index("features.code_mode=true") > args.index("exec")
+        assert [args[i + 1] for i, a in enumerate(args[:-1]) if a == "--disable"].count(
+            "shell_tool"
+        ) == 1
+        assert "unified_exec" in args and "apps" in args and "plugins" in args
+
+
+def test_readable_pnl_preserves_pending_and_unavailable_without_bearish_substitution(tmp_path):
+    from test_bidirectional import assessment, candidate
+
+    from tradeagent.research import bidirectional
+    from tradeagent.research.opportunity_workflow import DailyResearch
+
+    store = DailyResearch(tmp_path)
+    arms = bidirectional.select(
+        [candidate()],
+        assessment("bearish"),
+        assessment("bearish"),
+        "VALID",
+        "VALID",
+        "seed",
+        1791900000,
+    )
+    decision = {
+        "decision_id": "report",
+        "research_protocol": bidirectional.PROTOCOL,
+        "decision_time": 1791900000,
+        "outcome_entry_time": 1791900300,
+        "outcome_exit_time": 1791903900,
+        "comparisons": arms,
+        "put_selections": {},
+        "quantitative_observations": [candidate(), {**candidate(), "symbol": "SPY"}],
+    }
+    try:
+        store.save("decisions", decision, "report", 1791900000)
+        assert "PENDING" in bidirectional.pnl_report(store)
+        observed = {
+            s: {"gross": -0.02, "entry_price": 100, "exit_price": 98} for s in ("QQQ", "SPY")
+        }
+        prices = bidirectional.resolve_arms(decision, observed, [])
+        store.save(
+            "outcomes", {"decision_id": "report", "comparisons": prices}, "report", 1791903960
+        )
+        text = bidirectional.pnl_report(store)
+        funded, theory = text.split("## Theoretical underlying benchmark")
+        assert "| QQQ | BEARISH | LONG_PUT | — | — |" in funded
+        assert "UNAVAILABLE" in funded and "18.02" not in funded
+        assert "18.02" in theory and "non-executable" in theory
+        assert "SPY" in funded and "CASH" in funded
+    finally:
+        store.close()

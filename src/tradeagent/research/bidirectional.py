@@ -13,16 +13,20 @@ MIN_NET_EDGE = 0.001
 
 
 def select(eligible, price, news, price_status, news_status, seed, now):
-    """Use the three existing families; signed, cost-screened point forecasts only."""
+    """Quant uses cost-screened forecasts; Codex independently chooses stance and rank."""
     from .opportunity_workflow import research_support
 
-    def signal(candidate, direction=None):
+    def signal(candidate, direction=None, *, cost_screen=True):
         costs = candidate["outcome_costs"]
         possibilities = [
             p
             for p in candidate["predictions"]
             if p["direction"] in (-1, 1)
-            and p["expected_return"] * p["direction"] > 2 * costs["base_side_cost"] + MIN_NET_EDGE
+            and (
+                not cost_screen
+                or p["expected_return"] * p["direction"]
+                > 2 * costs["base_side_cost"] + MIN_NET_EDGE
+            )
             and (direction is None or direction == p["direction"])
         ]
         return max(
@@ -38,16 +42,17 @@ def select(eligible, price, news, price_status, news_status, seed, now):
                 support = research_support(c["scanner"], a, now, allow_bearish=True)
                 if not direction or not support["supported"]:
                     continue
-            p = signal(c, direction)
-            if p:
-                pool.append((c, p, a))
+            independent = assessments is not None and not quant
+            p = signal(c, direction, cost_screen=not independent)
+            if p or independent:
+                pool.append((c, p, a, direction if independent else p["direction"]))
         if quant or assessments is None:
             return max(
                 pool, key=lambda v: (abs(v[1]["expected_return"]), v[0]["symbol"]), default=None
             )
         return min(
             pool,
-            key=lambda v: (v[2]["rank"], -abs(v[1]["expected_return"]), v[0]["symbol"]),
+            key=lambda v: (v[2]["rank"], v[0]["symbol"]),
             default=None,
         )
 
@@ -58,7 +63,10 @@ def select(eligible, price, news, price_status, news_status, seed, now):
         "quant_codex": (choose(news, quant=True), news_status),
         "seeded_random": (
             random.Random(seed).choice(
-                [None, *[(c, signal(c), None) for c in eligible if signal(c)]]
+                [
+                    None,
+                    *[(c, signal(c), None, signal(c)["direction"]) for c in eligible if signal(c)],
+                ]
             ),
             "VALID",
         ),
@@ -67,20 +75,30 @@ def select(eligible, price, news, price_status, news_status, seed, now):
     for name, (chosen, status) in selections.items():
         if status != "VALID":
             chosen = None
-        direction = chosen[1]["direction"] if chosen else 0
+        direction = chosen[3] if chosen else 0
+        prediction = chosen[1] if chosen else None
         arms[name] = {
             "symbol": chosen[0]["symbol"] if chosen else None,
             "shadow_direction": direction,
             "predicted_direction": direction,
-            "prediction_id": chosen[1]["prediction_id"] if chosen else None,
-            "expected_return": chosen[1]["expected_return"] if chosen else None,
+            "prediction_id": prediction["prediction_id"] if prediction else None,
+            "expected_return": prediction["expected_return"] if prediction else None,
+            "codex_rank": chosen[2]["rank"] if chosen and chosen[2] else None,
             "decision": {1: "LONG", -1: "BEARISH", 0: "CASH"}[direction],
             "instrument": {1: "LONG_EQUITY", -1: "LONG_PUT", 0: "CASH"}[direction],
             "status": "VALID" if status == "VALID" else "UNAVAILABLE",
             "plan": None,
             "research_only": True,
             "capital_dollars": CAPITAL,
-            "reason": "signed uncalibrated forecast exceeds estimated round-trip costs plus 10bp; no proven profitability",
+            "reason": (
+                "bounded assessment unavailable"
+                if status != "VALID"
+                else "no eligible supported selection; CASH"
+                if not chosen
+                else "independent Codex stance and rank; no quantitative eligibility gate; Put expected value unavailable"
+                if name in {"codex_price", "codex_news"}
+                else "signed uncalibrated forecast exceeds estimated underlying costs plus 10bp; not evidence of positive Put expected value"
+            ),
         }
     arms["spy"] = {
         "symbol": "SPY",
@@ -334,3 +352,101 @@ def compare(store):
         "evidence_pools": pools,
         "orders_submitted": 0,
     }
+
+
+def pnl_report(store):
+    """Readable derivative of frozen decisions/outcomes; no substitutes for missing prices."""
+    decisions = [d for d in store.records("decisions") if d.get("research_protocol") == PROTOCOL]
+    lines = [
+        "# Bidirectional SHADOW P&L",
+        "",
+        "$1,000 capital per strategy, including unused option cash. Modeled prices/P&L, not broker fills.",
+        "",
+    ]
+    if not decisions:
+        return "\n".join(lines + ["PENDING: no prospective decision recorded.", ""])
+    decision = decisions[-1]
+    from .domain import iso
+
+    lines += [
+        f"Decision: {iso(decision['decision_time'])}",
+        f"Entry window: {iso(decision['outcome_entry_time'])}; exit window: {iso(decision['outcome_exit_time'])} (60 seconds each).",
+        "",
+    ]
+    outcome = next(
+        (o for o in store.records("outcomes") if o["decision_id"] == decision["decision_id"]), None
+    )
+    labels = {
+        "quant_only": "Quant Only",
+        "codex_price": "Codex Price",
+        "codex_news": "Codex News",
+        "quant_codex": "Quant + Codex",
+        "spy": "SPY",
+        "cash": "CASH",
+        "seeded_random": "Random (secondary)",
+    }
+
+    def number(value, percent=False):
+        return (
+            "—"
+            if value is None
+            else f"{value * 100 if percent else value:.2f}" + ("%" if percent else "")
+        )
+
+    for sleeve, title in (
+        ("instrument_simulation", "Funded equity/Put/cash simulations"),
+        (
+            "directional_benchmark",
+            "Theoretical underlying benchmark — bearish exposure is non-executable, not Put P&L",
+        ),
+    ):
+        lines += [
+            f"## {title}",
+            "",
+            "| Strategy | Symbol | Direction | Instrument | Entry | Exit | Put contracts | Premium $ | Idle cash $ | P&L $ | Return | Status |",
+            "| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
+        ]
+        notes = []
+        for name in ARMS:
+            arm = decision["comparisons"][name]
+            resolved = (outcome or {}).get("comparisons", {}).get(name)
+            price = resolved[sleeve] if resolved else {}
+            status = price.get(
+                "status", "UNAVAILABLE" if arm["status"] == "UNAVAILABLE" else "PENDING"
+            )
+            instrument = price.get(
+                "instrument",
+                arm["instrument"]
+                if sleeve == "instrument_simulation"
+                else "THEORETICAL_BEARISH_UNDERLYING"
+                if arm["shadow_direction"] < 0
+                else arm["instrument"],
+            )
+            lines.append(
+                "| "
+                + " | ".join(
+                    [
+                        labels[name],
+                        arm["symbol"] or "—",
+                        arm["decision"],
+                        instrument,
+                        number(price.get("entry_price")),
+                        number(price.get("exit_price")),
+                        str(price.get("contracts", "—")),
+                        number(price.get("premium_required")),
+                        number(price.get("idle_cash")),
+                        number(price.get("pnl_dollars")),
+                        number(price.get("net_return"), True),
+                        status,
+                    ]
+                )
+                + " |"
+            )
+            if price.get("reason"):
+                notes.append(f"{name}: {price['reason']}")
+        lines += ["", *notes, ""]
+    lines += [
+        "Equity uses minute prices and frozen estimated costs. Put uses observed entry ask / exit bid, multiplier 100; unknown option fees remain unobserved. Missing prices/P&L are not zero.",
+        "",
+    ]
+    return "\n".join(lines)
