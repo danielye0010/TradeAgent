@@ -24,7 +24,12 @@ def main():
     )
     parser.add_argument(
         "--protocol",
-        choices=("daily-four-arm-v1", "daily-news-v2", "daily-bidirectional-v3"),
+        choices=(
+            "daily-four-arm-v1",
+            "daily-news-v2",
+            "daily-bidirectional-v3",
+            "daily-call-put-v4",
+        ),
         default="daily-four-arm-v1",
         help="daily research experiment; each protocol needs its own --state-dir",
     )
@@ -130,6 +135,12 @@ DAILY["daily-bidirectional-v3"] = {
     ),
     "argument": " --protocol daily-bidirectional-v3",
 }
+DAILY["daily-call-put-v4"] = {
+    "name": "tradeagent-daily-options",
+    "title": "Call/Put",
+    "times": ("Mon..Fri *-*-* 11:00..59:00", "Mon..Fri *-*-* 12:00..15:00", "*-*-* 17:15:00"),
+    "argument": " --protocol daily-call-put-v4",
+}
 
 
 def install_daily(
@@ -141,7 +152,7 @@ def install_daily(
     directory.mkdir(parents=True, exist_ok=True)
     spec = DAILY[protocol]
     argument = spec["argument"]
-    if protocol == "daily-bidirectional-v3":
+    if protocol in {"daily-bidirectional-v3", "daily-call-put-v4"}:
         import json
 
         from tradeagent.research.research_universe import feasible_universe
@@ -197,6 +208,14 @@ WantedBy=timers.target
         ["systemctl", "--user", "daemon-reload"],
     ):
         subprocess.run(command, check=True)
+    if enable and protocol == "daily-call-put-v4":
+        from tradeagent.research.call_put import activation_ready
+
+        if not activation_ready(state):
+            enable = False
+            print(
+                "Call/Put activation blocked: genuine prospective Call and Put cycles are required; preparing disabled units."
+            )
     if enable:
         subprocess.run(["systemctl", "--user", "enable", "--now", timer], check=True)
     else:

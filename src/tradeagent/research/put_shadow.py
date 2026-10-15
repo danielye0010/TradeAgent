@@ -1,6 +1,7 @@
 """Read-only long Put research. No account access, intents, or option placement."""
 
 import json
+import re
 import time
 from dataclasses import asdict
 from datetime import date, datetime
@@ -32,9 +33,20 @@ PUT_RULE = {
 }
 
 
+class OptionAccessDenied(Halt):
+    """Authenticated upstream option-data denial; never retry automatically."""
+
+
 class OptionsResearchMCP(StandaloneMCP):
     read_tools = OPTION_TOOLS
     require_server_version = False
+
+    def _http_failure(self, status):
+        if status == 403:
+            return OptionAccessDenied(
+                "Robinhood option market data HTTP 403; provider access required"
+            )
+        return super()._http_failure(status)
 
     def __init__(self, token_source, timeout=20):
         super().__init__(token_source, timeout)
@@ -49,7 +61,14 @@ class OptionsResearchMCP(StandaloneMCP):
             method == "tools/call" and params.get("name") not in OPTION_TOOLS
         ):
             raise Halt("option research permits only four market-data reads")
-        return super().rpc(method, params, notification=notification)
+        response = super().rpc(method, params, notification=notification)
+        if method == "tools/call" and response.get("isError"):
+            # Keep raw diagnostics/token-bearing responses out of journals.
+            if re.search(r"\b403\b", json.dumps(response)):
+                raise OptionAccessDenied(
+                    "Robinhood option market data HTTP 403; provider access required"
+                )
+        return response
 
     def read(self, name, arguments=None):
         if name not in OPTION_TOOLS:
@@ -109,7 +128,11 @@ class PutReader:
             )
         return result
 
-    def select(self, symbol, spot, *, deadline=None):
+    def select(
+        self, symbol, spot, *, deadline=None, kind="put", strict_quotes=False, fees_per_contract=0
+    ):
+        if kind not in {"call", "put"}:
+            raise ValueError("option kind must be call or put")
         self.deadline = deadline
         chains = (
             self.read("get_option_chains", {"underlying_symbol": symbol})["data"].get("chains")
@@ -137,7 +160,7 @@ class PutReader:
         args = {
             "chain_id": chain["id"],
             "expiration_dates": expiry,
-            "type": "put",
+            "type": kind,
             "state": "active",
             "tradability": "tradable",
         }
@@ -163,7 +186,7 @@ class PutReader:
             if c["chain_id"] == chain["id"]
             and c["chain_symbol"] == symbol
             and c["underlying_type"] == "equity"
-            and c["type"] == "put"
+            and c["type"] == kind
             and c["expiration_date"] == expiry
             and c["state"] == "active"
             and c["tradability"] == "tradable"
@@ -176,7 +199,15 @@ class PutReader:
         if not nearest:
             return None
         quotes = self.quotes(nearest)
-        eligible = [q for q in quotes if liquid(q, self.clock())]
+        if strict_quotes and {q["book"]["contract_id"] for q in quotes} != {
+            c["id"] for c in nearest
+        }:
+            raise ValueError("complete genuine option quotes unavailable")
+        eligible = [
+            q
+            for q in quotes
+            if liquid(q, self.clock()) and q["book"]["ask"] * 100 + 2 * fees_per_contract <= 1000
+        ]
         if not eligible:
             return None
         chosen = min(

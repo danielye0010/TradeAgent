@@ -197,6 +197,23 @@ python -m tradeagent.prospective.daily --report-only \
 
 The autopilot paper-trades only; real orders always come from one of the live modes above.
 
+### Call/Put SHADOW research
+
+`daily-call-put-v4` is a separate experiment: bullish forecasts evaluate long Calls,
+bearish forecasts long Puts, alongside long-equity, SPY and CASH benchmarks. It uses
+the same Quant/Codex selection infrastructure, 14–35 DTE contracts and $1,000 capital.
+Whole-contract simulations use genuine entry ask and later exit bid, quoted sizes,
+idle cash and modeled $0.65 per-contract fees on each side. Missing quotes remain
+UNAVAILABLE; directional accuracy and underlying returns are not option P&L or EV.
+
+The existing systemd installer supports `--protocol daily-call-put-v4` with a separate
+state directory, measured universe profile and `--prepare-only`. Its 11:00–11:07 ET
+capture avoids the existing Codex windows; minute ticks collect frozen endpoints.
+`daily-report.md` is generated from saved observations. An authenticated option quote
+HTTP 403 blocks further automatic attempts. Keep this timer disabled until Robinhood
+quote access works and genuine prospective Call and Put entry/exit cycles succeed.
+V1/v2 and frozen v3 observations retain their original semantics.
+
 ## Strategies
 
 Three intraday hypotheses, each evaluated on 5-minute-delayed entries with a one-hour hold:
