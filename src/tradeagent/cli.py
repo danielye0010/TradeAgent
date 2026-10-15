@@ -1,4 +1,4 @@
-"""One-shot prediction lab. Live execution is a separate legacy library boundary."""
+"""TradeAgent command line: research lab, Robinhood sign-in and owner-launched execution."""
 
 import argparse
 import json
@@ -7,6 +7,7 @@ import sys
 import time
 from pathlib import Path
 
+from . import friendly
 from .research.domain import MarketSnapshot
 from .research.evolution import evolve_weekly, retire
 from .research.feedback import import_feedback
@@ -18,6 +19,17 @@ from .research.store import Experience
 
 def main(argv=None):
     supplied = list(sys.argv[1:] if argv is None else argv)
+    if not supplied or supplied[0] in {"-h", "--help", "help"}:
+        print(friendly.HELP)
+        return 0
+    if supplied[0] == "doctor":
+        from .doctor import main as doctor_main
+
+        return doctor_main(supplied[1:])
+    if supplied[0] in {"login", "logout"}:
+        from .robinhood_login import main as login_main
+
+        return login_main(supplied[1:] if supplied[0] == "login" else ["logout", *supplied[1:]])
     if supplied and supplied[0] == "opportunity":
         from .opportunity_cli import main as opportunity_main
 
@@ -141,6 +153,8 @@ def main(argv=None):
                 else:
                     result = store.inspect()
         print(json.dumps(result, indent=2, default=str, allow_nan=False))
+        if args.command == "demo":
+            friendly.show(friendly.demo(result))
         return 0
     except (ValueError, OSError, KeyError, TypeError, sqlite3.Error) as exc:
         print(json.dumps({"status": "halted", "reason": str(exc)}), file=sys.stderr)

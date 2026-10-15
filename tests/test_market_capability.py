@@ -62,9 +62,13 @@ def test_market_startup_still_rejects_market_drift(monkeypatch, tool, change):
         del tools[tool]
     elif change == "read_only":
         tools[tool]["annotations"]["readOnlyHint"] = False
+    elif change == "input":
+        schema = tools[tool]["inputSchema"]
+        schema.setdefault("properties", {})["new_mandatory_field"] = {"type": "string"}
+        schema["required"] = [*schema.get("required", []), "new_mandatory_field"]
     else:
-        schema = tools[tool][change + "Schema"]
-        schema["additionalProperties"] = not schema.get("additionalProperties", True)
+        properties = tools[tool]["outputSchema"]["properties"]
+        del properties[sorted(properties)[0]]
     transport(monkeypatch, tools)
     with pytest.raises(Halt, match=tool):
         MarketDataMCP(lambda: pytest.fail("token requested")).__enter__()

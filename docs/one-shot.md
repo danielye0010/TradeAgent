@@ -8,27 +8,28 @@ configuration and live-check never submit orders or install a service or timer.
 
 ## Install and configure
 
-Use Python 3.12–3.14 on Linux or Ubuntu/WSL2 and a dedicated environment, separate
-from an existing SHADOW environment:
+Use Python 3.12–3.14 on Linux or Ubuntu/WSL2. The simplest setup is:
 
 ```bash
-python3 -m venv ~/tradeagent-owner-venv
-source ~/tradeagent-owner-venv/bin/activate
-pip install /absolute/path/tradeagent-1.0.0b1-py3-none-any.whl
-umask 077
-mkdir -p ~/.config/tradeagent
-cd ~/.config/tradeagent
-python -c 'from importlib.resources import files; from pathlib import Path; Path("tradeagent.toml").open("x").write(files("tradeagent").joinpath("owner.example.toml").read_text())'
-chmod 600 tradeagent.toml
+tradeagent login        # browser sign-in; writes the helper and a starter config
+tradeagent live-check   # read-only readiness check
 ```
 
-Edit the packaged [owner.example.toml](../src/tradeagent/owner.example.toml) copy:
-replace both `/absolute/...` placeholders with absolute paths on your local Linux
-filesystem. The state path must be an isolated fresh directory, never the SHADOW
-or research state path. The OAuth helper must be an existing owner-only executable
-outside the package and repository. Keep access/refresh tokens, credentials and
-login entirely in the external helper; the TOML accepts no credential fields.
-See [helper contract](prospective-shadow.md). Authentication is never fabricated.
+`login` stores the Robinhood access and refresh tokens owner-only in
+`~/.config/tradeagent/robinhood-oauth.json`, installs the token helper at
+`~/.local/libexec/robinhood-mcp-oauth-helper` and creates
+`~/.config/tradeagent/tradeagent.toml` (mode 600) if it does not exist. The LIVE
+commands use that file when `--config` is omitted. `state_dir` defaults to
+`~/.local/state/tradeagent/live` and `oauth_helper` to the helper path above; set
+either explicitly to override. The state path must be an isolated directory, never
+a SHADOW or research state path.
+
+You can instead provide your own helper: any owner-only executable outside the
+package and repository that prints the [helper contract](prospective-shadow.md).
+`login` never overwrites a helper it did not write. Keep access/refresh tokens out
+of the TOML; it accepts no credential fields. Authentication is never fabricated.
+A fully explicit configuration copies the packaged
+[owner.example.toml](../src/tradeagent/owner.example.toml).
 
 The complete configuration is:
 
@@ -253,7 +254,18 @@ write recovery blocker. An operator must resolve or archive a reconciled prior l
 through the existing explicit workflow before starting another entry. Unknown contract,
 state or execution-protocol hashes still fail closed.
 
-A new Robinhood MCP server version with unchanged tool schemas blocks new entries
-(`live-check` reports it) but not `recover`, `reconcile-once` or `new-run`: an open
-position can still be reconciled and exited. Any schema change still fails closed. SHADOW retains its independent
-two-tool market-data capability and frozen research schedule.
+Robinhood MCP updates are checked for compatibility rather than exact equality
+(`src/tradeagent/schema.py`). For every tool TradeAgent relies on, the live schema must
+still accept every request the reviewed schema allows (no new required inputs, removed
+inputs or narrowed types) and must still return every reviewed response field with a
+reviewed type; the read-only annotation must not change. New optional inputs, new
+response fields and new tools are compatible. A version bump with compatible schemas
+does not block entries; `live-check` reports the new version and each compatible change
+so the maintainer can review it and refresh the pinned snapshot. Requests are still
+validated against both the reviewed and the live schema before sending. An incompatible
+change to an equity or account tool fails closed with the tool and reason; an
+incompatible change to an option tool disables only that tool. `recover`,
+`reconcile-once` and `new-run` keep working whenever their read tools are compatible.
+The legacy Codex/canary paths keep the exact version pin. Replaying the two real past
+upgrades (1.6.2 → 1.7.0 and 1.7.0 → 1.7.3) through this check finds both compatible.
+SHADOW retains its independent two-tool market-data capability and frozen research schedule.

@@ -1,18 +1,25 @@
 # TradeAgent
 
-**An AI analyst picks the trade. A deterministic engine places it.**
+**English** | [简体中文](https://github.com/danielye0010/TradeAgent/blob/main/README.zh-CN.md)
 
-TradeAgent scans US stocks and ETFs, asks a coding agent (Codex) to sanity-check the most
-interesting moves, runs the survivors through cost-aware quantitative checks, and trades
-them on Robinhood with automatic exits. Every forecast is written down before the market
-answers, so you always know which picks were actually right.
+**An AI analyst picks the trade. Plain, tested Python places it.**
+
+TradeAgent scans US stocks and ETFs, asks a coding agent (Codex) to review the most
+unusual moves, and trades the survivors on Robinhood through the official agentic
+trading API, with sizing limits and an automatic exit. Every forecast is written down
+*before* the market answers and scored against a random pick and SPY, so you find out
+whether the AI is actually adding anything.
 
 [![CI](https://github.com/danielye0010/TradeAgent/actions/workflows/ci.yml/badge.svg)](https://github.com/danielye0010/TradeAgent/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.12%E2%80%933.14-blue)
 ![Status](https://img.shields.io/badge/status-beta-orange)
-[![License](https://img.shields.io/badge/License-Apache--2.0%20AND%20MIT-blue)](LICENSE)
+[![License](https://img.shields.io/badge/License-Apache--2.0%20AND%20MIT-blue)](https://github.com/danielye0010/TradeAgent/blob/main/LICENSE)
 
-[How it works](#how-it-works) · [Quick start](#quick-start) · [Trading modes](#trading-modes) · [Daily autopilot](#daily-autopilot) · [Strategies](#strategies) · [Docs](#documentation)
+[Try it](#try-it-in-two-minutes) · [Why not something else?](#why-not-use-something-that-already-exists) · [Connect Robinhood](#connect-robinhood) · [Everyday use](#everyday-use) · [What protects your money](#what-protects-your-money) · [Results so far](#results-so-far)
+
+> **Read this first.** TradeAgent is a beta tool for learning whether an AI can pick
+> short-term trades. It has **not** shown that it can make money: no strategy has a
+> proven edge yet. Use amounts you would be happy to lose. Not financial advice.
 
 ## How it works
 
@@ -29,244 +36,239 @@ flowchart LR
     H --> I[Timed exit & P&L]
 ```
 
-The split is deliberate. **The model decides what is worth a look; it never touches the
-broker.** Sizing, risk limits, order placement, exits and reconciliation live in plain
-Python that behaves the same way every time.
+The split is the whole point: **the model decides what is worth a look; it never touches
+the broker.** Sizing, limits, order placement, exits and reconciliation are ordinary
+Python that behaves the same way every time and is covered by 1,000+ offline tests.
 
-A typical day on the [daily autopilot](#daily-autopilot), which paper-trades:
+## Why not use something that already exists?
 
-| Time (ET) | What happens |
-| --- | --- |
-| 10:00 | Pull fresh bars and quotes, rank the most unusual moves |
-| 10:01 | Codex reviews the top three and returns *long*, *watch* or *avoid* |
-| 10:02 | Quant signals and cost estimates are frozen into a decision |
-| 10:05 | The modeled entry window opens |
-| 11:05 | The modeled position closes |
-| 17:00 | Every forecast is scored against what the market actually did |
+TradeAgent reuses what already works: Robinhood's [official agentic trading
+MCP](https://robinhood.com/us/en/support/articles/agentic-trading-overview/) for data and
+orders, [Codex](https://github.com/openai/codex) for the analysis (on your ChatGPT plan,
+no per-token API bill), and standard libraries for market calendars. What it adds is the
+piece none of the alternatives below provide: a guarded path from an AI suggestion to a
+real order and back out, plus an honest record of whether the suggestions were any good.
 
-Real orders only happen when you start a [live mode](#trading-modes) yourself; it follows
-the same entry-then-timed-exit shape for the plan you approve.
+| Alternative | Good at | Missing for this job |
+| --- | --- | --- |
+| Connect ChatGPT, Claude or Codex straight to the Robinhood MCP and ask it to trade | One-off orders in plain English | The model itself holds the order tools: it can misread a quote, resubmit after a timeout or never sell. Limits live in the prompt, not in code, and nobody scores its calls afterwards. |
+| "AI hedge fund" projects such as [ai-hedge-fund](https://github.com/virattt/ai-hedge-fund) and [TradingAgents](https://github.com/TauricResearch/TradingAgents) | Exploring multi-agent market analysis | They simulate trades rather than placing them, and need paid per-token LLM API keys. |
+| Unofficial Robinhood libraries such as [robin_stocks](https://pypi.org/project/robin-stocks/) | Scripting your own account | They wrap Robinhood's private API and log in with your username, password and MFA. TradeAgent uses the official API and a browser sign-in, so it never sees your password. |
+| Backtesting frameworks (backtrader, vectorbt, LEAN, ...) | Testing ideas on years of history | They answer "what would have worked?", which is easy to overfit. TradeAgent answers "is it working now?" by freezing forecasts before the outcome exists. |
 
-## Quick start
+**When TradeAgent is the wrong tool:** you want years of historical backtests, crypto or
+another broker, long-term investing, or a strategy that is already known to be profitable.
 
-TradeAgent runs on Linux with Python 3.12+. WSL2 on Windows works too.
+## Try it in two minutes
+
+Needs Linux or WSL2 on Windows, and Python 3.12+. No accounts.
+
+```bash
+pipx install tradeagent         # on Ubuntu/WSL: sudo apt install pipx first
+
+tradeagent                      # list of commands, grouped by what you want to do
+tradeagent demo --demo-dir ~/tradeagent-demo
+tradeagent run-once --paper --state-dir ~/tradeagent-paper
+```
+
+That covers the demo, Robinhood sign-in and single live trades. The Codex analyst and
+the daily autopilot use the skill and installer in this repository, so for those clone it:
 
 ```bash
 git clone https://github.com/danielye0010/TradeAgent.git
 cd TradeAgent
 python3 -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
+pip install -e .
 ```
 
-Prebuilt wheels with checksums are on the [Releases](https://github.com/danielye0010/TradeAgent/releases) page.
+Each command prints a full JSON record, and a short summary when you run it in a
+terminal:
 
-Two things to try right away, no accounts needed:
+```text
+Demo passed: synthetic data only, 0 broker calls.
+  150 forecasts recorded and scored, 15 learning runs, 5 challenger strategies created.
+  These numbers exercise the machinery; they are not evidence of profit.
+
+Paper round trip: COMPLETED (simulated broker, no real orders)
+  buy  2 IWM @ 10.01 (filled)
+  sell 2 IWM @ 9.99 (filled)
+  Realized P&L: -$0.04
+```
+
+`tradeagent inspect --state-dir ~/tradeagent-demo` shows what the demo lab learned. Keep state
+directories on a local Linux disk (ext4, btrfs or xfs); TradeAgent refuses network shares
+and Windows mounts such as `/mnt/c` because SQLite locking is unreliable there.
+
+## Connect Robinhood
+
+You need a Robinhood individual investing account in good standing. When you approve
+TradeAgent, Robinhood walks you through opening a separate **agentic account**; that is
+the only account TradeAgent can trade in. Put in it only what you are willing to risk.
 
 ```bash
-# Simulated strategy lab: predictions, outcomes, learning and challengers on synthetic data
-tradeagent demo --demo-dir work/demo
-tradeagent inspect --state-dir work/demo
-
-# A full buy-and-sell round trip against a simulated broker
-tradeagent run-once --paper --state-dir work/paper
+tradeagent login        # opens Robinhood in your browser; approve TradeAgent
+tradeagent doctor       # offline checklist: what is set up, what to fix next
+tradeagent live-check   # read-only: account, permissions, quotes. Never places orders.
 ```
 
-Keep state directories on a local Linux disk (ext4, btrfs or xfs). SQLite locking is
-unreliable on network shares and Windows mounts, so TradeAgent refuses them.
-
-### Connect market data
-
-Live scanning uses the official
-[Robinhood Trading MCP](https://robinhood.com/us/en/support/articles/agentic-trading-overview/).
-TradeAgent never sees your password. You provide a small helper executable that prints a
-token, and TradeAgent calls it when it needs one:
-
-```json
-{"access_token": "...", "expires_at": 1767225600, "resource": "https://agent.robinhood.com/mcp/trading"}
-```
-
-Put it at `~/.local/libexec/robinhood-mcp-oauth-helper` (or pass `--oauth-helper`).
-Details are in the [helper contract](docs/prospective-shadow.md#robinhood-setup).
-Prefer Alpaca for data? Add `--provider alpaca` to `scan`.
-
-Then run a research pass by hand:
-
-```bash
-tradeagent opportunity scan --candidates 3                        # rank today's unusual movers
-tradeagent opportunity evidence --template > work/assessment.json # the form Codex fills in
-tradeagent opportunity assess --input work/assessment.json
-tradeagent opportunity decide --refresh                           # freeze a TradePlan or NO_TRADE
-tradeagent opportunity show
-```
-
-## Trading modes
-
-Open [Codex](https://github.com/openai/codex) in the repo and talk to the
-`trade-opportunity-analyst` skill. It runs the commands above for you, reads the news
-for each candidate, and explains its reasoning.
-
-| Mode | Say this | What happens |
-| --- | --- | --- |
-| **Research** | `$trade-opportunity-analyst Analyze today's market and generate a TradePlan.` | Full analysis, no orders |
-| **Live** | `$trade-opportunity-analyst LIVE: analyze today's market, show the purchase plan, execute if eligible, and report P&L.` | Trades only when the strategy has a statistically supported edge for that setup |
-| **Experimental live** | `$trade-opportunity-analyst EXPERIMENTAL LIVE: trade today's strongest quant signal with my $5 setting.` | One small position per day on the best quant signal, so you can learn from real fills |
-
-Both live modes use the same execution engine and your private config:
+`login` uses the standard OAuth sign-in Robinhood offers to AI apps. Your password stays
+with Robinhood; TradeAgent keeps a short-lived access token and a refresh token in
+`~/.config/tradeagent/robinhood-oauth.json`, readable by you alone (mode 600). It also creates `~/.config/tradeagent/tradeagent.toml`, the one
+file that controls real trading:
 
 ```toml
 [live]
-enabled = true
-symbols = ["QQQ", "IWM", "AAPL", "MSFT"]   # what the agent is allowed to buy
-state_dir = "/abs/path/to/state"
-max_notional = "25"
-
-[broker]
-oauth_helper = "/abs/path/to/robinhood-mcp-oauth-helper"
+symbols = ["QQQ", "IWM"]   # the only symbols TradeAgent is allowed to buy
+max_notional = "25"        # hard dollar ceiling for any single entry
 
 [entry]
-order_type = "market"
-dollar_amount = "5"
+dollar_amount = "5"        # each live entry spends exactly this much
+
+[exit]
+hold_seconds = 3600        # sell automatically after one hour
 ```
 
-Before the first live trade, run `tradeagent live-check --config tradeagent.toml`. It reads
-your account, quotes and permissions without placing anything. Drop a file named `KILL`
-in `state_dir` at any time to close the position and stop. If anything interrupts a
-trade, `tradeagent recover --config tradeagent.toml` picks up where it left off and only
-ever exits. The full reference is in [Live execution](docs/one-shot.md).
+On a machine without a browser, use `tradeagent login --paste` and paste back the address
+Robinhood redirects you to. `tradeagent logout` forgets the session.
 
-## Daily autopilot
+## Everyday use
 
-One command installs a systemd timer that runs the research loop every trading day, with
-no chat window involved:
+There are three ways to use TradeAgent. Only the last two can spend real money, and only
+when you start them yourself.
+
+### 1. Ask the analyst (Codex)
+
+Install the [Codex CLI](https://github.com/openai/codex), open it in the TradeAgent folder
+and talk to the `trade-opportunity-analyst` skill:
+
+| Mode | Say this | What happens |
+| --- | --- | --- |
+| **Research** | `$trade-opportunity-analyst Analyze today's market and generate a TradePlan.` | Scans, reads news for the top candidates, explains its reasoning. No orders. |
+| **Live** | `$trade-opportunity-analyst LIVE: analyze today's market, show the purchase plan, execute if eligible, and report P&L.` | Buys only when a strategy has passed its evidence threshold for that setup. So far none has, so expect `NO_TRADE`. |
+| **Experimental live** | `$trade-opportunity-analyst EXPERIMENTAL LIVE: trade today's strongest quant signal with my $5 setting.` | At most one $5 position a day on the best quant signal, then the timed exit. For learning from real fills, recorded separately. |
+
+The same steps also run by hand: `tradeagent opportunity scan`, `decide`, `show` and
+`compare`. See the [opportunity workflow](https://github.com/danielye0010/TradeAgent/blob/main/docs/opportunity-workflow.md).
+
+### 2. Let the daily autopilot paper-trade
+
+A systemd timer runs the research loop every trading day with no chat window and no real
+orders. It needs `tradeagent login`, the Codex CLI signed in with your ChatGPT account,
+and on WSL2 [systemd enabled](https://learn.microsoft.com/windows/wsl/systemd):
 
 ```bash
 python scripts/install_shadow.py --daily \
   --python "$PWD/.venv/bin/python" \
-  --state-dir /abs/path/to/daily-research
+  --state-dir "$HOME/tradeagent-research/daily"
 ```
 
-At 10:00 ET it scans the market and asks Codex (via `codex exec`, logged in with your
-ChatGPT account) to rank the top three candidates from the price and volume data. Then it
-records four competing picks:
+At 10:00 ET it scans the market and asks Codex to rank the top three candidates, then
+records four competing picks with identical entry, exit and costs:
 
 | Arm | How it picks |
 | --- | --- |
 | **Quant only** | Strongest quantitative signal |
 | **Codex only** | Codex's top-ranked *long* |
-| **Quant + Codex** | Best name that both agree on |
+| **Quant + Codex** | Best name both agree on |
 | **Random** | A seeded coin flip among the same candidates, or cash |
 
-### Does reading the news help?
+After each run, `daily-report.md` in the state directory shows every arm's P&L after
+costs and its excess over SPY for the same hour. If Codex cannot beat **Random**, it is not
+helping. A second protocol, `--protocol daily-news-v2`, asks Codex the same question with
+and without live web search, which measures exactly what reading the news is worth.
+Details: [daily autopilot](https://github.com/danielye0010/TradeAgent/blob/main/docs/prospective-shadow.md).
 
-A second timer runs the same idea at 10:30 ET, but asks Codex twice about the same three
-candidates: once from price data only, and once with live web search for news, filings and
-analyst actions, citing every source it relied on.
-
-```bash
-python scripts/install_shadow.py --daily --protocol daily-news-v2 \
-  --python "$PWD/.venv/bin/python" \
-  --state-dir /abs/path/to/daily-news
-```
-
-Both picks get the same entry, exit and costs, so the gap between **Codex news** and
-**Codex price** is exactly what the news is worth.
-
-### Reading the results
-
-Each existing v1/v2 timer writes `daily-status.json` and `daily-report.md` after its
-normal tick. The report separates frozen modeled P&L from exploratory candidate
-selection statistics: a cost-adjusted equal-weight basket of the same eligible
-candidates, complete Price/News rankings, daily rank association, ordering accuracy,
-selection disagreement and observed news-search activity. Missing evidence remains
-PENDING or UNAVAILABLE; failed assessments are never counted as profitable CASH.
-
-Quant + Codex requires a positive Quant signal and Codex support for the selected
-symbol, without requiring identical first choices. Ranking statistics describe the
-entire frozen shortlist; candidate pairs do not count as independent trading days.
-Longitudinal differences use matched daily sessions, separated by evidence pool.
-These exploratory diagnostics do not change the original trading metrics or establish
-a repeatable edge. Reports retain each final decision quote and its frozen costs;
-v2's refreshed quote may differ from its earlier scanner quote.
-
-Regenerate a report from saved evidence without collecting data or calling Codex:
+### 3. Place one trade yourself
 
 ```bash
-python -m tradeagent.prospective.daily --report-only \
-  --state-dir /abs/path/to/daily-news --protocol daily-news-v2
+tradeagent run-once --live   # one entry from your config, then the automatic exit
+tradeagent status            # read-only view of the current run
+tradeagent recover           # finish an interrupted run; only ever sells
 ```
 
-The autopilot paper-trades only; real orders always come from one of the live modes above.
+This is the execution path without any AI involved, useful for checking that orders,
+fills and exits work on your account before trusting the analyst. Full reference:
+[live execution](https://github.com/danielye0010/TradeAgent/blob/main/docs/one-shot.md).
 
-### Call/Put SHADOW research
+## What protects your money
 
-`daily-call-put-v4` is a separate experiment: bullish forecasts evaluate long Calls,
-bearish forecasts long Puts, alongside long-equity, SPY and CASH benchmarks. It uses
-the same Quant/Codex selection infrastructure, 14–35 DTE contracts and $1,000 capital.
-Whole-contract simulations use genuine entry ask and later exit bid, quoted sizes,
-idle cash and modeled $0.65 per-contract fees on each side. Missing quotes remain
-UNAVAILABLE; directional accuracy and underlying returns are not option P&L or EV.
+AI output is unpredictable; the code between it and your account is not. Before every
+order the engine checks, and refuses to trade if anything is off:
 
-The existing systemd installer supports `--protocol daily-call-put-v4` with a separate
-state directory, measured universe profile and `--prepare-only`. Its 11:00–11:07 ET
-capture avoids the existing Codex windows; minute ticks collect frozen endpoints.
-`daily-report.md` is generated from saved observations. An authenticated option quote
-HTTP 403 blocks further automatic attempts. Keep this timer disabled until Robinhood
-quote access works and genuine prospective Call and Put entry/exit cycles succeed.
-V1/v2 and frozen v3 observations retain their original semantics.
+- **Hard caps:** your dollar amount, a per-entry ceiling, position and exposure limits, a
+  cash reserve and a daily loss limit. Nothing is resized upward; there is no leverage,
+  no short selling and no margin.
+- **Allowlist:** only the symbols in your config, only in regular market hours.
+- **Fresh data:** account, quotes, spread and depth must be seconds old and agree with
+  each other, or the run halts.
+- **No double orders:** every order is journaled with a unique ID *before* it is sent and
+  is never blindly retried, so a timeout cannot turn one buy into two.
+- **A built-in way out:** the exit is part of the same run, due after your hold time or
+  shortly before the close. If your computer sleeps or the network drops,
+  `tradeagent recover` resumes the run and can only sell. Create a file named `KILL` in
+  the state directory (`~/.local/state/tradeagent/live`) to stop buying and exit now.
+  No software can promise a fill in a halted or illiquid market, which is one more
+  reason to keep amounts small.
 
-## Strategies
+Robinhood's own approval settings still apply on top of this. When Robinhood updates its
+API, TradeAgent checks every tool it uses: additive changes keep working and are noted in
+`live-check`; a change that could alter what an order means stops trading with a clear
+message, while `recover` can still exit.
 
-Three intraday hypotheses, each evaluated on 5-minute-delayed entries with a one-hour hold:
+## Results so far
 
-| Strategy | The bet |
-| --- | --- |
-| **Opening continuation** | A strong open that agrees with the gap and the market keeps going |
-| **Stabilized reversal** | A big opening move that starts to stall is about to retrace |
-| **Residual strength** | A stock outrunning the market on a beta-adjusted basis keeps outrunning it |
+No strategy has shown a repeatable edge after costs. The best historical rule made four
+profitable trades in its holdout period, too few to mean anything, and its gains look
+like ordinary market exposure rather than skill
+([alpha findings](https://github.com/danielye0010/TradeAgent/blob/main/docs/alpha-findings.md)). The daily autopilot started collecting
+forward evidence in October 2026. Telling a real edge of a few hundredths of a percent per
+trade from luck takes on the order of a year of daily observations, which is why every
+pick is recorded and compared with Random and SPY rather than judged by a good week.
 
-Spread, slippage and fees are subtracted before anything counts as a win. Bearish signals
-are recorded but never shorted.
+## Experimental research
 
-**Where things stand:** this is a beta, and no strategy has shown a repeatable edge yet.
-Early numbers are in [Alpha findings](docs/alpha-findings.md); the daily autopilot exists
-to change that answer with real data.
+These run alongside the main loop in their own state directories, place no orders and
+make no profit claims:
+
+| Protocol | Question | Status |
+| --- | --- | --- |
+| `daily-four-arm-v1` | Does Codex beat quant signals and a random pick? | Collecting daily |
+| `daily-news-v2` | Does live news search improve Codex's picks? | Collecting daily |
+| `continuous-quant-v5` | Does intraday momentum survive 1–10 minute decision delays? | [Docs](https://github.com/danielye0010/TradeAgent/blob/main/docs/continuous-v5.md) |
+| `event-driven-v6` | Does Codex reading SEC filings beat a mechanical baseline? | [Docs](https://github.com/danielye0010/TradeAgent/blob/main/docs/event-driven-v6.md) |
+| `daily-bidirectional-v3`, `daily-call-put-v4` | Do bearish forecasts work as put options? | Waiting on Robinhood option quote access; timers stay disabled |
 
 ## Project layout
 
 ```text
 .agents/skills/trade-opportunity-analyst/   the Codex skill
 src/tradeagent/
-  research/       scanner, signals, TradePlans, outcome tracking
-  prospective/    daily autopilot and market-data providers
-  oneshot.py      live entry, exit and recovery engine
-  risk.py         position, exposure and cash limits
-scripts/          systemd installers and release checks
-docs/             design notes and operating guides
+  research/          scanner, signals, TradePlans, outcome scoring
+  prospective/       daily autopilot and market-data providers
+  oneshot.py         live entry, exit and recovery engine
+  risk.py            position, exposure and cash limits
+  robinhood_login.py browser sign-in and token helper
+scripts/             systemd installers and release checks
+docs/                design notes and operating guides
 ```
 
-## Documentation
-
-- [Opportunity workflow](docs/opportunity-workflow.md): every command and how decisions are made
-- [Live execution](docs/one-shot.md): config reference, recovery, kill switch
-- [Daily autopilot and shadow trading](docs/prospective-shadow.md)
-- [Event-driven SEC / Codex SHADOW v6](docs/event-driven-v6.md)
-- [Architecture](docs/architecture.md) and [research protocol](docs/research-protocol.md)
-- [Changelog](CHANGELOG.md) and [release workflow](docs/releasing.md)
+More reading: [architecture](https://github.com/danielye0010/TradeAgent/blob/main/docs/architecture.md), [research protocol](https://github.com/danielye0010/TradeAgent/blob/main/docs/research-protocol.md),
+[changelog](https://github.com/danielye0010/TradeAgent/blob/main/CHANGELOG.md), [release workflow](https://github.com/danielye0010/TradeAgent/blob/main/docs/releasing.md).
 
 ## Development
 
 ```bash
+pip install -e ".[dev]"
 pytest -q
-ruff check src tests scripts
-ruff format --check src tests scripts
+ruff check src tests scripts && ruff format --check src tests scripts
 ```
 
-The test suite uses synthetic markets and a mock broker, so it runs offline in about two
-minutes. CI covers Python 3.12 through 3.14 and smoke-tests the built wheel.
+The tests use synthetic markets, a mock broker and a fake OAuth server, so they run
+offline in about two minutes. CI covers Python 3.12 through 3.14 and smoke-tests the
+built wheel. See [CONTRIBUTING.md](https://github.com/danielye0010/TradeAgent/blob/main/CONTRIBUTING.md).
 
 ## License
 
-[Apache 2.0](LICENSE), with some vendored MIT components ([details](THIRD_PARTY.md)).
-
-TradeAgent is an independent project and is not affiliated with Robinhood Markets, Inc.
-Trading involves risk of loss.
+[Apache 2.0](https://github.com/danielye0010/TradeAgent/blob/main/LICENSE), with some vendored MIT components ([details](https://github.com/danielye0010/TradeAgent/blob/main/THIRD_PARTY.md)).
+TradeAgent is an independent project, not affiliated with Robinhood Markets, Inc. or
+OpenAI. Trading involves risk of loss, including loss of your entire investment.

@@ -12,6 +12,7 @@ from importlib.resources import files
 from pathlib import Path
 
 from .model import Config, Halt, Risk, dec, digest
+from .paths import default_helper, default_live_state
 from .risk import check_order
 from .schema import Contracts
 from .state import dumps
@@ -153,8 +154,8 @@ def load_live_config(path):
             raise Halt(label + " requires local Linux storage")
         return result
 
-    directory = local_path(live.get("state_dir"), "state_dir")
-    helper = local_path(broker.get("oauth_helper"), "oauth_helper")
+    directory = local_path(live.get("state_dir", str(default_live_state())), "state_dir")
+    helper = local_path(broker.get("oauth_helper", str(default_helper())), "oauth_helper")
     config = live_config(directory, live.get("symbols"))
     config.validate()
     selector = broker.get("account_number")

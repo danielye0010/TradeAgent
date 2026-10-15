@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.0.0-beta.9 — 2026-10-15
+
+Python distribution version: `1.0.0b9`. First release published to PyPI
+(`pipx install tradeagent`).
+
+- Robinhood MCP updates are checked for compatibility instead of an exact version and
+  schema pin. Additive changes (new optional inputs, new response fields, new tools)
+  keep trading working and are reported by `live-check`; incompatible changes to equity
+  or account tools fail closed with the tool and reason; a broken option tool disables
+  only option features. Both real past upgrades replay as compatible. Legacy
+  Codex/canary paths keep the strict pin.
+- `tradeagent doctor`: offline setup checklist with the next command to run.
+- `tradeagent login` / `logout`: browser sign-in to the official Robinhood Trading MCP
+  (standard OAuth discovery, dynamic client registration and PKCE). The access and
+  refresh tokens are stored owner-only; the engine still obtains tokens only through the external
+  helper, which `login` installs at the existing default path.
+- `login` creates `~/.config/tradeagent/tradeagent.toml`; LIVE commands use it when
+  `--config` is omitted. `state_dir` and `oauth_helper` now have per-user defaults.
+- `tradeagent` with no arguments prints grouped help. `demo`, `run-once --paper` and
+  `live-check` add a short human summary on interactive terminals; JSON on stdout is
+  unchanged. `live-check` names the missing sign-in instead of a generic failure.
+- Tests isolate HOME/XDG directories so they never see a developer's real config.
+- README rewritten for new users, with a Simplified Chinese version (`README.zh-CN.md`)
+  linked from the top of each: comparison with existing tools, two-minute tour,
+  safety guarantees and honest results status.
+
 ## 1.0.0-beta.8 — 2026-10-15
 
 Python distribution version: `1.0.0b8`.
