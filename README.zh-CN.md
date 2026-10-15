@@ -98,7 +98,8 @@ tradeagent live-check   # 只读检查：账户、权限、报价。永远不会
 ```
 
 `login` 使用 Robinhood 为 AI 应用提供的标准 OAuth 登录。密码只留在 Robinhood，TradeAgent
-只在 `~/.config/tradeagent/` 里保存一个仅你本人可读的 refresh token。它还会生成
+在 `~/.config/tradeagent/robinhood-oauth.json` 里保存一个短期 access token 和一个 refresh
+token，文件权限为 600，仅你本人可读。它还会生成
 `~/.config/tradeagent/tradeagent.toml`，这是控制真实交易的唯一配置文件：
 
 ```toml

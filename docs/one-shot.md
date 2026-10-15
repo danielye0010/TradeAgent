@@ -15,7 +15,7 @@ tradeagent login        # browser sign-in; writes the helper and a starter confi
 tradeagent live-check   # read-only readiness check
 ```
 
-`login` stores the Robinhood refresh token owner-only in
+`login` stores the Robinhood access and refresh tokens owner-only in
 `~/.config/tradeagent/robinhood-oauth.json`, installs the token helper at
 `~/.local/libexec/robinhood-mcp-oauth-helper` and creates
 `~/.config/tradeagent/tradeagent.toml` (mode 600) if it does not exist. The LIVE

@@ -170,6 +170,8 @@ def current_token(path=None, now=None, allowed_hosts=ALLOWED_HOSTS):
     if not path.exists():
         raise LoginError("not signed in; run `tradeagent login`")
     with _locked(path):
+        if not path.exists():
+            raise LoginError("not signed in; run `tradeagent login`")
         document = _read_private(path)
         now = time.time() if now is None else now
         if document.get("expires_at", 0) - now < REFRESH_MARGIN:
@@ -380,10 +382,12 @@ def install_helper(path=None, force=False, python=None):
 def logout(path=None, helper=None):
     removed = []
     store = Path(path or store_path())
-    for candidate in (store, store.with_name(store.name + ".lock")):
-        if candidate.exists():
-            candidate.unlink()
-            removed.append(str(candidate))
+    # Delete under the same lock a refreshing helper holds, so an in-flight refresh
+    # cannot recreate the session afterwards. The lock file itself stays.
+    with _locked(store):
+        if store.exists():
+            store.unlink()
+            removed.append(str(store))
     helper = Path(helper or default_helper())
     if helper.exists() and HELPER_MARKER in helper.read_text(errors="replace"):
         helper.unlink()

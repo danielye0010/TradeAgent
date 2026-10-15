@@ -3,8 +3,8 @@
 ## Unreleased
 
 - `tradeagent login` / `logout`: browser sign-in to the official Robinhood Trading MCP
-  (standard OAuth discovery, dynamic client registration and PKCE). The refresh token
-  is stored owner-only; the engine still obtains tokens only through the external
+  (standard OAuth discovery, dynamic client registration and PKCE). The access and
+  refresh tokens are stored owner-only; the engine still obtains tokens only through the external
   helper, which `login` installs at the existing default path.
 - `login` creates `~/.config/tradeagent/tradeagent.toml`; LIVE commands use it when
   `--config` is omitted. `state_dir` and `oauth_helper` now have per-user defaults.

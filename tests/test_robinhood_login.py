@@ -232,3 +232,18 @@ def test_missing_session_and_loose_permissions_fail_clearly(tmp_path):
     os.chmod(loose, 0o644)
     with pytest.raises(rl.LoginError, match="owner-only"):
         rl.current_token(loose)
+
+
+def test_logout_waits_for_in_flight_refresh_and_wins(tmp_path):
+    store = tmp_path / "robinhood-oauth.json"
+    rl._write_private(store, {"access_token": "a", "expires_at": 9e12, "refresh_token": "r"})
+    finished = threading.Event()
+    with rl._locked(store):  # a helper mid-refresh holds the lock
+        worker = threading.Thread(target=lambda: (rl.logout(store, tmp_path / "h"), finished.set()))
+        worker.start()
+        assert not finished.wait(0.3)
+        rl._write_private(store, {"access_token": "b", "expires_at": 9e12, "refresh_token": "r2"})
+    worker.join(5)
+    assert finished.is_set() and not store.exists()
+    with pytest.raises(rl.LoginError, match="tradeagent login"):
+        rl.current_token(store)

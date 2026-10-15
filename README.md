@@ -104,8 +104,8 @@ tradeagent live-check   # read-only: account, permissions, quotes. Never places 
 ```
 
 `login` uses the standard OAuth sign-in Robinhood offers to AI apps. Your password stays
-with Robinhood; TradeAgent keeps only a refresh token, readable by you alone, in
-`~/.config/tradeagent/`. It also creates `~/.config/tradeagent/tradeagent.toml`, the one
+with Robinhood; TradeAgent keeps a short-lived access token and a refresh token in
+`~/.config/tradeagent/robinhood-oauth.json`, readable by you alone (mode 600). It also creates `~/.config/tradeagent/tradeagent.toml`, the one
 file that controls real trading:
 
 ```toml
