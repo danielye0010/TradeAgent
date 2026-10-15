@@ -53,7 +53,8 @@ Put P&L nor an executable short strategy. No broker instrument is submitted.
 
 Every frozen eligible opportunity is observed regardless of later losses or decay.
 A signal is stale for entry if signed waiting midpoint drift consumes its frozen
-expected magnitude or entry spread exceeds 0.5%. Stale signals stay in the full
+expected magnitude, entry spread exceeds 0.5%, or the latest valid scan available
+at the entry receipt no longer agrees with the original direction. Stale signals stay in the full
 decay cohort. A separate trade-or-CASH return uses zero for a stale entry. Missing
 prices remain unavailable and cannot become CASH. No OHLCV price substitutes for
 quote returns; this phase leaves quote-unavailable outcomes missing.

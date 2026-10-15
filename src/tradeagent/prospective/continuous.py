@@ -37,7 +37,7 @@ CONFIG = {
     "slippage_per_side": 0.0005,
     "fees_fraction": 0.0,
     "fees_status": "assumed zero; not observed",
-    "entry_stale": "direction*mid/detection_mid drift>=abs(frozen expected) or spread>0.005",
+    "entry_stale": "signed drift>=abs(frozen expected), spread>0.005, or latest valid scan direction expired",
     "bearish": "theoretical short underlying; excludes borrow/margin; no executable claim",
     "comparison": "all four delays matched; session mean clusters; no account compounding",
 }
@@ -460,8 +460,19 @@ def summarize(pipeline, now, session=None):
             eq, xq = (e or {}).get("quotes", {}), (x or {}).get("quotes", {})
             q = eq.get(o["symbol"])
             drift = mid(q) / mid(o["quote"]) - 1 if q else None
+            entry_scans = [
+                s for s in scans if q and o["detected_at"] <= s["detected_at"] <= q["observed_at"]
+            ]
+            known_directions = [
+                row["direction"]
+                for s in entry_scans
+                for row in s["rows"]
+                if row["symbol"] == o["symbol"] and row["valid"]
+            ]
+            expired = bool(known_directions and known_directions[-1] != o["direction"])
             stale = q is not None and (
-                o["direction"] * drift >= abs(o["expected_uncalibrated"])
+                expired
+                or o["direction"] * drift >= abs(o["expected_uncalibrated"])
                 or (q["ask"] - q["bid"]) / mid(q) > 0.005
             )
             selection = modeled(o, eq, xq, o["symbol"], o["direction"])
@@ -485,6 +496,7 @@ def summarize(pipeline, now, session=None):
                     "horizon_eligible": o["eligible"],
                     "entry_observed": q is not None,
                     "stale_before_entry": stale,
+                    "expired_before_entry": expired,
                     "entry_eligible": bool(q and not stale and o["eligible"]),
                     "waiting_price_drift": drift,
                     "selection": selection,

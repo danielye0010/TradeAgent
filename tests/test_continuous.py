@@ -292,3 +292,22 @@ def test_installer_calendar_isolated_and_safe_paths():
     assert "Persistent=false" in timer and "00/15" in timer
     with pytest.raises(ValueError, match="absolute plain"):
         installer["units"](Path("/bad path/python"), Path("/local/v5"), Path("/local/helper"))
+
+
+def test_expired_direction_uses_only_scans_available_at_entry(pipeline):
+    p, clock, _ = pipeline
+    p.tick()
+    start = clock[0]
+    clock[0] = start + 60
+    p.endpoints()
+    p.collector = lambda *a, **k: market(clock[0], moving=False)
+    clock[0] = start + 300
+    p.scan_slot(clock[0])
+    p.endpoints()
+    for delay in [600, 3600]:
+        clock[0] = start + delay
+        p.endpoints()
+    r = p.report()
+    assert not r["outcomes"][0]["expired_before_entry"]
+    assert r["outcomes"][2]["expired_before_entry"]
+    assert not r["outcomes"][2]["entry_eligible"]
