@@ -1,6 +1,6 @@
 # TradeAgent
 
-**English** | [简体中文](README.zh-CN.md)
+**English** | [简体中文](https://github.com/danielye0010/TradeAgent/blob/main/README.zh-CN.md)
 
 **An AI analyst picks the trade. Plain, tested Python places it.**
 
@@ -13,7 +13,7 @@ whether the AI is actually adding anything.
 [![CI](https://github.com/danielye0010/TradeAgent/actions/workflows/ci.yml/badge.svg)](https://github.com/danielye0010/TradeAgent/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.12%E2%80%933.14-blue)
 ![Status](https://img.shields.io/badge/status-beta-orange)
-[![License](https://img.shields.io/badge/License-Apache--2.0%20AND%20MIT-blue)](LICENSE)
+[![License](https://img.shields.io/badge/License-Apache--2.0%20AND%20MIT-blue)](https://github.com/danielye0010/TradeAgent/blob/main/LICENSE)
 
 [Try it](#try-it-in-two-minutes) · [Why not something else?](#why-not-use-something-that-already-exists) · [Connect Robinhood](#connect-robinhood) · [Everyday use](#everyday-use) · [What protects your money](#what-protects-your-money) · [Results so far](#results-so-far)
 
@@ -64,14 +64,21 @@ another broker, long-term investing, or a strategy that is already known to be p
 Needs Linux or WSL2 on Windows, and Python 3.12+. No accounts.
 
 ```bash
+pipx install tradeagent         # on Ubuntu/WSL: sudo apt install pipx first
+
+tradeagent                      # list of commands, grouped by what you want to do
+tradeagent demo --demo-dir ~/tradeagent-demo
+tradeagent run-once --paper --state-dir ~/tradeagent-paper
+```
+
+That covers the demo, Robinhood sign-in and single live trades. The Codex analyst and
+the daily autopilot use the skill and installer in this repository, so for those clone it:
+
+```bash
 git clone https://github.com/danielye0010/TradeAgent.git
 cd TradeAgent
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e .
-
-tradeagent                      # list of commands, grouped by what you want to do
-tradeagent demo --demo-dir work/demo
-tradeagent run-once --paper --state-dir work/paper
 ```
 
 Each command prints a full JSON record, and a short summary when you run it in a
@@ -88,7 +95,7 @@ Paper round trip: COMPLETED (simulated broker, no real orders)
   Realized P&L: -$0.04
 ```
 
-`tradeagent inspect --state-dir work/demo` shows what the demo lab learned. Keep state
+`tradeagent inspect --state-dir ~/tradeagent-demo` shows what the demo lab learned. Keep state
 directories on a local Linux disk (ext4, btrfs or xfs); TradeAgent refuses network shares
 and Windows mounts such as `/mnt/c` because SQLite locking is unreliable there.
 
@@ -141,7 +148,7 @@ and talk to the `trade-opportunity-analyst` skill:
 | **Experimental live** | `$trade-opportunity-analyst EXPERIMENTAL LIVE: trade today's strongest quant signal with my $5 setting.` | At most one $5 position a day on the best quant signal, then the timed exit. For learning from real fills, recorded separately. |
 
 The same steps also run by hand: `tradeagent opportunity scan`, `decide`, `show` and
-`compare`. See the [opportunity workflow](docs/opportunity-workflow.md).
+`compare`. See the [opportunity workflow](https://github.com/danielye0010/TradeAgent/blob/main/docs/opportunity-workflow.md).
 
 ### 2. Let the daily autopilot paper-trade
 
@@ -169,7 +176,7 @@ After each run, `daily-report.md` in the state directory shows every arm's P&L a
 costs and its excess over SPY for the same hour. If Codex cannot beat **Random**, it is not
 helping. A second protocol, `--protocol daily-news-v2`, asks Codex the same question with
 and without live web search, which measures exactly what reading the news is worth.
-Details: [daily autopilot](docs/prospective-shadow.md).
+Details: [daily autopilot](https://github.com/danielye0010/TradeAgent/blob/main/docs/prospective-shadow.md).
 
 ### 3. Place one trade yourself
 
@@ -181,7 +188,7 @@ tradeagent recover           # finish an interrupted run; only ever sells
 
 This is the execution path without any AI involved, useful for checking that orders,
 fills and exits work on your account before trusting the analyst. Full reference:
-[live execution](docs/one-shot.md).
+[live execution](https://github.com/danielye0010/TradeAgent/blob/main/docs/one-shot.md).
 
 ## What protects your money
 
@@ -213,7 +220,7 @@ message, while `recover` can still exit.
 No strategy has shown a repeatable edge after costs. The best historical rule made four
 profitable trades in its holdout period, too few to mean anything, and its gains look
 like ordinary market exposure rather than skill
-([alpha findings](docs/alpha-findings.md)). The daily autopilot started collecting
+([alpha findings](https://github.com/danielye0010/TradeAgent/blob/main/docs/alpha-findings.md)). The daily autopilot started collecting
 forward evidence in October 2026. Telling a real edge of a few hundredths of a percent per
 trade from luck takes on the order of a year of daily observations, which is why every
 pick is recorded and compared with Random and SPY rather than judged by a good week.
@@ -227,8 +234,8 @@ make no profit claims:
 | --- | --- | --- |
 | `daily-four-arm-v1` | Does Codex beat quant signals and a random pick? | Collecting daily |
 | `daily-news-v2` | Does live news search improve Codex's picks? | Collecting daily |
-| `continuous-quant-v5` | Does intraday momentum survive 1–10 minute decision delays? | [Docs](docs/continuous-v5.md) |
-| `event-driven-v6` | Does Codex reading SEC filings beat a mechanical baseline? | [Docs](docs/event-driven-v6.md) |
+| `continuous-quant-v5` | Does intraday momentum survive 1–10 minute decision delays? | [Docs](https://github.com/danielye0010/TradeAgent/blob/main/docs/continuous-v5.md) |
+| `event-driven-v6` | Does Codex reading SEC filings beat a mechanical baseline? | [Docs](https://github.com/danielye0010/TradeAgent/blob/main/docs/event-driven-v6.md) |
 | `daily-bidirectional-v3`, `daily-call-put-v4` | Do bearish forecasts work as put options? | Waiting on Robinhood option quote access; timers stay disabled |
 
 ## Project layout
@@ -245,8 +252,8 @@ scripts/             systemd installers and release checks
 docs/                design notes and operating guides
 ```
 
-More reading: [architecture](docs/architecture.md), [research protocol](docs/research-protocol.md),
-[changelog](CHANGELOG.md), [release workflow](docs/releasing.md).
+More reading: [architecture](https://github.com/danielye0010/TradeAgent/blob/main/docs/architecture.md), [research protocol](https://github.com/danielye0010/TradeAgent/blob/main/docs/research-protocol.md),
+[changelog](https://github.com/danielye0010/TradeAgent/blob/main/CHANGELOG.md), [release workflow](https://github.com/danielye0010/TradeAgent/blob/main/docs/releasing.md).
 
 ## Development
 
@@ -258,10 +265,10 @@ ruff check src tests scripts && ruff format --check src tests scripts
 
 The tests use synthetic markets, a mock broker and a fake OAuth server, so they run
 offline in about two minutes. CI covers Python 3.12 through 3.14 and smoke-tests the
-built wheel. See [CONTRIBUTING.md](CONTRIBUTING.md).
+built wheel. See [CONTRIBUTING.md](https://github.com/danielye0010/TradeAgent/blob/main/CONTRIBUTING.md).
 
 ## License
 
-[Apache 2.0](LICENSE), with some vendored MIT components ([details](THIRD_PARTY.md)).
+[Apache 2.0](https://github.com/danielye0010/TradeAgent/blob/main/LICENSE), with some vendored MIT components ([details](https://github.com/danielye0010/TradeAgent/blob/main/THIRD_PARTY.md)).
 TradeAgent is an independent project, not affiliated with Robinhood Markets, Inc. or
 OpenAI. Trading involves risk of loss, including loss of your entire investment.

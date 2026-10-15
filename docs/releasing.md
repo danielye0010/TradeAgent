@@ -27,11 +27,21 @@ tag remains a pre-release; the major number does not establish operational matur
    Wait for all tag CI jobs, including the tag/version check, to succeed.
 8. Download the distribution artifact from the successful CI run on the exact
    tagged commit. Verify `sha256sum -c SHA256SUMS`, then publish a GitHub pre-release
-   with those three assets and the prepared notes. Do not publish to PyPI.
-9. Download the published assets again. Verify the release URL/pre-release status,
-   annotated tag's peeled commit, package versions and byte-for-byte checksums.
+   with those three assets and the prepared notes.
+9. Publishing the GitHub release triggers `.github/workflows/publish.yml`, which
+   rebuilds from the tag, reruns `check_release.py --tag` and uploads the wheel and
+   source distribution to PyPI through Trusted Publishing (OIDC; no stored token).
+   Approve the `pypi` environment if it requires a reviewer.
+10. Download the published assets again. Verify the release URL/pre-release status,
+    annotated tag's peeled commit, package versions and byte-for-byte checksums, and
+    `pipx install tradeagent==VERSION` from PyPI in a fresh environment.
+
+One-time PyPI setup: on pypi.org add a pending Trusted Publisher for project
+`tradeagent` with owner `danielye0010`, repository `TradeAgent`, workflow
+`publish.yml` and environment `pypi`. PyPI rejects re-uploading an existing
+version, so a correction always needs a new version.
 
 Never move a published tag or replace its artifacts. Correct a release through a
 new version. CI has read-only repository permissions and never executes LIVE,
 uses owner configuration or installs a SHADOW timer. Publication remains an explicit
-maintainer action; no separate deployment pipeline is required.
+maintainer action: only publishing a GitHub release uploads to PyPI.

@@ -11,7 +11,7 @@
     "licenses/Oft3r-MIT.txt": "380775b4c1b3ec8ea691f8380e33c4f76be1c412c1444674a1b7c75af0a26797",
     "licenses/abiemann-MIT.txt": "43b87f35ac1a7d87c2a87caa4ffe37019927a1c2c2f9075bd35cf0176de7bdca",
     "licenses/cbangera2-MIT.txt": "82c7d6213c64ee4d1a906a7b5049f8d3959c481f42a63f0174534991136f2a0e",
-    "pyproject.toml": "7c11689c7023b472e9988ff3119e5e90cd0022295cf9a5996160a1a6722a8395",
+    "pyproject.toml": "3fb5b93fcb539d74dca0a97dc442eccb085cfb1ce2b098983f70637379b1ba2a",
     "src/tradeagent/__init__.py": "4d6ac5a1a0ad94edd128dc9e0a30a6614df73456dbdc71ddad7e777731ee9221",
     "src/tradeagent/account_policy.py": "ac872bb24842f0defcb09960bfbd78d0dd94c52725835caa8df0a7e860114020",
     "src/tradeagent/accounting.py": "901e8f4d4682817402b54f5c2cc3d8c8fbf7ca514d3c207737a269b723450615",
@@ -158,5 +158,5 @@
     "tests/test_tradeplan_engine.py": "8cb9735d0e593cfa49bb6d4ddb33093ef8e76d33d6cd06752ab18cb10dd5e80f",
     "tests/test_v5_supplement.py": "b8fc88af047f2a5a3c0c645613f16886bb4fa6b7175b7ef6d13263ce3ab1e770"
   },
-  "framework_sha256": "a763690724b79dbdcd0216b026be721ac2dcbe3a2370c719321a652be8161519"
+  "framework_sha256": "b004cc714b2ea65dc8d7c0f446bee392c2d315a8d5e2daa75c8205c55cc30377"
 }

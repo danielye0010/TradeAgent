@@ -60,14 +60,21 @@ TradeAgent 直接复用已经好用的东西：数据和下单用 Robinhood
 需要 Linux 或 Windows 上的 WSL2，以及 Python 3.12 及以上版本。不需要任何账户。
 
 ```bash
+pipx install tradeagent         # Ubuntu/WSL 上先运行 sudo apt install pipx
+
+tradeagent                      # 按用途分组列出所有命令
+tradeagent demo --demo-dir ~/tradeagent-demo
+tradeagent run-once --paper --state-dir ~/tradeagent-paper
+```
+
+这样就能用演示、Robinhood 登录和单笔实盘交易。Codex 分析师和每日自动驾驶要用到仓库里的
+技能和安装脚本，所以需要克隆仓库：
+
+```bash
 git clone https://github.com/danielye0010/TradeAgent.git
 cd TradeAgent
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e .
-
-tradeagent                      # 按用途分组列出所有命令
-tradeagent demo --demo-dir work/demo
-tradeagent run-once --paper --state-dir work/paper
 ```
 
 每条命令都会输出完整的 JSON 记录；在终端里运行时，还会附一段简短的总结（目前是英文）：
@@ -83,7 +90,7 @@ Paper round trip: COMPLETED (simulated broker, no real orders)
   Realized P&L: -$0.04
 ```
 
-`tradeagent inspect --state-dir work/demo` 可以查看演示实验学到了什么。状态目录要放在本地
+`tradeagent inspect --state-dir ~/tradeagent-demo` 可以查看演示实验学到了什么。状态目录要放在本地
 Linux 磁盘上（ext4、btrfs 或 xfs）。TradeAgent 会拒绝网络共享盘和 `/mnt/c` 这类 Windows
 挂载目录，因为那里的 SQLite 文件锁不可靠。
 

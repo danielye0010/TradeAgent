@@ -1,6 +1,9 @@
 # Changelog
 
-## Unreleased
+## 1.0.0-beta.9 — 2026-10-15
+
+Python distribution version: `1.0.0b9`. First release published to PyPI
+(`pipx install tradeagent`).
 
 - Robinhood MCP updates are checked for compatibility instead of an exact version and
   schema pin. Additive changes (new optional inputs, new response fields, new tools)
