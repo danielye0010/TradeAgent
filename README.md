@@ -1,5 +1,7 @@
 # TradeAgent
 
+**English** | [简体中文](README.zh-CN.md)
+
 **An AI analyst picks the trade. Plain, tested Python places it.**
 
 TradeAgent scans US stocks and ETFs, asks a coding agent (Codex) to review the most

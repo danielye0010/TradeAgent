@@ -12,7 +12,8 @@
   `live-check` add a short human summary on interactive terminals; JSON on stdout is
   unchanged. `live-check` names the missing sign-in instead of a generic failure.
 - Tests isolate HOME/XDG directories so they never see a developer's real config.
-- README rewritten for new users: comparison with existing tools, two-minute tour,
+- README rewritten for new users, with a Simplified Chinese version (`README.zh-CN.md`)
+  linked from the top of each: comparison with existing tools, two-minute tour,
   safety guarantees and honest results status.
 
 ## 1.0.0-beta.8 — 2026-10-15
