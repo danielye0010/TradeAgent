@@ -249,6 +249,7 @@ docs/             design notes and operating guides
 - [Opportunity workflow](docs/opportunity-workflow.md): every command and how decisions are made
 - [Live execution](docs/one-shot.md): config reference, recovery, kill switch
 - [Daily autopilot and shadow trading](docs/prospective-shadow.md)
+- [Event-driven SEC / Codex SHADOW v6](docs/event-driven-v6.md)
 - [Architecture](docs/architecture.md) and [research protocol](docs/research-protocol.md)
 - [Changelog](CHANGELOG.md) and [release workflow](docs/releasing.md)
 
