@@ -9,6 +9,7 @@ TradeAgent 扫描美股和 ETF，让编程智能体 Codex 复核当天最异常�
 给出结果*之前*记录下来，并和随机选股、SPY 做对比打分，AI 的每一次判断都有数据可查。
 
 [![CI](https://github.com/danielye0010/TradeAgent/actions/workflows/ci.yml/badge.svg)](https://github.com/danielye0010/TradeAgent/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/tradeagent)](https://pypi.org/project/tradeagent/)
 ![Python](https://img.shields.io/badge/Python-3.12%E2%80%933.14-blue)
 ![Status](https://img.shields.io/badge/status-beta-orange)
 [![License](https://img.shields.io/badge/License-Apache--2.0%20AND%20MIT-blue)](LICENSE)
@@ -50,7 +51,8 @@ TradeAgent 建立在已经好用的基础之上：数据和下单用 Robinhood
 
 ## 两分钟试用
 
-需要 Linux 或 Windows 上的 WSL2，以及 Python 3.12 及以上版本。不需要任何账户。
+TradeAgent 已发布到 [PyPI](https://pypi.org/project/tradeagent/)。需要 Linux 或 Windows 上的 WSL2，
+以及 Python 3.12 及以上版本，不需要任何账户。
 
 ```bash
 pipx install tradeagent         # Ubuntu/WSL 上先运行 sudo apt install pipx

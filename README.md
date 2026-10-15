@@ -11,6 +11,7 @@ trading API, with sizing limits and an automatic exit. Every forecast is written
 is measured, not just believed.
 
 [![CI](https://github.com/danielye0010/TradeAgent/actions/workflows/ci.yml/badge.svg)](https://github.com/danielye0010/TradeAgent/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/tradeagent)](https://pypi.org/project/tradeagent/)
 ![Python](https://img.shields.io/badge/Python-3.12%E2%80%933.14-blue)
 ![Status](https://img.shields.io/badge/status-beta-orange)
 [![License](https://img.shields.io/badge/License-Apache--2.0%20AND%20MIT-blue)](https://github.com/danielye0010/TradeAgent/blob/main/LICENSE)
@@ -54,7 +55,8 @@ order and back out, plus a scored record of every call the AI makes.
 
 ## Try it in two minutes
 
-Needs Linux or WSL2 on Windows, and Python 3.12+. No accounts.
+TradeAgent is on [PyPI](https://pypi.org/project/tradeagent/). It needs Linux or WSL2 on
+Windows and Python 3.12+; no accounts required.
 
 ```bash
 pipx install tradeagent         # on Ubuntu/WSL: sudo apt install pipx first
