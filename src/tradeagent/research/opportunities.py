@@ -54,6 +54,7 @@ def capture(
     deadline=None,
     lookback_minutes=None,
     quotes_only=False,
+    reference_details=False,
 ):
     """Reuse provider authentication and read transport; market tools only."""
     symbols = universe(symbols)
@@ -171,6 +172,11 @@ def capture(
                                 "previous_close": float(raw["previous_close"]),
                                 "previous_close_time": previous[1],
                             }
+                            if reference_details:
+                                references[symbol].update(
+                                    adjusted_previous_close=float(raw["adjusted_previous_close"]),
+                                    previous_close_date=raw["previous_close_date"],
+                                )
                     except (KeyError, ValueError, TypeError):
                         missing.append(symbol + ": quote/reference unavailable")
         elif provider == "alpaca":

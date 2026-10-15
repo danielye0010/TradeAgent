@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.0.0-beta.8 — 2026-10-15
+
+Python distribution version: `1.0.0b8`.
+
+- Add isolated event-driven v6: official SEC submissions/original disclosures,
+  declared fair access, deduplicated prospective events and budgeted subscription
+  Codex interpretation. Historical connectivity never becomes a live opportunity.
+- Independent Fast, Delayed and Quant+Codex arms share the appropriate fresh
+  quotes, with 1/3/5 subsequent-session close observations and corporate-action
+  evidence checks. Match incremental comparisons and cluster by entry session.
+- Add four independent SHADOW workers/timers and a read-only v5 supplement with
+  pairwise delays, separate benchmark cohorts and completeness by session period.
+  Preserve existing protocols, installed environments, timers and v5 priority guard.
+
 ## 1.0.0-beta.7 — 2026-10-15
 
 Python distribution version: `1.0.0b7`.
