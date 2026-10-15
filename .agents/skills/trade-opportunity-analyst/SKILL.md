@@ -29,6 +29,9 @@ Only an explicit owner request saying `EXPERIMENTAL LIVE` selects
 `experimental-live-v1`. Never infer experimental authorization from a NO_TRADE,
 low evidence, scanner ranking or a development request. Both modes retain the full
 31-symbol research universe and the existing owner allowlist and $5 sizing.
+Unless the owner names another file, CONFIG is `~/.config/tradeagent/tradeagent.toml`
+(created by `tradeagent login`); expand it to an absolute path. If it is missing, ask the
+owner to run `tradeagent login` rather than writing one.
 For experimental mode pass `decide --policy experimental --config CONFIG` and
 `execute --mode experimental --live --config CONFIG`. It selects a predefined
 quantitative long signal across authorized research symbols, independently of the

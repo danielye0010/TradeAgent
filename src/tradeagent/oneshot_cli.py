@@ -6,10 +6,12 @@ import os
 import time
 from pathlib import Path
 
+from . import friendly
 from .broker import Broker
 from .execution_policy import active_settings, check_run_state, load_live_config
 from .model import Config, Halt, Risk, digest
 from .oneshot import atomic_json, choose_entry, new_live_run, reconcile_live, run_live, run_paper
+from .paths import default_config
 from .risk import check_state
 from .schema import Contracts, structural
 from .simulator import SCENARIOS
@@ -217,11 +219,15 @@ def live_check(oauth_helper=None, root=None, timeout=10, settings=None):
             )
     except (Halt, OSError, ValueError, KeyError, TypeError) as exc:
         result.update(status="LIVE BLOCKED", live_ready=False)
-        result["connectivity_blocker"] = (
-            str(exc)
-            if isinstance(exc, Halt)
-            else "read-only preflight failed; inspect helper permissions and current broker contracts"
-        )
+        if oauth_helper is not None and not Path(oauth_helper).exists():
+            reason = (
+                f"not signed in to Robinhood (no helper at {oauth_helper}); run `tradeagent login`"
+            )
+        elif isinstance(exc, Halt):
+            reason = str(exc)
+        else:
+            reason = "read-only preflight failed; inspect helper permissions and broker contracts"
+        result["connectivity_blocker"] = reason
     finally:
         if bridge:
             result["broker_calls"] = bridge.calls
@@ -258,6 +264,19 @@ def progress(kind, payload):
         print(datetime.now(timezone.utc).isoformat() + " " + stage, file=sys.stderr, flush=True)
 
 
+def resolve_config(path):
+    """Use --config when given, else the per-user file created by `tradeagent login`."""
+    if path is not None:
+        return path
+    default = default_config()
+    if default.exists():
+        return default
+    raise Halt(
+        f"no live configuration at {default}; run `tradeagent login` to create one "
+        "or pass --config PATH"
+    )
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
@@ -269,19 +288,19 @@ def main(argv=None):
     fresh = commands.add_parser(
         "new-run", help="archive a broker-reconciled completed run; never orders"
     )
-    fresh.add_argument("--config", type=Path, required=True)
+    fresh.add_argument("--config", type=Path)
     reconcile = commands.add_parser(
         "reconcile-once", help="read-only reconciliation of an existing owner run; never orders"
     )
-    reconcile.add_argument("--config", type=Path, required=True)
+    reconcile.add_argument("--config", type=Path)
     status = commands.add_parser(
         "status", help="read-only selected-account execution and reconciliation status"
     )
-    status.add_argument("--config", type=Path, required=True)
+    status.add_argument("--config", type=Path)
     recover = commands.add_parser(
         "recover", help="owner-operated existing lifecycle recovery; never a new entry"
     )
-    recover.add_argument("--config", type=Path, required=True)
+    recover.add_argument("--config", type=Path)
     once = commands.add_parser("run-once", help="one owner-launched entry and automatic exit")
     modes = once.add_mutually_exclusive_group(required=True)
     modes.add_argument("--paper", action="store_true")
@@ -300,9 +319,9 @@ def main(argv=None):
     once.add_argument("--kill-switch", type=Path)
     args = parser.parse_args(argv)
     try:
+        if args.command != "run-once" or args.live:
+            args.config = resolve_config(args.config)
         if args.command == "live-check":
-            if not args.config:
-                raise Halt("live-check requires --config owner TOML")
             result = live_check(settings=load_live_config(args.config))
             if args.output:
                 os.umask(0o077)
@@ -331,8 +350,6 @@ def main(argv=None):
             result = new_live_run(load_live_config(args.config))
             code = 0
         elif args.live:
-            if not args.config:
-                raise Halt("LIVE requires --config with explicit live.enabled = true")
             if any(
                 getattr(args, key) is not None
                 for key in (
@@ -362,6 +379,10 @@ def main(argv=None):
             )
             code = 0 if result["status"] in {"COMPLETED", "NO_TRADE"} else 2
         print(json.dumps(result, indent=2, default=str, allow_nan=False))
+        if args.command == "live-check":
+            friendly.show(friendly.live_check(result))
+        elif args.command == "run-once" and args.paper:
+            friendly.show(friendly.paper(result))
         return code
     except (Halt, OSError, ValueError, KeyError, TypeError) as exc:
         print(
@@ -376,6 +397,7 @@ def main(argv=None):
                 }
             )
         )
+        friendly.show(friendly.halted(exc if isinstance(exc, Halt) else "invalid local input"))
         return 2
 
 

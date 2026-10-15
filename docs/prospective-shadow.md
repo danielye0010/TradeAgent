@@ -30,9 +30,10 @@ Provider semantics and capability limits are described in [Market data](market-d
 
 ## Robinhood setup
 
-Provide a local external OAuth helper for
-https://agent.robinhood.com/mcp/trading. This project does not perform login,
-store passwords/tokens, or implement OAuth refresh. The helper owns authentication
+Run `tradeagent login` once: it signs in through the browser and installs a helper at
+the default path below. Alternatively, provide your own local external OAuth helper for
+https://agent.robinhood.com/mcp/trading. The research and execution code never
+performs login or reads stored tokens itself; it only runs the helper. The helper owns authentication
 and must reside outside the repository, on local Linux storage, owned by the user,
 executable, with no group/other permissions. Its stdout contract is:
 

@@ -8,27 +8,28 @@ configuration and live-check never submit orders or install a service or timer.
 
 ## Install and configure
 
-Use Python 3.12–3.14 on Linux or Ubuntu/WSL2 and a dedicated environment, separate
-from an existing SHADOW environment:
+Use Python 3.12–3.14 on Linux or Ubuntu/WSL2. The simplest setup is:
 
 ```bash
-python3 -m venv ~/tradeagent-owner-venv
-source ~/tradeagent-owner-venv/bin/activate
-pip install /absolute/path/tradeagent-1.0.0b1-py3-none-any.whl
-umask 077
-mkdir -p ~/.config/tradeagent
-cd ~/.config/tradeagent
-python -c 'from importlib.resources import files; from pathlib import Path; Path("tradeagent.toml").open("x").write(files("tradeagent").joinpath("owner.example.toml").read_text())'
-chmod 600 tradeagent.toml
+tradeagent login        # browser sign-in; writes the helper and a starter config
+tradeagent live-check   # read-only readiness check
 ```
 
-Edit the packaged [owner.example.toml](../src/tradeagent/owner.example.toml) copy:
-replace both `/absolute/...` placeholders with absolute paths on your local Linux
-filesystem. The state path must be an isolated fresh directory, never the SHADOW
-or research state path. The OAuth helper must be an existing owner-only executable
-outside the package and repository. Keep access/refresh tokens, credentials and
-login entirely in the external helper; the TOML accepts no credential fields.
-See [helper contract](prospective-shadow.md). Authentication is never fabricated.
+`login` stores the Robinhood refresh token owner-only in
+`~/.config/tradeagent/robinhood-oauth.json`, installs the token helper at
+`~/.local/libexec/robinhood-mcp-oauth-helper` and creates
+`~/.config/tradeagent/tradeagent.toml` (mode 600) if it does not exist. The LIVE
+commands use that file when `--config` is omitted. `state_dir` defaults to
+`~/.local/state/tradeagent/live` and `oauth_helper` to the helper path above; set
+either explicitly to override. The state path must be an isolated directory, never
+a SHADOW or research state path.
+
+You can instead provide your own helper: any owner-only executable outside the
+package and repository that prints the [helper contract](prospective-shadow.md).
+`login` never overwrites a helper it did not write. Keep access/refresh tokens out
+of the TOML; it accepts no credential fields. Authentication is never fabricated.
+A fully explicit configuration copies the packaged
+[owner.example.toml](../src/tradeagent/owner.example.toml).
 
 The complete configuration is:
 

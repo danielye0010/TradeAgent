@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+- `tradeagent login` / `logout`: browser sign-in to the official Robinhood Trading MCP
+  (standard OAuth discovery, dynamic client registration and PKCE). The refresh token
+  is stored owner-only; the engine still obtains tokens only through the external
+  helper, which `login` installs at the existing default path.
+- `login` creates `~/.config/tradeagent/tradeagent.toml`; LIVE commands use it when
+  `--config` is omitted. `state_dir` and `oauth_helper` now have per-user defaults.
+- `tradeagent` with no arguments prints grouped help. `demo`, `run-once --paper` and
+  `live-check` add a short human summary on interactive terminals; JSON on stdout is
+  unchanged. `live-check` names the missing sign-in instead of a generic failure.
+- Tests isolate HOME/XDG directories so they never see a developer's real config.
+- README rewritten for new users: comparison with existing tools, two-minute tour,
+  safety guarantees and honest results status.
+
 ## 1.0.0-beta.8 — 2026-10-15
 
 Python distribution version: `1.0.0b8`.
