@@ -41,6 +41,13 @@ class OptionsResearchMCP(StandaloneMCP):
     read_tools = OPTION_TOOLS
     require_server_version = False
 
+    def _http_failure(self, status):
+        if status == 403:
+            return OptionAccessDenied(
+                "Robinhood option market data HTTP 403; provider access required"
+            )
+        return super()._http_failure(status)
+
     def __init__(self, token_source, timeout=20):
         super().__init__(token_source, timeout)
         pin = json.loads(

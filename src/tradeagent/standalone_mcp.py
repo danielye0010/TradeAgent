@@ -154,6 +154,9 @@ class StandaloneMCP:
         # No automatic DELETE, cancellation, reconnect, retry or credential write.
         self.session = None
 
+    def _http_failure(self, status):
+        return Halt("official MCP HTTP failure; no retry or redirect")
+
     def rpc(self, method, params, *, notification=False, before_send=None):
         if method not in {"initialize", "notifications/initialized", "tools/list", "tools/call"}:
             raise Halt("unsupported standalone protocol method")
@@ -208,7 +211,7 @@ class StandaloneMCP:
                     and response.status in {429, 502, 503, 504}
                 ):
                     raise TransientReadFailure(f"idempotent read HTTP {response.status}")
-                raise Halt("official MCP HTTP failure; no retry or redirect")
+                raise self._http_failure(response.status)
             if notification:
                 return None
             session = response.getheader("Mcp-Session-Id")

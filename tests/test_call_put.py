@@ -269,6 +269,35 @@ def test_independent_call_put_cash_and_unavailable_discovery():
     assert resolved["codex_price"]["equity_benchmark"]["instrument"] == "LONG_EQUITY"
 
 
+def test_transport_http_403_is_typed_without_changing_default_mcp_error(monkeypatch):
+    calls = []
+
+    class Connection:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def request(self, *args, **kwargs):
+            calls.append("request")
+
+        def getresponse(self):
+            return SimpleNamespace(status=403)
+
+        def close(self):
+            calls.append("closed")
+
+    monkeypatch.setattr("tradeagent.standalone_mcp.http.client.HTTPSConnection", Connection)
+    bridge = OptionsResearchMCP(lambda: "synthetic-token")
+    with pytest.raises(OptionAccessDenied, match="HTTP 403"):
+        bridge.rpc(
+            "tools/call", {"name": "get_option_quotes", "arguments": {"instrument_ids": ["id"]}}
+        )
+    default = StandaloneMCP(lambda: "synthetic-token")
+    with pytest.raises(Halt, match="official MCP HTTP failure; no retry or redirect") as error:
+        default.rpc("initialize", {})
+    assert type(error.value) is Halt
+    assert calls == ["request", "closed", "request", "closed"]
+
+
 def frozen(store, pool="synthetic"):
     selections = {
         "QQQ:" + k: {"status": "SELECTED", "selection": selection(kind=k)} for k in ("call", "put")

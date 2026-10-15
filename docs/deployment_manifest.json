@@ -79,7 +79,7 @@
     "src/tradeagent/research/opportunity_workflow.py": "3eab8de5917c80e873fc7663e01eda248a727548acae03fabd166086b8f3d767",
     "src/tradeagent/research/option_economics.py": "8904dc1219011568e6876a07dd9f25289f67be0a5f220895e6498d94a2aea13b",
     "src/tradeagent/research/outcomes.py": "e2b5d5fc5e8c09d50608b9579a6d5004cb7bbed835ad2eef526d99061bcb451a",
-    "src/tradeagent/research/put_shadow.py": "b12c525c401388bb6e2a771bac0944b01a8eac82827c07cd1637a1d10aee416f",
+    "src/tradeagent/research/put_shadow.py": "e7c4db5da8f27cd58cc29bbdc00450dfdfc7613e824de28e37692b2437379f89",
     "src/tradeagent/research/replay.py": "7397361fd85539bf86afd9cbab3fbc5726d8bc04c5cd52dbdb100898f56d77a4",
     "src/tradeagent/research/reporting.py": "e5bdacf2e4e66a6e25c9d667fd84ca2f7e93da5c0c51c62636d64f747edb1ffa",
     "src/tradeagent/research/research_universe.py": "39da79013d481bfcc84f6be44e8f70aea6b19535bfb01c47b402ecb089b84338",
@@ -89,7 +89,7 @@
     "src/tradeagent/risk.py": "f833a547e590d45de80f2c7bccfc251bcb3a2f93f4ad3af2af8ea8a8acd0873b",
     "src/tradeagent/schema.py": "4045d9bfb77157a3550e822b41be2f49f53e1474b7131bd695edfdea52fbb560",
     "src/tradeagent/simulator.py": "8b6e36c8cd6fd966d1ed320a4ddf99a87603c02bea3cdacd4c873246a2ac9ba8",
-    "src/tradeagent/standalone_mcp.py": "cf9a62c9e73fdaf473ab6bc228b9f537475aee88de6d2f741d0817adb7f1206c",
+    "src/tradeagent/standalone_mcp.py": "b82391a9c9b32f5a4b93d36fe0074cad50d82f7b2736f5c3c7f499daafc36244",
     "src/tradeagent/state.py": "5c060114117e9e52ed0e6f6b06b0346386936faedd3af4f6023862e09cd02d8f",
     "src/tradeagent/strategy.py": "4a6a7008611f172a98ba6204efa3ce79a24c27691299e73c2691e42803dea76d",
     "src/tradeagent/supervised.py": "e85533e9c2c54647975eff040f18c6de95f688adedafb0ac30d71463197f32f8",
@@ -103,7 +103,7 @@
     "tests/test_account_and_market_rules.py": "ebdb3d63a660990930473ae5dc847b8f9079fb5ee555d0552ad5b6170d2d465e",
     "tests/test_bidirectional.py": "45da54cd96543aba4889f684857bb91fcab6bc86096b1a6bb7f0fad3b1c9b043",
     "tests/test_broker_contract.py": "187d61ecf92092889d54718471f4772cb2a8d650d38b479cef76ede97b2984f0",
-    "tests/test_call_put.py": "ba79407d58966a748bb79cf4b24ae429c297eaf5ba149103647e1fdd73f7dea1",
+    "tests/test_call_put.py": "b79dc6daa03138cf7f0751d902ff0c031f447da6f285de275a9d429d732dccb8",
     "tests/test_canary_execution.py": "a2344761daa78e350d4a515fc3246690afaba9464626d3a6fa5ed84661c14f81",
     "tests/test_canary_reference.py": "d1cc61aea7954f39a51e8f6dfcec0c1a36d7fd9d1e473c8125c3996699685442",
     "tests/test_canary_review.py": "84e2c3b188deb097a3a6a8c8a6949f0c8c44142cddb18f28aafc409b5b5ec7ca",
@@ -141,5 +141,5 @@
     "tests/test_supervised_contract.py": "b17692ea76ef0653e92215103a4dc459478601cfc17c7fb3df17697e37c92d44",
     "tests/test_tradeplan_engine.py": "8cb9735d0e593cfa49bb6d4ddb33093ef8e76d33d6cd06752ab18cb10dd5e80f"
   },
-  "framework_sha256": "559520241d6cea64891e2ab3038e1c91a1bc08ce698d40017931c8ec85c03ce0"
+  "framework_sha256": "5d69142b13a55a03d96b532c731fe4921382fe31eb173389bfd9e948adb740b7"
 }
