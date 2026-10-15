@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.0-beta.7 — 2026-10-15
+
+Python distribution version: `1.0.0b7`.
+
+- Add isolated continuous Quant SHADOW v5, five-minute rolling discovery and real
+  forward bid/ask observations at 1/3/5/10-minute delays and a common signal+60m exit.
+- Freeze signal transitions, liquidity, uncalibrated forecasts, costs and the eligible
+  basket. Preserve missing and stale signals; compare matched delays by session clusters.
+- Independent SQLite/captures and systemd units; no LLM calls or broker writes.
+  Existing v1/v2 captures take priority and v3/v4 activation remains unchanged.
+
 ## 1.0.0-beta.6 — 2026-10-15
 
 Python distribution version: `1.0.0b6`.

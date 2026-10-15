@@ -52,6 +52,8 @@ def capture(
     clock=time.time,
     session=None,
     deadline=None,
+    lookback_minutes=None,
+    quotes_only=False,
 ):
     """Reuse provider authentication and read transport; market tools only."""
     symbols = universe(symbols)
@@ -61,6 +63,15 @@ def capture(
     if not bounds or bounds[0] >= started:
         raise ValueError("requested market session unavailable or future")
     end = min(started, bounds[1])
+    if lookback_minutes is not None and (type(lookback_minutes) is not int or lookback_minutes < 5):
+        raise ValueError("lookback must be at least five minutes")
+    history_start = (
+        max(bounds[0], int(end // 60) * 60 - lookback_minutes * 60)
+        if lookback_minutes
+        else bounds[0]
+    )
+    if quotes_only and provider != "robinhood":
+        raise ValueError("quote-only capture requires official Robinhood")
     bars, quotes, references, missing = [], {}, {}, []
     with open_provider(provider, Path(__file__).resolve().parents[3], oauth_helper) as adapter:
 
@@ -76,13 +87,13 @@ def capture(
             return result
 
         if provider == "robinhood":
-            for index in range(0, len(requested), 5):
+            for index in range(0, 0 if quotes_only else len(requested), 5):
                 batch = requested[index : index + 5]
                 history = market_read(
                     "get_equity_historicals",
                     {
                         "symbols": batch,
-                        "start_time": iso(bounds[0]),
+                        "start_time": iso(history_start),
                         "end_time": iso(end),
                         "interval": "minute",
                         "bounds": "regular",
@@ -145,6 +156,13 @@ def capture(
                             ),
                             "observed_at": received,
                         }
+                        if quotes_only or lookback_minutes is not None:
+                            quotes[symbol].update(
+                                bid_asof=timestamp(raw["venue_bid_time"]),
+                                ask_asof=timestamp(raw["venue_ask_time"]),
+                                active=raw.get("state") == "active"
+                                and raw.get("has_traded") is True,
+                            )
                         previous = session_bounds(
                             datetime.fromisoformat(raw["previous_close_date"]).date()
                         )
