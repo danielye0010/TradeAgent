@@ -257,7 +257,7 @@ class CodexBridge:
         name = "review_equity_order"
         contracts = Contracts()
         status = next(s for s in self.inventory["data"] if s["name"] == SERVER)
-        contracts.check_current(self.tools, status["serverInfo"]["version"])
+        contracts.check_current(self.tools, status["serverInfo"]["version"], strict=True)
         contracts.validate(name, arguments)
         if (
             set(arguments)
@@ -301,7 +301,9 @@ class CodexBridge:
         from .schema import Contracts
 
         contracts = Contracts()
-        contracts.check_current(self.tools, self.inventory["data"][0]["serverInfo"]["version"])
+        contracts.check_current(
+            self.tools, self.inventory["data"][0]["serverInfo"]["version"], strict=True
+        )
         contracts.validate(name, arguments)
         self.calls.append(name)
         result = self._exchange(

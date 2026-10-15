@@ -55,7 +55,7 @@ class CanaryReviewBridge(CodexBridge):
                 k: status.get("serverInfo", {}).get(k) for k in identity
             }:
                 raise Halt("review/catalog server identities disagree")
-            Contracts().check_current(complete, server.get("version"))
+            Contracts().check_current(complete, server.get("version"), strict=True)
             for name, tool in self.tools.items():
                 expected = complete.get(name)
                 fields = ("inputSchema", "outputSchema", "annotations")

@@ -16,6 +16,7 @@ Try it (no accounts needed):
   inspect               show what a research state directory has learned
 
 Connect Robinhood:
+  doctor                checklist of what is set up and what to do next
   login                 sign in through your browser (password never seen)
   logout                forget the saved session
   live-check            read-only readiness check; never places orders
@@ -69,6 +70,12 @@ def paper(result):
 
 
 def live_check(result):
+    note = result.get("broker_compatibility_summary")
+    text = _live_check(result)
+    return text + ("\n  Note: " + note if note else "")
+
+
+def _live_check(result):
     if result.get("live_ready"):
         entry = result.get("configured_entry") or {}
         symbol = entry.get("symbol") or "your first allowed symbol"

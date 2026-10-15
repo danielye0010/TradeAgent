@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Robinhood MCP updates are checked for compatibility instead of an exact version and
+  schema pin. Additive changes (new optional inputs, new response fields, new tools)
+  keep trading working and are reported by `live-check`; incompatible changes to equity
+  or account tools fail closed with the tool and reason; a broken option tool disables
+  only option features. Both real past upgrades replay as compatible. Legacy
+  Codex/canary paths keep the strict pin.
+- `tradeagent doctor`: offline setup checklist with the next command to run.
 - `tradeagent login` / `logout`: browser sign-in to the official Robinhood Trading MCP
   (standard OAuth discovery, dynamic client registration and PKCE). The access and
   refresh tokens are stored owner-only; the engine still obtains tokens only through the external

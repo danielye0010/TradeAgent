@@ -22,6 +22,10 @@ def main(argv=None):
     if not supplied or supplied[0] in {"-h", "--help", "help"}:
         print(friendly.HELP)
         return 0
+    if supplied[0] == "doctor":
+        from .doctor import main as doctor_main
+
+        return doctor_main(supplied[1:])
     if supplied[0] in {"login", "logout"}:
         from .robinhood_login import main as login_main
 

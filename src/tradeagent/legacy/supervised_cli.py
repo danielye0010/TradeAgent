@@ -74,7 +74,9 @@ def main(argv=None):
                 ) as bridge:
                     contracts = Contracts()
                     contracts.check_current(
-                        bridge.tools, bridge.inventory["data"][0]["serverInfo"]["version"]
+                        bridge.tools,
+                        bridge.inventory["data"][0]["serverInfo"]["version"],
+                        strict=True,
                     )
                     b = Broker(bridge, c, r, options_enabled=True)
                     b.accounts()

@@ -13,7 +13,7 @@ from .model import Config, Halt, Risk, digest
 from .oneshot import atomic_json, choose_entry, new_live_run, reconcile_live, run_live, run_paper
 from .paths import default_config
 from .risk import check_state
-from .schema import Contracts, structural
+from .schema import Contracts, describe, is_option_tool
 from .simulator import SCENARIOS
 from .standalone_mcp import READ_TOOLS, ExternalOAuthToken, ReadOnlyMCP
 
@@ -58,17 +58,14 @@ def live_check(oauth_helper=None, root=None, timeout=10, settings=None):
                 transport="direct official MCP HTTP; no Codex",
             )
             full = Contracts()
-            drift = [
+            report = full.compatibility(bridge.tools, result["server_version"])
+            result["broker_compatibility"] = report
+            result["broker_compatibility_summary"] = describe(report)
+            drift = sorted(
                 name
-                for name, expected in full.tools.items()
-                if name not in READ_TOOLS
-                and structural({k: bridge.tools.get(name, {}).get(k) for k in expected}) != expected
-            ]
-            if not getattr(bridge, "server_version_reviewed", True):
-                result["blockers"].append(
-                    f"Broker MCP server version {result['server_version']} is not the reviewed "
-                    f"{full.manifest['server_version']}; new entries are blocked, recover remains available"
-                )
+                for name in report["broken"]
+                if name not in READ_TOOLS and not is_option_tool(name)
+            )
             result["write_contract_drift"] = drift
             result["observed_write_input_fields"] = {
                 name: sorted(
@@ -78,7 +75,9 @@ def live_check(oauth_helper=None, root=None, timeout=10, settings=None):
             }
             if drift:
                 result["blockers"].append(
-                    "Authenticated write catalog differs from frozen schemas: " + ", ".join(drift)
+                    "Robinhood changed order tools incompatibly ("
+                    + "; ".join(f"{n}: {report['broken'][n][0]}" for n in drift)
+                    + "); update TradeAgent. Reads and recover still work."
                 )
             # Broker exposes read operations only. StandaloneMCP.read independently
             # enforces READ_TOOLS before network; never instantiate a write transport.

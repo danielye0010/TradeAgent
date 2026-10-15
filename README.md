@@ -100,6 +100,7 @@ the only account TradeAgent can trade in. Put in it only what you are willing to
 
 ```bash
 tradeagent login        # opens Robinhood in your browser; approve TradeAgent
+tradeagent doctor       # offline checklist: what is set up, what to fix next
 tradeagent live-check   # read-only: account, permissions, quotes. Never places orders.
 ```
 
@@ -202,7 +203,10 @@ order the engine checks, and refuses to trade if anything is off:
   No software can promise a fill in a halted or illiquid market, which is one more
   reason to keep amounts small.
 
-Robinhood's own approval settings still apply on top of this.
+Robinhood's own approval settings still apply on top of this. When Robinhood updates its
+API, TradeAgent checks every tool it uses: additive changes keep working and are noted in
+`live-check`; a change that could alter what an order means stops trading with a clear
+message, while `recover` can still exit.
 
 ## Results so far
 

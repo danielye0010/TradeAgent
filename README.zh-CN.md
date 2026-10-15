@@ -94,6 +94,7 @@ Linux 磁盘上（ext4、btrfs 或 xfs）。TradeAgent 会拒绝网络共享盘�
 
 ```bash
 tradeagent login        # 在浏览器里打开 Robinhood，授权 TradeAgent
+tradeagent doctor       # 离线自检：哪些已配好，下一步该做什么
 tradeagent live-check   # 只读检查：账户、权限、报价。永远不会下单。
 ```
 
@@ -189,7 +190,9 @@ AI 的输出不可预测，但它和你账户之间的代码是确定的。每�
   （`~/.local/state/tradeagent/live`）里创建一个名为 `KILL` 的文件，就会停止买入并立即退出。
   在停牌或流动性很差的市场里，没有任何软件能保证成交，这也是金额要小的另一个原因。
 
-在此之上，Robinhood 自己的审批设置依然有效。
+在此之上，Robinhood 自己的审批设置依然有效。Robinhood 更新接口时，TradeAgent 会逐个检查
+它用到的工具：只是新增字段的变化照常工作，并在 `live-check` 里提示；可能改变订单含义的变化
+会停止交易并给出明确原因，而 `recover` 仍然可以卖出退出。
 
 ## 目前的结果
 
