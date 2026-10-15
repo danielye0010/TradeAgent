@@ -26,7 +26,9 @@ from .tradeplan import (
 SKILL_VERSION = "trade-opportunity-analyst-v4"
 NEWS_PROTOCOL = "daily-news-v2"
 BIDIRECTIONAL_PROTOCOL = "daily-bidirectional-v3"
-SHADOW_PROTOCOLS = ("daily-four-arm-v1", NEWS_PROTOCOL, BIDIRECTIONAL_PROTOCOL)
+OPTIONS_PROTOCOL = "daily-call-put-v4"
+DIRECTIONAL_PROTOCOLS = (BIDIRECTIONAL_PROTOCOL, OPTIONS_PROTOCOL)
+SHADOW_PROTOCOLS = ("daily-four-arm-v1", NEWS_PROTOCOL, *DIRECTIONAL_PROTOCOLS)
 ARMS = ("quant_only", "codex_only", "quant_codex")
 
 
@@ -228,7 +230,7 @@ class DailyResearch:
             item["stance"]
             not in (
                 {"long", "bearish", "watch", "avoid"}
-                if report.get("research_protocol") == BIDIRECTIONAL_PROTOCOL
+                if report.get("research_protocol") in DIRECTIONAL_PROTOCOLS
                 else {"long", "watch", "avoid"}
             )
             or type(item["rank"]) is not int
@@ -273,7 +275,7 @@ class DailyResearch:
         invalid_decisions |= {
             d["decision_id"]
             for d in self.records("decisions")
-            if d.get("research_protocol") == BIDIRECTIONAL_PROTOCOL
+            if d.get("research_protocol") in DIRECTIONAL_PROTOCOLS
         }
         rows = [
             {
@@ -446,6 +448,7 @@ class DailyResearch:
         assessment_status="VALID",
         news_assessment_status="UNAVAILABLE",
         put_selections=None,
+        option_selections=None,
     ):
         failure = scan_failure(report)
         if failure:
@@ -561,7 +564,7 @@ class DailyResearch:
             approved = [p for p in plans if p["decision"]["kind"] == "UNDERLYING"]
             best = max(approved, key=lambda p: p["economics"]["lower_net_estimate"], default=None)
             support = research_support(
-                candidate, research, now, allow_bearish=shadow_protocol == BIDIRECTIONAL_PROTOCOL
+                candidate, research, now, allow_bearish=shadow_protocol in DIRECTIONAL_PROTOCOLS
             )
             combined = best if support["supported"] else None
             coverage.append(
@@ -680,7 +683,7 @@ class DailyResearch:
             randomized = random.Random(seed).choice(
                 [None, *sorted(eligible, key=lambda c: c["symbol"])]
             )
-            if shadow_protocol in {NEWS_PROTOCOL, BIDIRECTIONAL_PROTOCOL}:
+            if shadow_protocol in {NEWS_PROTOCOL, *DIRECTIONAL_PROTOCOLS}:
                 # Same candidates, timestamp, entry/exit and costs: the only difference
                 # between codex_price and codex_news is whether Codex could read the news.
                 for c in eligible:
@@ -688,7 +691,7 @@ class DailyResearch:
                         c["scanner"],
                         news_assessments.get(c["symbol"]),
                         now,
-                        allow_bearish=shadow_protocol == BIDIRECTIONAL_PROTOCOL,
+                        allow_bearish=shadow_protocol in DIRECTIONAL_PROTOCOLS,
                     )
                 news_ai = min(
                     (c for c in eligible if c["news_support"]["supported"]),
@@ -736,10 +739,13 @@ class DailyResearch:
                     if unavailable
                     else "frozen research selection; no proven profitability",
                 }
-        if shadow_protocol == BIDIRECTIONAL_PROTOCOL:
-            from .bidirectional import select
+        if shadow_protocol in DIRECTIONAL_PROTOCOLS:
+            from . import bidirectional, call_put
 
-            arms = select(
+            selector = (
+                call_put.select if shadow_protocol == OPTIONS_PROTOCOL else bidirectional.select
+            )
+            arms = selector(
                 eligible,
                 assessments,
                 news_assessments,
@@ -747,6 +753,11 @@ class DailyResearch:
                 news_assessment_status,
                 seed,
                 now,
+                **(
+                    {"selections": option_selections or {}}
+                    if shadow_protocol == OPTIONS_PROTOCOL
+                    else {}
+                ),
             )
         experimental = (
             max(
@@ -832,10 +843,16 @@ class DailyResearch:
                 decision_status="SHADOW_ONLY",
                 freeze_time=now,
             )
-            if shadow_protocol in {NEWS_PROTOCOL, BIDIRECTIONAL_PROTOCOL}:
+            if shadow_protocol in {NEWS_PROTOCOL, *DIRECTIONAL_PROTOCOLS}:
                 result["news_assessment_status"] = news_assessment_status
-        if shadow_protocol == BIDIRECTIONAL_PROTOCOL:
-            result["put_selections"] = put_selections or {}
+        if shadow_protocol in DIRECTIONAL_PROTOCOLS:
+            if shadow_protocol == OPTIONS_PROTOCOL:
+                from .call_put import RULE
+
+                result["option_selections"] = option_selections or {}
+                result["option_rule"] = RULE
+            else:
+                result["put_selections"] = put_selections or {}
             result["research_decision"] = arms["quant_codex"]["decision"]
         result["decision_id"] = identity(result)
         self.save("decisions", result, result["decision_id"], now)
@@ -882,7 +899,7 @@ class DailyResearch:
                 )
                 continue
             if (
-                decision.get("research_protocol") == BIDIRECTIONAL_PROTOCOL
+                decision.get("research_protocol") in DIRECTIONAL_PROTOCOLS
                 and now < decision["outcome_exit_time"] + 60
             ):
                 continue
@@ -967,7 +984,7 @@ class DailyResearch:
                             "comparison_context": comparison_context(prediction["features"], costs),
                             "sampling_key": prediction["features"].get("sampling_key"),
                             "active": bool(prediction["direction"])
-                            if decision.get("research_protocol") == BIDIRECTIONAL_PROTOCOL
+                            if decision.get("research_protocol") in DIRECTIONAL_PROTOCOLS
                             else prediction["direction"] > 0,
                             "gross": gross,
                             **(
@@ -975,7 +992,7 @@ class DailyResearch:
                                     "predicted_direction": prediction["direction"],
                                     "directional_gross": prediction["direction"] * gross,
                                 }
-                                if decision.get("research_protocol") == BIDIRECTIONAL_PROTOCOL
+                                if decision.get("research_protocol") in DIRECTIONAL_PROTOCOLS
                                 else {}
                             ),
                         }
@@ -1025,10 +1042,15 @@ class DailyResearch:
                 )
                 for name, arm in decision["comparisons"].items()
             }
-            if decision.get("research_protocol") == BIDIRECTIONAL_PROTOCOL:
-                from .bidirectional import resolve_arms
+            if decision.get("research_protocol") in DIRECTIONAL_PROTOCOLS:
+                from . import bidirectional, call_put
 
-                arms = resolve_arms(decision, observed, self.records("option_observations"))
+                resolver = (
+                    call_put.resolve_arms
+                    if decision.get("research_protocol") == OPTIONS_PROTOCOL
+                    else bidirectional.resolve_arms
+                )
+                arms = resolver(decision, observed, self.records("option_observations"))
             item = {
                 "decision_id": decision["decision_id"],
                 "resolved_at": now,

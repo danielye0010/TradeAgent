@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.0-beta.6 — 2026-10-15
+
+Python distribution version: `1.0.0b6`.
+
+- Add isolated `daily-call-put-v4`: signed Quant and independent Codex Price/News
+  choices use long Calls/Puts, genuine entry ask/exit bid, whole-contract allocation,
+  idle cash and explicit modeled fees. Equity, SPY and CASH remain separate controls.
+- Existing minutely SHADOW pipeline captures endpoints and generates daily reports.
+  The 11:00 ET capture avoids v1/v2 Codex windows and checks their service activity.
+- Persist option-data HTTP 403 as an access blocker and suppress automatic retries.
+  Timer enablement requires successful genuine prospective Call and Put cycles;
+  prepare-only installs a verified disabled timer. V1/v2/v3 history remains frozen.
+
 ## 1.0.0-beta.5 — 2026-10-14
 
 Python distribution version: `1.0.0b5`.

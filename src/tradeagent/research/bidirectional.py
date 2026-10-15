@@ -238,18 +238,20 @@ def observe_options(store, reader, now):
                 saved.add(key)
 
 
-def compare(store):
+def compare(
+    store, *, protocol=PROTOCOL, sleeve_names=("instrument_simulation", "directional_benchmark")
+):
     decisions = {
         d["decision_id"]: d
         for d in store.records("decisions")
-        if d.get("research_protocol") == PROTOCOL
+        if d.get("research_protocol") == protocol
     }
     outcomes = [o for o in store.records("outcomes") if o["decision_id"] in decisions]
     pools = {}
     for pool in sorted({d["evidence_kind"] for d in decisions.values()}):
         rows = [o for o in outcomes if o["evidence_kind"] == pool]
         sleeves = {}
-        for sleeve in ("instrument_simulation", "directional_benchmark"):
+        for sleeve in sleeve_names:
             # Every reported difference uses the same matched sessions, including SPY/CASH.
             paired_rows = [
                 o
@@ -344,7 +346,7 @@ def compare(store):
             "selections_and_prices": [o["comparisons"] for o in rows],
         }
     return {
-        "protocol": PROTOCOL,
+        "protocol": protocol,
         "capital_dollars": CAPITAL,
         "put_rule": PUT_RULE,
         "capital_basis": "instrument sleeve: $1000 cash budget, whole Puts with idle cash or fractional unleveraged equity; returns/P&L divide by $1000, not premium",

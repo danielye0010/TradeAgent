@@ -616,6 +616,23 @@ def write_report(directory, text):
 def regenerate(directory, protocol, now=None):
     """Read-only SQLite snapshot; write only the derived Markdown report."""
     directory, now = Path(directory), time.time() if now is None else now
+    if protocol == "daily-call-put-v4" and not (directory / "experience.sqlite3").exists():
+        from ..research import call_put
+
+        class Empty:
+            def records(self, kind):
+                return []
+
+        directory.mkdir(parents=True, exist_ok=True)
+        path = write_report(
+            directory, call_put.report(Empty(), now, call_put.access_status(directory))
+        )
+        return {
+            "protocol": protocol,
+            "report": str(path),
+            "generated_at": now,
+            "orders_submitted": 0,
+        }
     db = sqlite3.connect(
         (directory / "experience.sqlite3").resolve().as_uri() + "?mode=ro", uri=True
     )
@@ -640,6 +657,7 @@ def regenerate(directory, protocol, now=None):
                 "assessments",
                 "sessions",
                 "resolution_failures",
+                "option_observations",
             )
         }
     finally:
@@ -652,7 +670,12 @@ def regenerate(directory, protocol, now=None):
     status = json.loads((directory / "daily-status.json").read_text())
     if status["protocol"] != protocol:
         raise ValueError("report protocol does not match saved state")
-    if protocol == "daily-bidirectional-v3":
+    if protocol == "daily-call-put-v4":
+        from ..research import call_put
+
+        text = call_put.report(Snapshot(), now, call_put.access_status(directory))
+        result = {"protocol": protocol, "status": "SAVED_DATA_ONLY"}
+    elif protocol == "daily-bidirectional-v3":
         from ..research.bidirectional import pnl_report
 
         text = pnl_report(Snapshot())

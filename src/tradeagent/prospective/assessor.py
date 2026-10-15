@@ -131,7 +131,7 @@ def assess_news(report, *, executable="codex", timeout=300, now=None, search=Tru
         + json.dumps({"candidates": candidates}, allow_nan=False)
     )
     schema = NEWS_SCHEMA
-    if report.get("research_protocol") == "daily-bidirectional-v3":
+    if report.get("research_protocol") in {"daily-bidirectional-v3", "daily-call-put-v4"}:
         import copy
 
         schema = copy.deepcopy(NEWS_SCHEMA)
@@ -144,6 +144,8 @@ def assess_news(report, *, executable="codex", timeout=300, now=None, search=Tru
         prompt = prompt.replace("one-hour long trade", "one-hour LONG or BEARISH opportunity")
         prompt = prompt.replace("long, watch or avoid", "long, bearish, watch or avoid")
         prompt += "\nBearish means a negative directional hypothesis for Put SHADOW research. Rising or falling price alone is insufficient: abstain without an attractive supported opportunity."
+        if report.get("research_protocol") == "daily-call-put-v4":
+            prompt += "\nBullish is a positive directional hypothesis for long Call SHADOW research, without claiming positive option expected value."
     document, provenance = run(
         prompt,
         schema,
@@ -154,7 +156,10 @@ def assess_news(report, *, executable="codex", timeout=300, now=None, search=Tru
         allowed_items={"web_search"} if search else set(),
         report_search=True,
     )
-    if report.get("research_protocol") == "daily-bidirectional-v3" and search:
+    if (
+        report.get("research_protocol") in {"daily-bidirectional-v3", "daily-call-put-v4"}
+        and search
+    ):
         if not provenance["web_searches"]:
             raise ValueError("live news requires an observed web search")
         sources = [s for item in document["assessments"] for s in item["sources"]]

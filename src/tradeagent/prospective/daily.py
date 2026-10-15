@@ -12,7 +12,7 @@ from zoneinfo import ZoneInfo
 from ..calendar import session_bounds
 from ..model import Halt
 from ..opportunity_cli import write
-from ..research import bidirectional
+from ..research import bidirectional, call_put
 from ..research.alpha_signals import ALPHA_VERSION
 from ..research.domain import identity
 from ..research.opportunities import UNIVERSE, capture, research_snapshot, scan
@@ -97,6 +97,22 @@ PROTOCOLS[bidirectional.PROTOCOL] = {
     "arms": bidirectional.ARMS,
     "baselines": ("quant_only", "spy", "cash"),
     "start": (10, 30),
+    "seconds": 420,
+}
+PROTOCOLS[call_put.PROTOCOL] = {
+    "config": {
+        **NEWS_CONFIG,
+        "protocol": call_put.PROTOCOL,
+        "decision_window_ny": "11:00:00-11:07:00",
+        "universe": "measured prefix from --universe-profile",
+        "capital_dollars": 1000,
+        "option_rule": call_put.RULE,
+        "minimum_point_net_edge": bidirectional.MIN_NET_EDGE,
+        "collection_budget_seconds": COLLECTION_BUDGET_SECONDS,
+    },
+    "arms": call_put.ARMS,
+    "baselines": ("quant_only", "spy", "cash"),
+    "start": (11, 0),
     "seconds": 420,
 }
 
@@ -278,7 +294,8 @@ class Pipeline:
         if protocol not in PROTOCOLS:
             raise ValueError("unknown scheduled research protocol")
         self.protocol, self.news_assessor = protocol, news_assessor
-        self.bidirectional = protocol == bidirectional.PROTOCOL
+        self.options = protocol == call_put.PROTOCOL
+        self.bidirectional = protocol in {bidirectional.PROTOCOL, call_put.PROTOCOL}
         self.universe = UNIVERSE
         self.profile = None
         self.put_reader_factory = put_reader_factory
@@ -372,6 +389,9 @@ class Pipeline:
         return selections
 
     def observe_puts(self):
+        if self.options:
+            call_put.observe(self)
+            return
         now = self.clock()
         due = any(
             d.get("research_protocol") == bidirectional.PROTOCOL
@@ -496,6 +516,14 @@ class Pipeline:
                 else:
                     self.event(day, "STARTED", status="STARTED")
                     try:
+                        if (
+                            self.options
+                            and self.evidence_kind == "prospective"
+                            and not call_put.codex_slot_available()
+                        ):
+                            raise ValueError(
+                                "existing v1/v2 SHADOW service active or unavailable; options Codex capture skipped"
+                            )
                         data = self.collect(self.universe)
                         captured = self.clock()
                         if (
@@ -515,7 +543,11 @@ class Pipeline:
                             report = liquid_candidates(report, data)
                         write(self.directory / "captures" / (identity(data) + ".json"), data)
                         self.store.save("scans", report, report["scan_id"], captured)
-                        news = self.protocol in {NEWS_PROTOCOL, bidirectional.PROTOCOL}
+                        news = self.protocol in {
+                            NEWS_PROTOCOL,
+                            bidirectional.PROTOCOL,
+                            call_put.PROTOCOL,
+                        }
                         if news:
                             # Both arms: same prompt, schema, model and deadline; only web
                             # search differs. Run together so both fit the decision window.
@@ -546,7 +578,9 @@ class Pipeline:
                                 raise ValueError("provider session differs from XNYS calendar")
                             write(self.directory / "captures" / (identity(data) + ".json"), data)
                         puts = (
-                            self.select_puts(report, data, min(target[1], self.clock() + 20))
+                            call_put.discover(self, report, data, min(target[1], self.clock() + 20))
+                            if self.options
+                            else self.select_puts(report, data, min(target[1], self.clock() + 20))
                             if self.bidirectional
                             else None
                         )
@@ -563,7 +597,11 @@ class Pipeline:
                             shadow_protocol=self.protocol,
                             assessment_status=agent_status,
                             news_assessment_status=news_status,
-                            **({"put_selections": puts} if self.bidirectional else {}),
+                            **(
+                                {"option_selections" if self.options else "put_selections": puts}
+                                if self.bidirectional
+                                else {}
+                            ),
                         )
                         write(
                             self.directory / "decisions" / (decision["decision_id"] + ".json"),
@@ -605,7 +643,9 @@ class Pipeline:
                 "run": result,
                 "resolution": resolution,
                 "protocol": self.protocol,
-                "comparison": bidirectional.compare(self.store)
+                "comparison": call_put.compare(self.store)
+                if self.options
+                else bidirectional.compare(self.store)
                 if self.bidirectional
                 else compare(
                     self.store,
@@ -632,7 +672,16 @@ class Pipeline:
                 status["exploratory_selection"] = evaluation
                 write_report(self.directory, render(evaluation, status))
             write(self.directory / "daily-status.json", status)
-            if self.bidirectional:
+            if self.options:
+                from .daily_reporting import write_report
+
+                write_report(
+                    self.directory,
+                    call_put.report(
+                        self.store, self.clock(), call_put.access_status(self.directory)
+                    ),
+                )
+            elif self.bidirectional:
                 (self.directory / "daily-pnl.md").write_text(
                     bidirectional.pnl_report(self.store), encoding="utf-8"
                 )
