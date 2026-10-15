@@ -7,8 +7,8 @@
 TradeAgent scans US stocks and ETFs, asks a coding agent (Codex) to review the most
 unusual moves, and trades the best of them on Robinhood through the official agentic
 trading API, with sizing limits and an automatic exit. Every forecast is written down
-*before* the market answers and scored against a random pick and SPY, so you always see
-exactly what the AI adds.
+*before* the market answers and scored against a random pick and SPY, so every AI call
+is measured, not just believed.
 
 [![CI](https://github.com/danielye0010/TradeAgent/actions/workflows/ci.yml/badge.svg)](https://github.com/danielye0010/TradeAgent/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.12%E2%80%933.14-blue)
@@ -164,8 +164,8 @@ records four competing picks with identical entry, exit and costs:
 | **Random** | A seeded coin flip among the same candidates, or cash |
 
 After each run, `daily-report.md` in the state directory shows every arm's P&L after
-costs and its excess over SPY for the same hour, so you see exactly how much Codex adds
-over a random pick. A second protocol, `--protocol daily-news-v2`, asks Codex the same
+costs and its excess over SPY for the same hour, so Codex is always measured against a
+random pick. A second protocol, `--protocol daily-news-v2`, asks Codex the same
 question with and without live web search, which measures exactly what reading the news
 is worth. Details: [daily autopilot](https://github.com/danielye0010/TradeAgent/blob/main/docs/prospective-shadow.md).
 
@@ -195,9 +195,9 @@ The AI suggests; deterministic code decides. Before every order the engine check
   is never blindly retried, so a timeout cannot turn one buy into two.
 - **A built-in way out:** the exit is part of the same run, due after your hold time or
   shortly before the close. If your computer sleeps or the network drops,
-  `tradeagent recover` picks the run back up and finishes the exit. Create a file named
-  `KILL` in the state directory (`~/.local/state/tradeagent/live`) to stop buying and exit
-  now.
+  `tradeagent recover` picks the run back up and works the exit, and `tradeagent status`
+  shows whether the exit has completed. Create a file named `KILL` in the state directory
+  (`~/.local/state/tradeagent/live`) to stop buying and start the exit right away.
 
 Robinhood's own approval settings apply on top. TradeAgent also keeps up with Robinhood
 API updates on its own: it checks every tool it uses, keeps working through additive
@@ -215,7 +215,7 @@ directory:
 | `daily-news-v2` | Does live news search improve Codex's picks? | Collecting daily |
 | `continuous-quant-v5` | Does intraday momentum survive 1–10 minute decision delays? | [Docs](https://github.com/danielye0010/TradeAgent/blob/main/docs/continuous-v5.md) |
 | `event-driven-v6` | Does Codex reading SEC filings beat a mechanical baseline? | [Docs](https://github.com/danielye0010/TradeAgent/blob/main/docs/event-driven-v6.md) |
-| `daily-bidirectional-v3`, `daily-call-put-v4` | Do bearish forecasts work as put options? | Ready; switches on when Robinhood opens option quotes |
+| `daily-bidirectional-v3`, `daily-call-put-v4` | Do bearish forecasts work as put options? | Built; enabled by hand once option quotes are available ([research protocol](https://github.com/danielye0010/TradeAgent/blob/main/docs/research-protocol.md)) |
 
 ## Project layout
 

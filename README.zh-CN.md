@@ -6,7 +6,7 @@
 
 TradeAgent 扫描美股和 ETF，让编程智能体 Codex 复核当天最异常的几只股票，再通过 Robinhood
 官方的智能体交易接口，对其中最好的标的下单。仓位有上限，到时间自动卖出。每一个预测都在市场
-给出结果*之前*记录下来，并和随机选股、SPY 做对比打分，AI 带来了多少价值一目了然。
+给出结果*之前*记录下来，并和随机选股、SPY 做对比打分，AI 的每一次判断都有数据可查。
 
 [![CI](https://github.com/danielye0010/TradeAgent/actions/workflows/ci.yml/badge.svg)](https://github.com/danielye0010/TradeAgent/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.12%E2%80%933.14-blue)
@@ -157,7 +157,7 @@ python scripts/install_shadow.py --daily \
 | **随机** | 在同一批候选中用固定种子随机抽取，或持有现金 |
 
 每次运行后，状态目录里的 `daily-report.md` 会列出每组扣除成本后的盈亏，以及同一小时内相对
-SPY 的超额收益，Codex 比随机选股多带来多少，一看便知。另一个协议 `--protocol daily-news-v2`
+SPY 的超额收益，Codex 始终和随机选股放在一起比较。另一个协议 `--protocol daily-news-v2`
 让 Codex 分别在联网搜索和不联网的情况下回答同一个问题，从而准确衡量“读新闻”到底值多少。
 详见[每日自动驾驶](docs/prospective-shadow.md)。
 
@@ -183,8 +183,8 @@ AI 负责建议，确定性的代码负责决定。每次下单前，引擎都�
 - **不会重复下单：** 每笔订单在发出*之前*就带着唯一 ID 写入日志，并且绝不盲目重试，所以一次
   超时不会把一笔买单变成两笔。
 - **内置退出路径：** 退出是同一次运行的一部分，在持有时间到期或临近收盘前执行。如果电脑休眠或
-  断网，`tradeagent recover` 会接着这次运行完成退出。在状态目录
-  （`~/.local/state/tradeagent/live`）里创建一个名为 `KILL` 的文件，就会停止买入并立即退出。
+  断网，`tradeagent recover` 会接着这次运行继续退出，`tradeagent status` 会显示退出是否已完成。
+  在状态目录（`~/.local/state/tradeagent/live`）里创建一个名为 `KILL` 的文件，就会停止买入并立即开始退出。
 
 Robinhood 自己的审批设置同样生效。TradeAgent 还会自动跟进 Robinhood 的接口更新：逐个检查
 它用到的工具，新增字段之类的变化照常工作，并在 `live-check` 里提示；如果某个变化可能改变
@@ -200,7 +200,7 @@ Robinhood 自己的审批设置同样生效。TradeAgent 还会自动跟进 Robi
 | `daily-news-v2` | 联网搜索新闻能否改进 Codex 的选择？ | 每日收集中 |
 | `continuous-quant-v5` | 日内动量信号在 1–10 分钟的决策延迟后还有效吗？ | [文档](docs/continuous-v5.md) |
 | `event-driven-v6` | Codex 阅读 SEC 公告能否胜过机械规则基线？ | [文档](docs/event-driven-v6.md) |
-| `daily-bidirectional-v3`、`daily-call-put-v4` | 看空预测用看跌期权表达是否有效？ | 已就绪，Robinhood 开放期权报价后启用 |
+| `daily-bidirectional-v3`、`daily-call-put-v4` | 看空预测用看跌期权表达是否有效？ | 已实现；拿到期权报价权限后手动启用（[研究协议](docs/research-protocol.md)） |
 
 ## 项目结构
 
