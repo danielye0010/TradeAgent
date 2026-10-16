@@ -15,6 +15,7 @@
 > - **核心设计**：模型不直接接触券商接口；每次预测都在结果揭晓前锁定，之后与量化信号、随机选股和 SPY 一起计分，
 >   AI 到底有没有用，看数据。
 > - **主要功能**：Autopilot 每个交易日自动跑一轮模拟盘；一条命令完成实盘交易，带金额上限和自动平仓；
+>   也可以开启定时任务，每个交易日自动下一笔小额实盘；
 >   本地 Dashboard 集中展示运行状态、AI 的选择和理由，以及各策略的表现。期权（Call/Put）交易即将上线。
 > - **快速开始**：按[下面的步骤](#快速开始)安装，并分别登录 Codex 和 Robinhood。
 
@@ -139,6 +140,10 @@ systemctl --user list-timers tradeagent-daily-research.timer
 **手动下一单。** `tradeagent run-once --live` 按配置买入并自动平仓；`status` 查看进度，
 `recover` 接着完成被中断的交易（只卖不买）。[详细说明](docs/one-shot.md)
 
+**每天自动实盘。** `tradeagent autotrade install --enable` 装好工作日定时任务（美东 10:15）。
+每天早上自动扫描，量化信号达标就按 `dollar_amount`（1–5 美元）买入，持有 `hold_seconds` 后卖出；
+没有信号就空仓观望。每天最多一笔，所有风控和 `KILL` 照常生效。[详细说明](docs/autotrade.md)
+
 ## 内置安全机制
 
 AI 给建议，代码做决定。每次下单前都会检查：
@@ -163,7 +168,7 @@ Robinhood 向 Agent 账户开放期权行情后即可启用。
 
 ## 文档与开发
 
-[Dashboard](docs/dashboard.md) · [架构](docs/architecture.md) · [研究协议](docs/research-protocol.md) ·
+[Dashboard](docs/dashboard.md) · [每日自动实盘](docs/autotrade.md) · [架构](docs/architecture.md) · [研究协议](docs/research-protocol.md) ·
 [详细上手指南](docs/getting-started.md) · [更新日志](CHANGELOG.md)（文档为英文）
 
 ```bash

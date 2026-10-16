@@ -231,6 +231,18 @@ def test_experimental_still_checks_quote_signal_window_and_identity(tmp_path, ch
         store.close()
 
 
+def test_experimental_accepts_a_smaller_owner_amount(tmp_path):
+    store, d = freeze_experimental(tmp_path / "research")
+    try:
+        plan, _ = selected_execution(d, "experimental")
+        settings = SimpleNamespace(
+            directory=tmp_path / "owner", options={"entry": {"dollar_amount": "1"}}
+        )
+        assert live.reserve_experimental_day(settings, d, plan, plan.entry_after)
+    finally:
+        store.close()
+
+
 def test_day_reservation_is_atomic_durable_and_owner_scoped(tmp_path):
     store, d = freeze_experimental(tmp_path / "research")
     try:
@@ -262,7 +274,10 @@ def test_day_reservation_is_atomic_durable_and_owner_scoped(tmp_path):
                 settings, dict(d, decision_id="another"), plan, plan.entry_after
             )
         settings.options["entry"]["dollar_amount"] = "6"
-        with pytest.raises(Halt, match=r"existing owner \$5"):
+        with pytest.raises(Halt, match=r"at most \$5"):
+            live.reserve_experimental_day(settings, d, plan, plan.entry_after)
+        settings.options["entry"] = {"quantity": "1"}
+        with pytest.raises(Halt, match=r"at most \$5"):
             live.reserve_experimental_day(settings, d, plan, plan.entry_after)
     finally:
         store.close()

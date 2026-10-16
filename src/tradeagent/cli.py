@@ -26,6 +26,10 @@ def main(argv=None):
         from .dashboard.server import main as dashboard_main
 
         return dashboard_main(supplied[1:])
+    if supplied[0] == "autotrade":
+        from .autotrade import main as autotrade_main
+
+        return autotrade_main(supplied[1:])
     if supplied[0] == "doctor":
         from .doctor import main as doctor_main
 

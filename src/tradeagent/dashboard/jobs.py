@@ -16,12 +16,14 @@ MODULES = {
     "tradeagent.prospective.service": "prospective",
     "tradeagent.prospective.continuous": "continuous",
     "tradeagent.prospective.events": "events",
+    "tradeagent.autotrade": "autotrade",
 }
 DEFAULT_PROTOCOL = {
     "daily": "daily-four-arm-v1",
     "continuous": "continuous-quant-v5",
     "events": "event-driven-v6",
     "prospective": "prospective-shadow",
+    "autotrade": "experimental-live",
 }
 _TIMER = re.compile(r"^OnCalendar=(.+)$", re.M)
 _cache = {}
