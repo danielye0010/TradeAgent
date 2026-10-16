@@ -7,9 +7,10 @@ import sqlite3
 import threading
 from pathlib import Path
 
+import dashboard_fixtures as demo
 import pytest
 
-from tradeagent.dashboard import demo, jobs, readers
+from tradeagent.dashboard import jobs, readers
 from tradeagent.dashboard.server import Workspace, serve
 from tradeagent.oneshot import run_paper
 
@@ -178,13 +179,6 @@ def test_non_daily_jobs_are_listed_but_their_state_is_not_misread(tmp_path, work
     payload = ws.overview()
     assert [j["protocol"] for j in payload["jobs"]] == ["continuous-quant-v5"]
     assert payload["labs"] == [] and payload["errors"] == []
-
-
-def test_demo_rebuild_refuses_a_directory_it_did_not_create(tmp_path):
-    (tmp_path / "keep.txt").write_text("user data")
-    with pytest.raises(ValueError, match="refusing"):
-        demo.build(tmp_path, rebuild=True)
-    assert (tmp_path / "keep.txt").exists()
 
 
 @pytest.fixture

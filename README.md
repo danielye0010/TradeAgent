@@ -7,7 +7,6 @@
 [![CI](https://github.com/danielye0010/TradeAgent/actions/workflows/ci.yml/badge.svg)](https://github.com/danielye0010/TradeAgent/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/tradeagent)](https://pypi.org/project/tradeagent/)
 ![Python](https://img.shields.io/badge/Python-3.12%E2%80%933.14-blue)
-![Status](https://img.shields.io/badge/status-beta-orange)
 [![License](https://img.shields.io/badge/License-Apache--2.0%20AND%20MIT-blue)](https://github.com/danielye0010/TradeAgent/blob/main/LICENSE)
 
 > **TL;DR**
@@ -19,9 +18,12 @@
 > - **What you get:** a daily autopilot that paper-trades every session on its own,
 >   one-command live trades with hard caps and an automatic exit, and a local dashboard
 >   that shows what is running, what the AI picked and why, and how each approach scores.
-> - **Start:** `pipx install tradeagent`, then `tradeagent dashboard --demo`. No accounts needed.
+>   Options trading (calls and puts) is coming soon.
+> - **Start:** follow [Quick start](#quick-start) to install and sign in to Codex and Robinhood.
 
-![TradeAgent dashboard: today's schedule, the latest AI decisions and the autopilot](https://raw.githubusercontent.com/danielye0010/TradeAgent/main/docs/images/dashboard-overview.png)
+![Latest decisions in the dashboard: each arm's pick and its net result](https://raw.githubusercontent.com/danielye0010/TradeAgent/main/docs/images/dashboard-decisions.png)
+
+<sub>The dashboard on real Paper data, Oct 14–16, 2026.</sub>
 
 ## How it works
 
@@ -54,24 +56,43 @@ ChatGPT plan, with no per-token API bill.
 | Unofficial Robinhood libraries ([robin_stocks](https://pypi.org/project/robin-stocks/)) | The official API and a browser sign-in; your password never leaves Robinhood. |
 | Backtesting frameworks (backtrader, vectorbt, LEAN) | Live evidence: forecasts frozen before the outcome exists, so nothing is fitted after the fact. |
 
+## Real-market results
+
+Live market data, Paper trading: Codex picked **TLT** on Oct 14, 2026 (**+0.14%** net)
+and **CRM** on Oct 15, 2026 (**+0.99%** net) in the daily news test.
+
 ## Quick start
 
-Linux or WSL2, Python 3.12+.
+Linux or WSL2, Python 3.12+. Run these commands as the same Linux user, inside WSL
+if you use Windows. Keep state under your Linux home, on ext4/btrfs/xfs, not `/mnt/c`
+or a network share. If pipx uses an older Python, add `--python python3.12` to its
+install command.
 
 ```bash
-pipx install tradeagent          # Ubuntu/WSL: sudo apt install pipx first
-tradeagent dashboard --demo      # the dashboard on a synthetic workspace
-tradeagent run-once --paper --state-dir ~/tradeagent-paper   # a full buy/sell round trip, simulated
+pipx install tradeagent   # Ubuntu/WSL: sudo apt install pipx first
+pipx ensurepath
+curl -fsSL https://chatgpt.com/codex/install.sh | sh  # official Codex CLI installer
 ```
 
-Connect Robinhood when ready. `login` opens the standard OAuth sign-in Robinhood offers to
-AI apps and sets up a separate **agentic account**, so the main portfolio stays untouched:
+Open a new terminal, then sign in to the two services separately:
 
 ```bash
-tradeagent login        # browser sign-in; creates ~/.config/tradeagent/tradeagent.toml
-tradeagent doctor       # offline checklist: what's set up, what's next
-tradeagent live-check   # read-only: account, permissions, quotes
+codex login              # ChatGPT browser sign-in; requires Codex access
+codex login status       # verify Codex sign-in; tradeagent doctor only detects the CLI
+tradeagent login         # Robinhood browser sign-in; creates the starter TOML
+tradeagent doctor        # offline setup checklist
+tradeagent live-check    # read-only account, permissions and quotes check
+tradeagent dashboard     # opens the local dashboard; Ctrl+C stops it
 ```
+
+Codex CLI is required for the AI analyst and Autopilot. TradeAgent starts
+[`codex exec`](https://learn.chatgpt.com/docs/non-interactive-mode) automatically;
+you do not need to keep a Codex window open. If the CLI or its login is missing,
+AI assessments are unavailable; the dashboard and manual trading do not require Codex.
+See the [official installation guide](https://learn.chatgpt.com/docs/codex/cli) for other install methods.
+
+`tradeagent login` uses Robinhood OAuth for its separate **agentic account**.
+`live-check` can report NOT READY outside market hours; you can still view the dashboard.
 
 `tradeagent.toml` is the one file that controls real money:
 
@@ -92,25 +113,31 @@ own. Today's session as a timeline, every frozen decision with Codex's reasoning
 results against SPY and Random, and every trade with its fills. Local and read-only.
 [More](https://github.com/danielye0010/TradeAgent/blob/main/docs/dashboard.md)
 
-![Research view: per-arm results, verdicts and the cumulative chart](https://raw.githubusercontent.com/danielye0010/TradeAgent/main/docs/images/dashboard-research.png)
+![Research view: per-arm results and progress toward a verdict](https://raw.githubusercontent.com/danielye0010/TradeAgent/main/docs/images/dashboard-research.png)
 
-**Daily autopilot.** A systemd timer runs the research loop every trading day, no chat
-window, no real orders. From a clone of this repo:
+**Daily autopilot (Paper only).** Install this separately: neither pipx nor the dashboard starts
+a timer. It needs a running systemd user manager, an awake machine and, on Windows,
+WSL kept running. From a clone of this repo under your Linux home:
 
 ```bash
 git clone https://github.com/danielye0010/TradeAgent.git && cd TradeAgent
 python3 -m venv .venv && source .venv/bin/activate && pip install -e .
 python scripts/install_shadow.py --daily --python "$PWD/.venv/bin/python" \
   --state-dir "$HOME/tradeagent-research/daily"
+systemctl --user list-timers tradeagent-daily-research.timer
 ```
+
+The timer must find `codex` in `~/.local/bin`, `/usr/local/bin`, `/usr/bin` or `/bin`;
+a custom shell-only PATH is not inherited. Each research state directory belongs to one protocol.
 
 At 10:00 ET it scans the market, has Codex rank the top three, and freezes four picks
 with identical entry, exit and costs: **Quant only**, **Codex only**, **Quant + Codex** and
 **Random**. Add `--protocol daily-news-v2` to also measure what reading the news is worth.
 [More](https://github.com/danielye0010/TradeAgent/blob/main/docs/prospective-shadow.md)
 
-**Ask the analyst.** Open the [Codex CLI](https://github.com/openai/codex) in the repo and
-talk to the `trade-opportunity-analyst` skill:
+**Ask the analyst.** Clone this repo first (or use the checkout above): pipx does not
+install its `.agents/skills`. Run `codex` from that checkout and use the
+`trade-opportunity-analyst` skill:
 
 | Say | What happens |
 | --- | --- |
@@ -146,8 +173,11 @@ vs random, collecting daily), `daily-news-v2` (does reading the news help, colle
 [`continuous-quant-v5`](https://github.com/danielye0010/TradeAgent/blob/main/docs/continuous-v5.md)
 (does intraday momentum survive decision delays),
 [`event-driven-v6`](https://github.com/danielye0010/TradeAgent/blob/main/docs/event-driven-v6.md)
-(Codex reading SEC filings), and put-option versions of bearish calls (v3/v4, switched on
-once option quotes are available).
+(Codex reading SEC filings).
+
+**Coming soon: options.** Calls for bullish picks and puts for bearish ones, with the same
+caps, frozen forecasts and automatic exit. The selection and scoring are built (`v3`, `v4`)
+and switch on as Robinhood rolls out option market data to agentic accounts.
 
 ## Docs and development
 
@@ -167,5 +197,3 @@ server. See [CONTRIBUTING.md](https://github.com/danielye0010/TradeAgent/blob/ma
 ## License
 
 [Apache 2.0](https://github.com/danielye0010/TradeAgent/blob/main/LICENSE), with some vendored MIT components ([details](https://github.com/danielye0010/TradeAgent/blob/main/THIRD_PARTY.md)).
-TradeAgent is an independent project, not affiliated with Robinhood Markets, Inc. or
-OpenAI. Not investment advice; trading involves risk.

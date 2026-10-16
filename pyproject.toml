@@ -4,14 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tradeagent"
-version = "1.0.0b9"
+version = "1.0.0"
 description = "An AI analyst picks the trade; tested Python places it on Robinhood with hard limits and an automatic exit."
 readme = "README.md"
 authors = [{ name = "Daniel Ye" }]
 keywords = ["trading", "robinhood", "mcp", "codex", "ai-agent", "quant", "paper-trading"]
 license = "Apache-2.0 AND MIT"
 classifiers = [
-  "Development Status :: 4 - Beta",
+  "Development Status :: 5 - Production/Stable",
   "Environment :: Console",
   "Operating System :: POSIX :: Linux",
   "Programming Language :: Python :: 3",
