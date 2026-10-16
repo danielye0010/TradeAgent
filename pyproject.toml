@@ -39,7 +39,7 @@ tradeagent = "tradeagent.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-tradeagent = ["contracts/*.json", "owner.example.toml"]
+tradeagent = ["contracts/*.json", "owner.example.toml", "dashboard/static/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

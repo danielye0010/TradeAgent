@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+- `tradeagent dashboard`: a local, read-only web dashboard. Today's session as a
+  timeline with the scheduled steps, every frozen AI decision with Codex's thesis,
+  catalyst, invalidation and sources, per-arm results against SPY and Random (verdicts
+  only after 20 paired sessions), the strategy lab's weights, and live/paper trades
+  with fills, P&L and the execution timeline. Finds installed timers and the live run
+  automatically; English and Simplified Chinese; light and dark. Loopback only, GET
+  only, Host-checked, strict CSP, SQLite opened read-only; never reads tokens.
+- `tradeagent dashboard --demo`: builds a synthetic workspace once (strategy lab, a
+  paper round trip, 21 daily four-arm sessions through the real pipeline) so the
+  dashboard can be explored before any setup.
+- READMEs rewritten: a TL;DR up top, dashboard screenshots, about a third shorter;
+  details moved to `docs/` (new `docs/dashboard.md`).
+
 ## 1.0.0-beta.9 — 2026-10-15
 
 Python distribution version: `1.0.0b9`. First release published to PyPI
