@@ -28,7 +28,7 @@ Plain LIVE means Evidence-Gated LIVE (`evidence-gated-v1`), with the existing
 Only an explicit owner request saying `EXPERIMENTAL LIVE` selects
 `experimental-live-v1`. Never infer experimental authorization from a NO_TRADE,
 low evidence, scanner ranking or a development request. Both modes retain the full
-31-symbol research universe and the existing owner allowlist and $5 sizing.
+31-symbol research universe and the existing owner allowlist and dollar sizing (experimental: at most $5).
 Unless the owner names another file, CONFIG is `~/.config/tradeagent/tradeagent.toml`
 (created by `tradeagent login`); expand it to an absolute path. If it is missing, ask the
 owner to run `tradeagent login` rather than writing one.
@@ -188,7 +188,7 @@ $trade-opportunity-analyst LIVE：分析今天的市场机会，输出购买计�
 Exact explicit experimental invocation (no profitability claim):
 
 ```text
-$trade-opportunity-analyst EXPERIMENTAL LIVE：使用预定义量化假设分析今天的市场机会；仅在信号、行情、时段和全部执行保护通过时，以现有 $5 配置最多新开一个实验仓位，并完成退出和独立盈亏记录。不宣称盈利能力已验证。
+$trade-opportunity-analyst EXPERIMENTAL LIVE：使用预定义量化假设分析今天的市场机会；仅在信号、行情、时段和全部执行保护通过时，按现有金额配置（不超过 $5）最多新开一个实验仓位，并完成退出和独立盈亏记录。不宣称盈利能力已验证。
 ```
 
 The RESEARCH invocation stays read-only. For the future v2 research experiment,

@@ -398,7 +398,8 @@ def logout(path=None, helper=None):
 STARTER_CONFIG = """\
 # TradeAgent live settings (created by `tradeagent login`).
 # Nothing here places an order. Real orders only happen when you run
-# `tradeagent run-once --live` or explicitly ask the Codex skill for LIVE.
+# `tradeagent run-once --live`, install `tradeagent autotrade`, or explicitly
+# ask the Codex skill for LIVE.
 
 [live]
 enabled = true

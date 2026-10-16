@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.1.0 — 2026-10-16
+
+Python distribution version: `1.1.0`.
+
+- `tradeagent autotrade`: one small LIVE trade each trading day with nothing to run by
+  hand. `autotrade install --enable` adds a weekday systemd timer (10:15 New York time by
+  default; a missed morning is skipped, never traded late). Each run finishes any
+  interrupted lifecycle first (exit only), scans, freezes an experimental decision and
+  buys only when a predefined quant long signal is eligible; otherwise the day is
+  `NO_TRADE`. The existing engine still owns sizing, every risk limit, KILL, the timed
+  exit and reconciliation. `install` reports the account value the risk fractions need
+  for the configured amount.
+- Experimental LIVE accepts any owner dollar amount from $1 to $5 (previously exactly $5).
+- The dashboard shows the autotrade timer as "Daily live trade".
+
 ## 1.0.0 — 2026-10-16
 
 Python distribution version: `1.0.0`. First stable release.

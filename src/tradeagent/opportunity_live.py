@@ -15,6 +15,9 @@ from .research.domain import identity
 from .research.opportunity_workflow import selected_execution
 from .research.tradeplan import EVIDENCE_GATED, EXPERIMENTAL, plan_dict, validate_execution_plan
 
+# Experimental entries are learning trades; the owner's dollar amount may be smaller.
+EXPERIMENTAL_MAX_DOLLARS = dec("5")
+
 
 def display(kind, payload):
     print(
@@ -203,8 +206,11 @@ def reserve_experimental_day(settings, decision, plan, now):
     from zoneinfo import ZoneInfo
 
     entry = settings.options["entry"]
-    if "quantity" in entry or dec(entry.get("dollar_amount", "0")) != dec("5"):
-        raise Halt("Experimental LIVE requires the existing owner $5 dollar sizing")
+    amount = dec(entry.get("dollar_amount", "0"))
+    if "quantity" in entry or not dec("0") < amount <= EXPERIMENTAL_MAX_DOLLARS:
+        raise Halt(
+            f"Experimental LIVE requires owner dollar sizing of at most ${EXPERIMENTAL_MAX_DOLLARS}"
+        )
     day = datetime.fromtimestamp(now, ZoneInfo("America/New_York")).date().isoformat()
     if (
         day

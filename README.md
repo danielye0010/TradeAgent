@@ -16,7 +16,8 @@
 > - **What's different:** the model never touches the broker, and every forecast is frozen
 >   before the market answers, then scored against quant signals, a random pick and SPY.
 > - **What you get:** a daily autopilot that paper-trades every session on its own,
->   one-command live trades with hard caps and an automatic exit, and a local dashboard
+>   one-command live trades with hard caps and an automatic exit, an optional small live
+>   trade every trading day on a timer, and a local dashboard
 >   that shows what is running, what the AI picked and why, and how each approach scores.
 >   Options trading (calls and puts) is coming soon.
 > - **Start:** follow [Quick start](#quick-start) to install and sign in to Codex and Robinhood.
@@ -149,6 +150,12 @@ install its `.agents/skills`. Run `codex` from that checkout and use the
 `status` shows the run, `recover` finishes an interrupted one (it only sells).
 [More](https://github.com/danielye0010/TradeAgent/blob/main/docs/one-shot.md)
 
+**A live trade every day.** `tradeagent autotrade install --enable` adds a weekday timer
+(10:15 New York time). Each morning it scans, and when the quant signal is eligible it
+buys your `dollar_amount` ($1–$5) and sells after `hold_seconds`; otherwise it sits the
+day out. One entry per day, every risk limit and `KILL` still apply.
+[More](https://github.com/danielye0010/TradeAgent/blob/main/docs/autotrade.md)
+
 ## Built-in safety
 
 The AI suggests; code decides. Before every order:
@@ -182,6 +189,7 @@ and switch on as Robinhood rolls out option market data to agentic accounts.
 ## Docs and development
 
 [Dashboard](https://github.com/danielye0010/TradeAgent/blob/main/docs/dashboard.md) ·
+[Autotrade](https://github.com/danielye0010/TradeAgent/blob/main/docs/autotrade.md) ·
 [Architecture](https://github.com/danielye0010/TradeAgent/blob/main/docs/architecture.md) ·
 [Research protocol](https://github.com/danielye0010/TradeAgent/blob/main/docs/research-protocol.md) ·
 [Getting started in depth](https://github.com/danielye0010/TradeAgent/blob/main/docs/getting-started.md) ·

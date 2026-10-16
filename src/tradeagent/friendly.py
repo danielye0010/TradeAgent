@@ -33,6 +33,7 @@ Daily research (no orders):
 Real money (only when you run it):
   run-once --live       one entry from your config, then the automatic exit
   status                read-only state of the current live run
+  autotrade install     one small LIVE trade each trading day, on a timer
   recover               finish an interrupted run; only ever exits
 
 Run `tradeagent <command> --help` for options. Docs: README.md and docs/.
