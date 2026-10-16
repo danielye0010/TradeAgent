@@ -1127,10 +1127,14 @@
     if (!d.research.length && !d.labs.length) {
       parts.push(h("div", { class: "empty stack" }, h("p", { text: t("research.none") + " " + t("research.noneHint") }), h("code", { text: d.setup.steps.find((s) => s.id === "autopilot")?.command || "" })));
     }
+    const seen = {};
+    for (const r of d.research) seen[r.protocol] = (seen[r.protocol] || 0) + 1;
     for (const r of d.research) {
       const q = t("questions." + r.protocol);
       parts.push(h("section", { class: "protocol" },
-        h("div", { class: "section-head" }, h("h2", { text: protoName(r.protocol) }), evidenceBadge(r.evidence_kind)),
+        h("div", { class: "section-head" }, h("h2", { text: protoName(r.protocol) }), evidenceBadge(r.evidence_kind),
+          // Only when two directories run the same protocol does the path tell them apart.
+          seen[r.protocol] > 1 && r.path ? h("span", { class: "aside mono", text: r.path }) : null),
         q.startsWith("questions.") ? null : h("p", { class: "lede", text: q }),
         r.scored ? [progress(r), armsTable(r), chartPlaceholder(r)]
           : h("p", { class: "empty" }, t("research.ownReport"), r.report ? [" ", h("code", { text: r.report })] : null),
