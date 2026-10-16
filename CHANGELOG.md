@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.2.0 — 2026-10-16
+
+Python distribution version: `1.2.0`.
+
+- `tradeagent autotrade` now copies the daily news-Codex research pick instead of
+  trading its own quant signal. Each weekday at 10:30 New York time it waits for the
+  frozen `daily-news-v2` decision, takes the `codex_news` arm's selection and, when it is
+  a long position in an allowed symbol, buys the owner's dollar amount ($1–$5) at the
+  decision's entry minute and sells one hour after the fill. Cash, an unavailable
+  assessment or a symbol outside `[live] symbols` is recorded as `NO_TRADE`; nothing is
+  re-decided. One entry per New York day, exit-only recovery first, KILL respected; each
+  day's outcome is saved with the research decision id. `install` finds the installed
+  `daily-news-v2` timer (or takes `--follow-dir`), requires `hold_seconds = 3600`, and
+  lists research symbols missing from the allowlist. The `--at` option is removed.
+- The dashboard labels the timer "Daily live mirror".
+
 ## 1.1.0 — 2026-10-16
 
 Python distribution version: `1.1.0`.

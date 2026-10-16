@@ -150,10 +150,10 @@ install its `.agents/skills`. Run `codex` from that checkout and use the
 `status` shows the run, `recover` finishes an interrupted one (it only sells).
 [More](https://github.com/danielye0010/TradeAgent/blob/main/docs/one-shot.md)
 
-**A live trade every day.** `tradeagent autotrade install --enable` adds a weekday timer
-(10:15 New York time). Each morning it scans, and when the quant signal is eligible it
-buys your `dollar_amount` ($1–$5) and sells after `hold_seconds`; otherwise it sits the
-day out. One entry per day, every risk limit and `KILL` still apply.
+**Copy the AI's pick with real money.** `tradeagent autotrade install --enable` adds a
+weekday timer that follows the news-reading Codex arm of `daily-news-v2`: the same frozen
+pick, the same entry minute and the same one-hour hold, for your `dollar_amount` ($1–$5).
+Cash days stay in cash. One entry per day, every risk limit and `KILL` still apply.
 [More](https://github.com/danielye0010/TradeAgent/blob/main/docs/autotrade.md)
 
 ## Built-in safety

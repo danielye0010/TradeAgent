@@ -1,18 +1,23 @@
-"""`tradeagent autotrade`: one experimental LIVE trade per trading day, unattended.
+"""`tradeagent autotrade`: a small LIVE mirror of the daily news-Codex decision.
 
-`autotrade run` is the daily job. It finishes any interrupted lifecycle (exit only),
-scans the market, freezes an experimental decision and hands an eligible plan to the
-existing LIVE engine, which owns sizing, risk checks, the order, the timed exit and
-reconciliation. Every engine limit still applies: the owner TOML amount (at most $5 for
-experimental entries), the symbol allowlist, the daily new-entry allowance, KILL, and
-the account risk fractions.
+Each trading day the `daily-news-v2` research service freezes one decision per arm in
+its 10:30-10:37 New York window. `autotrade run` waits for that frozen record, takes the
+`codex_news` arm's selection (the same one the paper account follows) and, when it is a
+long position in a symbol the owner TOML allows, buys the owner's dollar amount at the
+decision's own entry minute and sells after the same one-hour hold. A cash day, a
+missing or incomplete decision, or a symbol outside the allowlist is recorded as
+NO_TRADE. Nothing is re-decided, re-ranked or substituted.
 
-`autotrade install` writes a systemd user timer that runs the job each weekday morning
-(New York time). It is installed disabled unless `--enable` is given.
+The existing LIVE engine owns sizing, every risk limit, the order, the timed exit and
+reconciliation. On top of it: at most $5 per entry, one new entry per New York day,
+exit-only recovery of any interrupted lifecycle first, and the KILL switch.
+
+`autotrade install` writes a systemd user timer for 10:30 New York time each weekday.
 """
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -25,7 +30,12 @@ from .paths import default_config, state_home
 
 NY = ZoneInfo("America/New_York")
 UNIT = "tradeagent-autotrade"
-DEFAULT_TIME = "10:15"
+FOLLOWED_PROTOCOL = "daily-news-v2"
+FOLLOWED_ARM = "codex_news"
+START = (10, 30)  # the followed protocol's decision window opens here (New York)
+DECISION_WAIT_SECONDS = 9 * 60  # window is 7 minutes; allow the record to land
+POLL_SECONDS = 15
+HOLD_SECONDS = 3600  # the followed protocol's holding horizon
 CLOSED = {"COMPLETED", "CLOSED_PARTIAL", "NO_TRADE"}
 
 
@@ -37,10 +47,64 @@ def log(stage, **values):
     print(json.dumps({"stage": stage, "at": time.time(), **values}, default=str), flush=True)
 
 
-def _opportunity(state_dir, *args):
-    from .opportunity_cli import main as opportunity_main
+def check_owner_settings(settings):
+    """The owner TOML must size in dollars ($1-$5) and hold exactly as the research does."""
+    from .model import dec
+    from .opportunity_live import EXPERIMENTAL_MAX_DOLLARS
 
-    return opportunity_main(["--state-dir", str(state_dir), *args])
+    entry = settings.options.get("entry") or {}
+    if "dollar_amount" not in entry or "quantity" in entry:
+        raise ValueError("autotrade needs [entry] dollar_amount in the TOML")
+    amount = dec(entry["dollar_amount"])
+    if not dec("1") <= amount <= EXPERIMENTAL_MAX_DOLLARS:
+        raise ValueError(
+            f"[entry] dollar_amount must be between $1 and ${EXPERIMENTAL_MAX_DOLLARS}"
+        )
+    if settings.options["hold_seconds"] != HOLD_SECONDS:
+        raise ValueError(
+            f"[exit] hold_seconds must be {HOLD_SECONDS} to match {FOLLOWED_PROTOCOL} "
+            f"(now {settings.options['hold_seconds']})"
+        )
+    return amount
+
+
+def find_decision(follow_dir, day):
+    """The followed protocol's frozen decision for this New York session, if any."""
+    found = []
+    for path in sorted((Path(follow_dir) / "decisions").glob("*.json")):
+        try:
+            decision = json.loads(path.read_text())
+        except (OSError, ValueError):
+            continue
+        if (
+            decision.get("research_protocol") == FOLLOWED_PROTOCOL
+            and datetime.fromtimestamp(decision["session_open"], NY).date() == day
+        ):
+            found.append(decision)
+    if len(found) > 1:
+        raise RuntimeError(
+            f"{len(found)} {FOLLOWED_PROTOCOL} decisions for {day}; refusing to pick"
+        )
+    return found[0] if found else None
+
+
+def selection(decision, allowed):
+    """(symbol, reason): symbol is None for every no-trade outcome."""
+    arm = (decision.get("comparisons") or {}).get(FOLLOWED_ARM) or {}
+    if arm.get("status") != "VALID":
+        return None, f"{FOLLOWED_ARM} assessment unavailable"
+    if arm.get("decision") != "SHADOW_LONG" or not arm.get("symbol"):
+        return None, f"{FOLLOWED_ARM} chose cash"
+    if (
+        not (decision.get("research_window") or {}).get("valid")
+        or decision.get("outcome_entry_time") is None
+    ):
+        return None, "decision has no realizable entry/exit window"
+    if decision.get("holding_seconds") != HOLD_SECONDS:
+        return None, "decision horizon differs from the owner hold"
+    if arm["symbol"] not in allowed:
+        return None, f"{arm['symbol']} is not in the owner [live] symbols"
+    return arm["symbol"], f"{FOLLOWED_ARM} selection"
 
 
 def finish_previous(settings):
@@ -62,11 +126,88 @@ def finish_previous(settings):
     return result.get("status")
 
 
-def run(config, state_dir, *, now=None):
+def archive_previous(settings):
+    """Archive a closed lifecycle with fresh broker proof; refuses open exposure."""
+    from .oneshot import new_live_run
+
+    return new_live_run(settings)
+
+
+def reserve_day(settings, day, decision_id, now):
+    """One new-entry attempt per New York day; failed or unknown attempts keep the claim."""
+    directory = settings.directory.with_name(settings.directory.name + ".autotrade-days")
+    directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+    path = directory / f"{day.isoformat()}.json"
+    try:
+        descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    except FileExistsError as error:
+        raise RuntimeError(f"today's autotrade entry was already attempted ({path})") from error
+    with os.fdopen(descriptor, "w") as stream:
+        json.dump({"decision_id": decision_id, "reserved_at": now}, stream)
+        stream.flush()
+        os.fsync(stream.fileno())
+    return path
+
+
+def mirror_order(decision, symbol, now):
+    """A fresh owner prediction and plan that point at the frozen research decision."""
+    from .research.domain import Payload, Prediction, identity
+    from .research.expressions import TradePlan
+
+    source = {
+        "protocol": FOLLOWED_PROTOCOL,
+        "arm": FOLLOWED_ARM,
+        "decision_id": decision["decision_id"],
+        "decision_time": decision["decision_time"],
+        "outcome_entry_time": decision["outcome_entry_time"],
+        "outcome_exit_time": decision["outcome_exit_time"],
+    }
+    strategy = f"mirror:{FOLLOWED_PROTOCOL}:{FOLLOWED_ARM}"
+    version = str(decision.get("skill_version") or "unversioned")
+    prediction = Prediction(
+        identity([strategy, version, decision["decision_id"], symbol, now]),
+        strategy,
+        version,
+        decision["decision_id"],
+        symbol,
+        now,
+        HOLD_SECONDS,
+        1,
+        0.0,
+        0.0,
+        Payload.of(source),
+        Payload.of({"evidence_kind": "live_mirror", "source": FOLLOWED_PROTOCOL}),
+        Payload.of({"kind": "none", "calibrated_probability": False}),
+        now,
+    )
+    plan = TradePlan(
+        prediction.prediction_id,
+        "UNDERLYING",
+        symbol,
+        None,
+        f"mirror of frozen {FOLLOWED_PROTOCOL} {FOLLOWED_ARM} selection",
+    )
+    return plan, prediction
+
+
+def execute(settings, plan, prediction):
+    from .oneshot import run_live
+
+    return run_live(settings, plan=plan, prediction=prediction)
+
+
+def record(state_dir, day, value):
+    state_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+    path = state_dir / f"{day.isoformat()}.json"
+    path.write_text(json.dumps(value, indent=2, default=str) + "\n")
+    return path
+
+
+def run(config, follow_dir, state_dir, *, clock=time.time, sleep=time.sleep):
     from .calendar import session_bounds
     from .execution_policy import load_live_config
 
-    now = time.time() if now is None else now
+    now = clock()
     day = datetime.fromtimestamp(now, NY).date()
     bounds = session_bounds(day)
     if not bounds or not bounds[0] <= now < bounds[1]:
@@ -76,50 +217,83 @@ def run(config, state_dir, *, now=None):
     if (settings.directory / "KILL").exists():
         log("KILL_SWITCH", path=str(settings.directory / "KILL"))
         return 0
+    check_owner_settings(settings)
+    base = {"session": day.isoformat(), "followed": f"{FOLLOWED_PROTOCOL}/{FOLLOWED_ARM}"}
+
+    opens = datetime(day.year, day.month, day.day, *START, tzinfo=NY).timestamp()
+    decision = find_decision(follow_dir, day)
+    while decision is None and clock() < opens + DECISION_WAIT_SECONDS:
+        sleep(POLL_SECONDS)
+        decision = find_decision(follow_dir, day)
+    if decision is None:
+        reason = f"no {FOLLOWED_PROTOCOL} decision today"
+        record(state_dir, day, {**base, "status": "NO_TRADE", "reason": reason})
+        log("NO_TRADE", reason=reason)
+        return 0
+
+    symbol, reason = selection(decision, set(settings.config.allowed_symbols))
+    base.update(decision_id=decision["decision_id"], symbol=symbol, reason=reason)
+    if symbol is None:
+        record(state_dir, day, {**base, "status": "NO_TRADE"})
+        log("NO_TRADE", decision_id=decision["decision_id"], reason=reason)
+        return 0
+
     try:
         finish_previous(settings)
+        archive_previous(settings)
+        reserve_day(settings, day, decision["decision_id"], clock())
     except Exception as error:  # never open a new position on top of an unresolved one
+        record(state_dir, day, {**base, "status": "STOPPED", "reason": str(error)})
         log("STOPPED", reason=str(error))
         return 2
-    state_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
-    common = ["--config", str(config)]
-    # Market captures use the same broker login, and the frozen plan the same hold, as LIVE.
-    helper = ["--oauth-helper", str(settings.oauth_helper)]
-    hold = ["--hold-seconds", str(settings.options["hold_seconds"])]
-    if _opportunity(state_dir, "scan", "--candidates", "3", *helper, *common) != 0:
-        log("STOPPED", reason="market scan incomplete")
-        return 2
-    decide = ["decide", "--refresh", "--policy", "experimental", *helper, *hold, *common]
-    if _opportunity(state_dir, *decide) != 0:
-        log("STOPPED", reason="decision could not be frozen")
-        return 2
-    plan = json.loads((state_dir / "latest-plan.json").read_text())
-    if not (plan.get("experimental") or {}).get("plan"):
-        log("NO_TRADE", decision_id=plan["decision_id"], reason="no eligible signal today")
+
+    entry_at, deadline = decision["outcome_entry_time"], decision["entry_deadline"]
+    while clock() < entry_at:
+        sleep(min(POLL_SECONDS, max(0.0, entry_at - clock())))
+    if clock() >= deadline:
+        reason = "entry window passed before the order could start"
+        record(state_dir, day, {**base, "status": "EXPIRED", "reason": reason})
+        log("EXPIRED", reason=reason)
         return 0
-    log("EXECUTING", decision_id=plan["decision_id"])
-    return _opportunity(
+    plan, prediction = mirror_order(decision, symbol, clock())
+    log("EXECUTING", decision_id=decision["decision_id"], symbol=symbol)
+    try:
+        report = execute(settings, plan, prediction)
+    except Exception as error:
+        record(state_dir, day, {**base, "status": "HALTED", "reason": str(error)})
+        log("HALTED", reason=str(error))
+        return 2
+    from .opportunity_live import execution_result
+
+    outcome = execution_result(report)
+    record(
         state_dir,
-        "execute",
-        "--decision-id",
-        plan["decision_id"],
-        "--mode",
-        "experimental",
-        "--live",
-        *common,
+        day,
+        {**base, "status": outcome["status"], "prediction_id": prediction.prediction_id, **outcome},
     )
+    log("FINISHED", status=outcome["status"], pnl=outcome["pnl"])
+    return 0 if report.get("status") in CLOSED and not report.get("outstanding_incident") else 2
 
 
-def units(python, config, state_dir, at):
-    hour, minute = at.split(":")
+def discover_follow_dir(unit_dir=None):
+    """State directory of the installed daily-news-v2 research timer."""
+    from .dashboard.jobs import discover
+
+    for job in discover(unit_dir, systemctl=False):
+        if job["kind"] == "daily" and job["protocol"] == FOLLOWED_PROTOCOL:
+            return Path(job["state_dir"])
+    return None
+
+
+def units(python, config, follow_dir, state_dir):
     service = f"""[Unit]
-Description=TradeAgent daily experimental LIVE trade
+Description=TradeAgent daily LIVE mirror of {FOLLOWED_PROTOCOL} {FOLLOWED_ARM}
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart={python} -m tradeagent.autotrade run --config {config} --state-dir {state_dir}
+ExecStart={python} -m tradeagent.autotrade run --config {config} --follow-dir {follow_dir} --state-dir {state_dir}
 TimeoutStartSec=3h
 UMask=0077
 NoNewPrivileges=true
@@ -128,10 +302,10 @@ Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
 """
     # No Persistent=: a missed morning must not trade late in the day.
     timer = f"""[Unit]
-Description=TradeAgent daily experimental LIVE trade
+Description=TradeAgent daily LIVE mirror of {FOLLOWED_PROTOCOL} {FOLLOWED_ARM}
 
 [Timer]
-OnCalendar=Mon..Fri *-*-* {int(hour):02d}:{int(minute):02d}:00 America/New_York
+OnCalendar=Mon..Fri *-*-* {START[0]:02d}:{START[1]:02d}:00 America/New_York
 AccuracySec=1s
 Unit={UNIT}.service
 
@@ -141,21 +315,20 @@ WantedBy=timers.target
     return {f"{UNIT}.service": service, f"{UNIT}.timer": timer}
 
 
-def install(config, state_dir, at, *, enable, unit_dir=None, systemctl=True):
+def install(config, follow_dir, state_dir, *, enable, unit_dir=None, systemctl=True):
     from .execution_policy import load_live_config
+    from .model import dec
+    from .research.opportunities import UNIVERSE
 
     settings = load_live_config(config)
-    from .model import dec
-    from .opportunity_live import EXPERIMENTAL_MAX_DOLLARS
-
-    entry = settings.options.get("entry") or {}
-    if "dollar_amount" not in entry or "quantity" in entry:
-        raise ValueError("autotrade needs [entry] dollar_amount in the TOML")
-    amount = dec(entry["dollar_amount"])
-    if not dec("1") <= amount <= EXPERIMENTAL_MAX_DOLLARS:
+    amount = check_owner_settings(settings)
+    follow_dir = follow_dir or discover_follow_dir(unit_dir)
+    if follow_dir is None or not Path(follow_dir).is_dir():
         raise ValueError(
-            f"[entry] dollar_amount must be between $1 and ${EXPERIMENTAL_MAX_DOLLARS}"
+            f"no {FOLLOWED_PROTOCOL} research directory found; pass --follow-dir DIR "
+            "(the --state-dir of the installed daily-news timer)"
         )
+    follow_dir = Path(follow_dir).resolve()
     risk = settings.risk
     # Smallest account value at which the engine's sizing limits still admit the amount.
     needs = max(
@@ -164,25 +337,24 @@ def install(config, state_dir, at, *, enable, unit_dir=None, systemctl=True):
         amount / dec(risk.max_daily_turnover_fraction),
         amount / (1 - dec(risk.min_cash_fraction)) if dec(risk.min_cash_fraction) < 1 else amount,
     )
-    for value in (str(config), str(state_dir), sys.executable):
+    for value in (str(config), str(follow_dir), str(state_dir), sys.executable):
         if any(c in value for c in '\n\r%"\\ '):
             raise ValueError(f"unsupported path for a systemd unit: {value}")
-    hour, _, minute = at.partition(":")
-    if not (hour.isdigit() and minute.isdigit() and 9 <= int(hour) <= 14 and int(minute) < 60):
-        raise ValueError("--at must be HH:MM New York time between 09:30 and 14:59")
-    if (int(hour), int(minute)) < (9, 35):
-        raise ValueError("--at must be at least five minutes after the 09:30 open")
     directory = Path(unit_dir or Path.home() / ".config/systemd/user")
     directory.mkdir(parents=True, exist_ok=True)
-    for name, text in units(sys.executable, config, state_dir, at).items():
+    for name, text in units(sys.executable, config, follow_dir, state_dir).items():
         (directory / name).write_text(text)
         (directory / name).chmod(0o600)
+    allowed = set(settings.config.allowed_symbols)
     summary = {
         "timer": f"{UNIT}.timer",
-        "runs": f"weekdays {at} New York time",
+        "runs": f"weekdays {START[0]:02d}:{START[1]:02d} New York time",
+        "follows": f"{FOLLOWED_PROTOCOL} {FOLLOWED_ARM} in {follow_dir}",
         "amount_per_trade": f"${amount}",
+        "hold_seconds": HOLD_SECONDS,
         "account_value_needed": f"${needs.quantize(dec('0.01'))}",
-        "symbols": list(settings.config.allowed_symbols),
+        "symbols": sorted(allowed),
+        "research_symbols_not_allowed": [s for s in UNIVERSE if s not in allowed],
         "enabled": False,
     }
     if systemctl:
@@ -209,16 +381,19 @@ def uninstall(unit_dir=None, *, systemctl=True):
 def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="tradeagent autotrade",
-        description="One experimental LIVE trade per trading day, on a timer.",
+        description=f"Daily small LIVE mirror of the {FOLLOWED_PROTOCOL} {FOLLOWED_ARM} decision.",
     )
     commands = parser.add_subparsers(dest="command", required=True)
     for name in ("run", "install"):
         command = commands.add_parser(name)
         command.add_argument("--config", type=Path, default=None)
         command.add_argument("--state-dir", type=Path, default=None)
-    commands.choices["install"].add_argument(
-        "--at", default=DEFAULT_TIME, help="New York time, HH:MM (default 10:15)"
-    )
+        command.add_argument(
+            "--follow-dir",
+            type=Path,
+            default=None,
+            help=f"{FOLLOWED_PROTOCOL} research directory (install finds the installed one)",
+        )
     commands.choices["install"].add_argument(
         "--enable", action="store_true", help="start the timer now (otherwise installed off)"
     )
@@ -229,10 +404,13 @@ def main(argv=None):
         return 0
     config = Path(args.config or default_config()).expanduser().resolve()
     state_dir = Path(args.state_dir or research_dir()).expanduser().resolve()
+    follow_dir = Path(args.follow_dir).expanduser().resolve() if args.follow_dir else None
     try:
         if args.command == "run":
-            return run(config, state_dir)
-        print(json.dumps(install(config, state_dir, args.at, enable=args.enable), indent=2))
+            if follow_dir is None:
+                raise ValueError("autotrade run needs --follow-dir")
+            return run(config, follow_dir, state_dir)
+        print(json.dumps(install(config, follow_dir, state_dir, enable=args.enable), indent=2))
         return 0
     except Exception as error:
         log("STOPPED", reason=f"{type(error).__name__}: {error}")
