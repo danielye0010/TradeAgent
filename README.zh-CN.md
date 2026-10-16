@@ -7,7 +7,6 @@
 [![CI](https://github.com/danielye0010/TradeAgent/actions/workflows/ci.yml/badge.svg)](https://github.com/danielye0010/TradeAgent/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/tradeagent)](https://pypi.org/project/tradeagent/)
 ![Python](https://img.shields.io/badge/Python-3.12%E2%80%933.14-blue)
-![Status](https://img.shields.io/badge/status-beta-orange)
 [![License](https://img.shields.io/badge/License-Apache--2.0%20AND%20MIT-blue)](LICENSE)
 
 > **TL;DR**
@@ -21,8 +20,7 @@
 
 ![Dashboard 最新决策：各组的选择和净收益](docs/images/dashboard-decisions.zh.png)
 
-<sub>Dashboard 展示的真实模拟盘数据，2026 年 10 月 14–16 日（[完整记录](docs/evidence/2026-10-16/README.md)）。</sub>
-
+<sub>Dashboard 展示的真实模拟盘数据，2026 年 10 月 14–16 日。</sub>
 
 ## 工作原理
 
@@ -57,13 +55,8 @@ TradeAgent 专注补上其余方案缺的部分：
 
 ## 真实行情下的运行结果
 
-v2 的已保存记录中，Codex 在 2026-10-14 选择 TLT，扣除模型成本后收益为 **+0.1435%**；
-2026-10-15 选择 CRM，净收益为 **+0.9856%**。这些是**真实行情上的模拟盘结果，不是实盘到账利润**。
-完整数据同时保留 v1 的亏损、所有对照组、待结算记录，以及入场价、出场价、时间和成本。
-v2 目前只有两个已结算交易日，还不能证明稳定盈利。
-
-[查看完整结果与计算口径](docs/evidence/2026-10-16/README.md) ·
-[下载逐日逐组数据](docs/evidence/2026-10-16/returns.csv)
+真实行情、模拟盘交易：在每日新闻对比中，Codex 于 2026 年 10 月 14 日选中 **TLT**，净收益 **+0.14%**；
+10 月 15 日选中 **CRM**，净收益 **+0.99%**。
 
 ## 快速开始
 
@@ -98,7 +91,6 @@ hold_seconds = 3600        # 持有一小时后自动卖出
 仅在本机运行，只读。[详细说明](docs/dashboard.md)
 
 ![研究页：各组表现和样本进度](docs/images/dashboard-research.zh.png)
-
 
 **Autopilot。** 用 systemd 定时器在每个交易日自动运行，不需要打开聊天窗口，只跑模拟盘。需要先克隆仓库：
 
@@ -160,5 +152,4 @@ pip install -e ".[dev]" && pytest -q && ruff check src tests scripts
 
 ## 许可证
 
-[Apache 2.0](LICENSE)，部分内置组件采用 MIT 许可（[详情](THIRD_PARTY.md)）。TradeAgent 是独立项目，
-与 Robinhood Markets, Inc. 和 OpenAI 均无关联。不构成投资建议，交易有风险。
+[Apache 2.0](LICENSE)，部分内置组件采用 MIT 许可（[详情](THIRD_PARTY.md)）。

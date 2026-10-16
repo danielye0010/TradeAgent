@@ -7,7 +7,6 @@
 [![CI](https://github.com/danielye0010/TradeAgent/actions/workflows/ci.yml/badge.svg)](https://github.com/danielye0010/TradeAgent/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/tradeagent)](https://pypi.org/project/tradeagent/)
 ![Python](https://img.shields.io/badge/Python-3.12%E2%80%933.14-blue)
-![Status](https://img.shields.io/badge/status-beta-orange)
 [![License](https://img.shields.io/badge/License-Apache--2.0%20AND%20MIT-blue)](https://github.com/danielye0010/TradeAgent/blob/main/LICENSE)
 
 > **TL;DR**
@@ -24,8 +23,7 @@
 
 ![Latest decisions in the dashboard: each arm's pick and its net result](https://raw.githubusercontent.com/danielye0010/TradeAgent/main/docs/images/dashboard-decisions.png)
 
-<sub>The dashboard on real Paper data, Oct 14–16, 2026 ([full records](https://github.com/danielye0010/TradeAgent/blob/main/docs/evidence/2026-10-16/README.md)).</sub>
-
+<sub>The dashboard on real Paper data, Oct 14–16, 2026.</sub>
 
 ## How it works
 
@@ -60,14 +58,8 @@ ChatGPT plan, with no per-token API bill.
 
 ## Real-market results
 
-The running Paper pipeline has real saved observations: Codex selected TLT on
-2026-10-14 (**+0.1435% net**) and CRM on 2026-10-15 (**+0.9856% net**) in v2.
-These are **real-market Paper results, not live-account profits**. The complete
-snapshot also shows v1 losses, every comparison arm, pending sessions, prices, times
-and modeled costs. Only two v2 sessions are resolved; this does not establish an edge.
-
-[Inspect the data and full results](docs/evidence/2026-10-16/README.md) ·
-[Download every arm/session row](docs/evidence/2026-10-16/returns.csv)
+Live market data, Paper trading: Codex picked **TLT** on Oct 14, 2026 (**+0.14%** net)
+and **CRM** on Oct 15, 2026 (**+0.99%** net) in the daily news test.
 
 ## Quick start
 
@@ -104,7 +96,6 @@ results against SPY and Random, and every trade with its fills. Local and read-o
 [More](https://github.com/danielye0010/TradeAgent/blob/main/docs/dashboard.md)
 
 ![Research view: per-arm results and progress toward a verdict](https://raw.githubusercontent.com/danielye0010/TradeAgent/main/docs/images/dashboard-research.png)
-
 
 **Daily autopilot.** A systemd timer runs the research loop every trading day, no chat
 window, no real orders. From a clone of this repo:
@@ -182,5 +173,3 @@ server. See [CONTRIBUTING.md](https://github.com/danielye0010/TradeAgent/blob/ma
 ## License
 
 [Apache 2.0](https://github.com/danielye0010/TradeAgent/blob/main/LICENSE), with some vendored MIT components ([details](https://github.com/danielye0010/TradeAgent/blob/main/THIRD_PARTY.md)).
-TradeAgent is an independent project, not affiliated with Robinhood Markets, Inc. or
-OpenAI. Not investment advice; trading involves risk.

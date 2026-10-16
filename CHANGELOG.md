@@ -1,8 +1,10 @@
 # Changelog
 
-## Unreleased
+## 1.0.0 — 2026-10-16
 
-- `tradeagent dashboard`: a local, read-only web dashboard. Today's session as a
+Python distribution version: `1.0.0`. First stable release.
+
+- `tradeagent dashboard`: a local web dashboard. Today's session as a
   timeline with the scheduled steps, every frozen AI decision with Codex's thesis,
   catalyst, invalidation and sources, per-arm results against SPY and Random (verdicts
   only after 20 paired sessions), the strategy lab's weights, and live/paper trades
