@@ -29,6 +29,8 @@ BIDIRECTIONAL_PROTOCOL = "daily-bidirectional-v3"
 OPTIONS_PROTOCOL = "daily-call-put-v4"
 DIRECTIONAL_PROTOCOLS = (BIDIRECTIONAL_PROTOCOL, OPTIONS_PROTOCOL)
 SHADOW_PROTOCOLS = ("daily-four-arm-v1", NEWS_PROTOCOL, *DIRECTIONAL_PROTOCOLS)
+# Frozen Alpha horizons: holding plus decision delay, in seconds.
+ALPHA_HORIZONS = (1800, 2100, 3600, 3900, 7200, 7500)
 ARMS = ("quant_only", "codex_only", "quant_codex")
 
 
@@ -464,7 +466,7 @@ class DailyResearch:
             or delay_seconds < 0
         ):
             raise ValueError("holding horizon positive and delay nonnegative")
-        if holding_seconds + delay_seconds not in (1800, 2100, 3600, 3900, 7200, 7500):
+        if holding_seconds + delay_seconds not in ALPHA_HORIZONS:
             raise ValueError(
                 "use a frozen Alpha horizon: holding plus delay must be 1800, 2100, 3600, 3900, 7200 or 7500 seconds"
             )

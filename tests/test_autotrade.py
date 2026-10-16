@@ -162,3 +162,12 @@ def test_market_captures_use_the_configured_helper_and_hold(calls, tmp_path):
         assert args[args.index("--oauth-helper") + 1] == str(settings.oauth_helper)
     decide = calls.args["decide"]
     assert decide[decide.index("--hold-seconds") + 1] == "900"
+
+
+def test_install_rejects_a_hold_the_frozen_horizons_cannot_use(tmp_path):
+    config = _config()
+    config.write_text(config.read_text().replace("hold_seconds = 3600", "hold_seconds = 30"))
+    with pytest.raises(ValueError, match="hold_seconds must be one of"):
+        autotrade.install(
+            config, tmp_path / "s", "10:15", enable=False, unit_dir=tmp_path, systemctl=False
+        )

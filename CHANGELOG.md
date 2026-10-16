@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- `autotrade install` rejects an `[exit] hold_seconds` that the frozen research horizons
+  cannot use (with the fixed 5-minute decision delay: 1500, 1800, 3300, 3600, 6900 or
+  7200 seconds), instead of failing at every morning's decision.
+
 ## 1.1.0 — 2026-10-16
 
 Python distribution version: `1.1.0`.

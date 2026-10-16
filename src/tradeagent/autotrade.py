@@ -26,6 +26,7 @@ from .paths import default_config, state_home
 NY = ZoneInfo("America/New_York")
 UNIT = "tradeagent-autotrade"
 DEFAULT_TIME = "10:15"
+DECISION_DELAY = 300  # seconds between the frozen decision and the entry
 CLOSED = {"COMPLETED", "CLOSED_PARTIAL", "NO_TRADE"}
 
 
@@ -85,7 +86,12 @@ def run(config, state_dir, *, now=None):
     common = ["--config", str(config)]
     # Market captures use the same broker login, and the frozen plan the same hold, as LIVE.
     helper = ["--oauth-helper", str(settings.oauth_helper)]
-    hold = ["--hold-seconds", str(settings.options["hold_seconds"])]
+    hold = [
+        "--hold-seconds",
+        str(settings.options["hold_seconds"]),
+        "--delay-seconds",
+        str(DECISION_DELAY),
+    ]
     if _opportunity(state_dir, "scan", "--candidates", "3", *helper, *common) != 0:
         log("STOPPED", reason="market scan incomplete")
         return 2
@@ -164,6 +170,12 @@ def install(config, state_dir, at, *, enable, unit_dir=None, systemctl=True):
         amount / dec(risk.max_daily_turnover_fraction),
         amount / (1 - dec(risk.min_cash_fraction)) if dec(risk.min_cash_fraction) < 1 else amount,
     )
+    from .research.opportunity_workflow import ALPHA_HORIZONS
+
+    hold = settings.options["hold_seconds"]
+    if hold + DECISION_DELAY not in ALPHA_HORIZONS:
+        allowed = sorted(h - DECISION_DELAY for h in ALPHA_HORIZONS if h > DECISION_DELAY)
+        raise ValueError(f"[exit] hold_seconds must be one of {allowed} for autotrade (now {hold})")
     for value in (str(config), str(state_dir), sys.executable):
         if any(c in value for c in '\n\r%"\\ '):
             raise ValueError(f"unsupported path for a systemd unit: {value}")
