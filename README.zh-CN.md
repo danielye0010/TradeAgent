@@ -51,6 +51,16 @@ TradeAgent 专注补上其余方案缺的部分：
 | 非官方 Robinhood 库（[robin_stocks](https://pypi.org/project/robin-stocks/)） | 使用官方接口和浏览器登录，密码只留在 Robinhood。 |
 | 回测框架（backtrader、vectorbt、LEAN） | 实时验证：预测在结果出现前就已锁定，不存在事后拟合。 |
 
+## 真实行情下的运行结果
+
+v2 的已保存记录中，Codex 在 2026-10-14 选择 TLT，扣除模型成本后收益为 **+0.1435%**；
+2026-10-15 选择 CRM，净收益为 **+0.9856%**。这些是**真实行情上的模拟盘结果，不是实盘到账利润**。
+完整数据同时保留 v1 的亏损、所有对照组、待结算记录，以及入场价、出场价、时间和成本。
+v2 目前只有两个已结算交易日，还不能证明稳定盈利。
+
+[查看完整结果与计算口径](docs/evidence/2026-10-16/README.md) ·
+[下载逐日逐组数据](docs/evidence/2026-10-16/returns.csv)
+
 ## 快速开始
 
 环境要求：Linux 或 WSL2，Python 3.12+。

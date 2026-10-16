@@ -67,3 +67,10 @@ tradeagent dashboard --state-dir ~/tradeagent-research/news
 | `--state-dir DIR` | none | Extra state directory to show (repeatable). |
 | `--no-discover` | off | Skip installed timers and the default live directory. |
 | `--no-browser` | off | Print the address without opening a browser. |
+
+## Real saved results
+
+The [2026-10-16 evidence snapshot](evidence/2026-10-16/README.md) provides the
+real-market Paper records directly, with winning, losing, cash and pending results.
+Use it to inspect numbers without relying on a screenshot. It contains no broker
+fills and does not demonstrate live-account profitability.

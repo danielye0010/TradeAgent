@@ -54,6 +54,17 @@ ChatGPT plan, with no per-token API bill.
 | Unofficial Robinhood libraries ([robin_stocks](https://pypi.org/project/robin-stocks/)) | The official API and a browser sign-in; your password never leaves Robinhood. |
 | Backtesting frameworks (backtrader, vectorbt, LEAN) | Live evidence: forecasts frozen before the outcome exists, so nothing is fitted after the fact. |
 
+## Real-market results
+
+The running Paper pipeline has real saved observations: Codex selected TLT on
+2026-10-14 (**+0.1435% net**) and CRM on 2026-10-15 (**+0.9856% net**) in v2.
+These are **real-market Paper results, not live-account profits**. The complete
+snapshot also shows v1 losses, every comparison arm, pending sessions, prices, times
+and modeled costs. Only two v2 sessions are resolved; this does not establish an edge.
+
+[Inspect the data and full results](docs/evidence/2026-10-16/README.md) ·
+[Download every arm/session row](docs/evidence/2026-10-16/returns.csv)
+
 ## Quick start
 
 Linux or WSL2, Python 3.12+.

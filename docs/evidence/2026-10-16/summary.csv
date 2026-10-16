@@ -1,0 +1,10 @@
+protocol,arm,frozen_sessions,resolved_sessions,pending_or_unavailable_sessions,mean_daily_net_return
+daily-four-arm-v1,codex_only,4,4,0,-0.0024653085368133987
+daily-four-arm-v1,quant_codex,4,4,0,-0.0024653085368133987
+daily-four-arm-v1,quant_only,4,4,0,-0.0030174761254566085
+daily-four-arm-v1,seeded_random,4,4,0,-0.0031613606926892135
+daily-news-v2,codex_news,3,2,1,0.005645513589982332
+daily-news-v2,codex_price,3,2,1,0.005645513589982332
+daily-news-v2,quant_codex_news,3,2,1,0.005645513589982332
+daily-news-v2,quant_only,3,2,1,0.005426771038728018
+daily-news-v2,seeded_random,3,2,1,-0.0017341806563386242
