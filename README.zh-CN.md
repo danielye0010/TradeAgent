@@ -16,7 +16,7 @@
 > - **核心设计**：模型不直接接触券商接口；每次预测都在结果揭晓前锁定，之后与量化信号、随机选股和 SPY 一起计分，
 >   AI 到底有没有用，看数据。
 > - **主要功能**：Autopilot 每个交易日自动跑一轮模拟盘；一条命令完成实盘交易，带金额上限和自动平仓；
->   本地 Dashboard 集中展示运行状态、AI 的选择和理由，以及各策略的表现。
+>   本地 Dashboard 集中展示运行状态、AI 的选择和理由，以及各策略的表现。期权（Call/Put）交易即将上线。
 > - **快速开始**：`pipx install tradeagent`、`tradeagent login`、`tradeagent dashboard`。
 
 
@@ -126,8 +126,10 @@ Robinhood 接口更新时会逐个工具检查：新增字段不影响运行；�
 
 以下实验同时运行，各自使用独立的数据目录：`daily-four-arm-v1`（Codex、量化与随机选股对比，每天积累数据）、
 `daily-news-v2`（读新闻是否有帮助，每天积累数据）、[`continuous-quant-v5`](docs/continuous-v5.md)
-（日内动量信号能否承受决策延迟）、[`event-driven-v6`](docs/event-driven-v6.md)（让 Codex 读 SEC 公告），
-以及用看跌期权表达看空判断的 v3/v4（获得期权报价权限后启用）。
+（日内动量信号能否承受决策延迟）、[`event-driven-v6`](docs/event-driven-v6.md)（让 Codex 读 SEC 公告）。
+
+**期权即将上线。** 看多买 Call，看空买 Put，同样有金额上限、预测锁定和自动平仓。选约和计分逻辑已经完成（`v3`、`v4`），
+Robinhood 向 Agent 账户开放期权行情后即可启用。
 
 ## 文档与开发
 

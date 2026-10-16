@@ -19,6 +19,7 @@
 > - **What you get:** a daily autopilot that paper-trades every session on its own,
 >   one-command live trades with hard caps and an automatic exit, and a local dashboard
 >   that shows what is running, what the AI picked and why, and how each approach scores.
+>   Options trading (calls and puts) is coming soon.
 > - **Start:** `pipx install tradeagent`, `tradeagent login`, `tradeagent dashboard`.
 
 
@@ -140,8 +141,11 @@ vs random, collecting daily), `daily-news-v2` (does reading the news help, colle
 [`continuous-quant-v5`](https://github.com/danielye0010/TradeAgent/blob/main/docs/continuous-v5.md)
 (does intraday momentum survive decision delays),
 [`event-driven-v6`](https://github.com/danielye0010/TradeAgent/blob/main/docs/event-driven-v6.md)
-(Codex reading SEC filings), and put-option versions of bearish calls (v3/v4, switched on
-once option quotes are available).
+(Codex reading SEC filings).
+
+**Coming soon: options.** Calls for bullish picks and puts for bearish ones, with the same
+caps, frozen forecasts and automatic exit. The selection and scoring are built (`v3`, `v4`)
+and switch on as Robinhood rolls out option market data to agentic accounts.
 
 ## Docs and development
 
