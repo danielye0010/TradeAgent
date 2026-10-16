@@ -66,7 +66,7 @@
         "continuous-quant-v5": "Intraday momentum",
         "event-driven-v6": "SEC filings",
         "prospective-shadow": "Market collector",
-        "experimental-live": "Daily live trade",
+        "live-mirror": "Daily live mirror",
       },
       questions: {
         "daily-four-arm-v1": "Does Codex pick better than quant signals or a random pick from the same shortlist?",
@@ -292,7 +292,7 @@
         "continuous-quant-v5": "日内动量",
         "event-driven-v6": "SEC 公告",
         "prospective-shadow": "行情采集",
-        "experimental-live": "每日实盘",
+        "live-mirror": "每日实盘跟单",
       },
       questions: {
         "daily-four-arm-v1": "同一批候选，Codex 的选择能否胜过量化信号和随机选股？",

@@ -23,7 +23,7 @@ DEFAULT_PROTOCOL = {
     "continuous": "continuous-quant-v5",
     "events": "event-driven-v6",
     "prospective": "prospective-shadow",
-    "autotrade": "experimental-live",
+    "autotrade": "live-mirror",
 }
 _TIMER = re.compile(r"^OnCalendar=(.+)$", re.M)
 _cache = {}
