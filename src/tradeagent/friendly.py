@@ -10,6 +10,10 @@ import sys
 HELP = """\
 TradeAgent: an AI analyst picks the trade, a deterministic engine places it.
 
+See what it is doing:
+  dashboard             local web dashboard: schedule, AI decisions, results, trades
+  dashboard --demo      the same dashboard on a synthetic workspace (no accounts needed)
+
 Try it (no accounts needed):
   demo                  synthetic strategy lab: forecasts, scoring, learning
   run-once --paper      full buy-and-sell round trip against a simulated broker

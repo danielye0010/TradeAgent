@@ -2,11 +2,7 @@
 
 [English](README.md) | **简体中文**
 
-**AI 分析师挑交易，经过测试的普通 Python 代码负责下单。**
-
-TradeAgent 扫描美股和 ETF，让编程智能体 Codex 复核当天最异常的几只股票，再通过 Robinhood
-官方的智能体交易接口，对其中最好的标的下单。仓位有上限，到时间自动卖出。每一个预测都在市场
-给出结果*之前*记录下来，并和随机选股、SPY 做对比打分，AI 的每一次判断都有数据可查。
+**AI 负责挑票，下单交给测过的 Python。**
 
 [![CI](https://github.com/danielye0010/TradeAgent/actions/workflows/ci.yml/badge.svg)](https://github.com/danielye0010/TradeAgent/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/tradeagent)](https://pypi.org/project/tradeagent/)
@@ -14,7 +10,16 @@ TradeAgent 扫描美股和 ETF，让编程智能体 Codex 复核当天最异常�
 ![Status](https://img.shields.io/badge/status-beta-orange)
 [![License](https://img.shields.io/badge/License-Apache--2.0%20AND%20MIT-blue)](LICENSE)
 
-[两分钟试用](#两分钟试用) · [为什么选 TradeAgent](#为什么选-tradeagent) · [连接 Robinhood](#连接-robinhood) · [日常使用](#日常使用) · [内置安全机制](#内置安全机制) · [研究实验室](#研究实验室)
+> **TL;DR**
+> - **是什么**：跑在 Robinhood 上的美股 / ETF 交易 Agent。每天上午 Codex 把盘中最异动的几只过一遍，
+>   仓位、下单、到点卖出全部交给确定性的 Python，走的是 Robinhood 官方智能体交易接口。
+> - **哪里不一样**：模型碰不到券商接口；每个预测都在市场开奖前冻结，事后和量化信号、随机抽签、
+>   SPY 放在一起打分，AI 有没有用，数据说了算。
+> - **能干啥**：每日自动驾驶（每个交易日自己跑一轮模拟交易）；一条命令实盘下单，硬上限 + 自动平仓；
+>   本地 dashboard，正在跑什么、AI 选了谁、为什么、各组成绩如何，一屏看完。
+> - **怎么开始**：`pipx install tradeagent`，然后 `tradeagent dashboard --demo`，不用任何账户。
+
+![TradeAgent dashboard：今天的日程、最新的 AI 决策和自动驾驶状态](docs/images/dashboard-overview.zh.png)
 
 ## 工作原理
 
@@ -28,211 +33,120 @@ flowchart LR
     E -->|不交易| F[记录，事后打分]
     E -->|买入| G[风控检查]
     G --> H[Robinhood 下单]
-    H --> I[定时退出并计算盈亏]
+    H --> I[定时退出并结算盈亏]
 ```
 
-关键在于这种分工：**模型只决定哪些标的值得看，它永远碰不到券商接口。** 仓位大小、限额、
-下单、退出和对账，都是每次行为完全一致的普通 Python 代码，并由 1000 多个离线测试覆盖。
+模型只管“哪只值得看”。仓位、限额、下单、平仓、对账都是普通 Python，1000 多个离线测试兜底。
 
-## 为什么选 TradeAgent
+## 为什么选它
 
-TradeAgent 建立在已经好用的基础之上：数据和下单用 Robinhood
+轮子能复用就复用：数据和下单走 Robinhood
 [官方智能体交易 MCP](https://robinhood.com/us/en/support/articles/agentic-trading-overview/)，
-分析用 [Codex](https://github.com/openai/codex)（走你的 ChatGPT 订阅，不按 token 计费），
-交易日历用标准库。在此之上，它补上了下面这些方案都没有的部分：一条从 AI 建议到真实下单、再安全
-退出的受保护通道，以及 AI 每一次判断的打分记录。
+分析用 [Codex](https://github.com/openai/codex)，吃 ChatGPT 订阅额度，不按 token 计费。
 
-| 方案 | 擅长 | TradeAgent 带来什么 |
-| --- | --- | --- |
-| 把 ChatGPT、Claude 或 Codex 直接接到 Robinhood MCP，让它自己交易 | 用大白话下一次性订单 | 下单工具不在模型手里。限额由代码强制执行，每笔订单都先写入日志，超时也不会重复下单；退出提前排好，每次判断事后都会打分。 |
-| “AI 对冲基金”类项目，比如 [ai-hedge-fund](https://github.com/virattt/ai-hedge-fund) 和 [TradingAgents](https://github.com/TauricResearch/TradingAgents) | 探索多智能体的市场分析 | 在真实账户里真正下单，分析走你的 ChatGPT 订阅，不需要按 token 付费的 API key。 |
-| 非官方 Robinhood 库，比如 [robin_stocks](https://pypi.org/project/robin-stocks/) | 用脚本操作自己的账户 | 使用 Robinhood 官方接口和浏览器登录，TradeAgent 永远看不到你的密码。 |
-| 回测框架（backtrader、vectorbt、LEAN 等） | 在多年历史数据上测试想法 | 实时证据：在结果出来之前就把预测冻结，结果不可能事后拟合。 |
+| 别的方案 | TradeAgent 多给的 |
+| --- | --- |
+| 大模型直连券商，让它自己下单 | 下单工具模型碰不到：限额写在代码里，每笔订单先落日志，超时也不会重复下单；平仓提前排好，每次判断都有打分。 |
+| “AI 对冲基金”类项目（[ai-hedge-fund](https://github.com/virattt/ai-hedge-fund)、[TradingAgents](https://github.com/TauricResearch/TradingAgents)） | 真账户真下单，分析走 ChatGPT 订阅，不用另买 API key。 |
+| 非官方 Robinhood 库（[robin_stocks](https://pypi.org/project/robin-stocks/)） | 官方接口 + 浏览器登录，密码只留在 Robinhood。 |
+| 回测框架（backtrader、vectorbt、LEAN） | 实时证据：结果出来之前就冻结预测，事后没法拟合。 |
 
-## 两分钟试用
+## 三分钟上手
 
-TradeAgent 已发布到 [PyPI](https://pypi.org/project/tradeagent/)。需要 Linux 或 Windows 上的 WSL2，
-以及 Python 3.12 及以上版本，不需要任何账户。
+环境：Linux 或 WSL2，Python 3.12+。
 
 ```bash
-pipx install tradeagent         # Ubuntu/WSL 上先运行 sudo apt install pipx
-
-tradeagent                      # 按用途分组列出所有命令
-tradeagent demo --demo-dir ~/tradeagent-demo
-tradeagent run-once --paper --state-dir ~/tradeagent-paper
+pipx install tradeagent          # Ubuntu/WSL 先 sudo apt install pipx
+tradeagent dashboard --demo      # 在合成数据上看 dashboard
+tradeagent run-once --paper --state-dir ~/tradeagent-paper   # 模拟券商上走一遍完整买卖
 ```
 
-这样就能用演示、Robinhood 登录和单笔实盘交易。Codex 分析师和每日自动驾驶要用到仓库里的
-技能和安装脚本，所以需要克隆仓库：
+准备好了再连 Robinhood。`login` 走 Robinhood 给 AI 应用的标准 OAuth 登录，顺手开一个独立的
+**智能体账户**，主账户完全不受影响：
 
 ```bash
-git clone https://github.com/danielye0010/TradeAgent.git
-cd TradeAgent
-python3 -m venv .venv && source .venv/bin/activate
-pip install -e .
+tradeagent login        # 浏览器登录，生成 ~/.config/tradeagent/tradeagent.toml
+tradeagent doctor       # 离线自检：哪些好了，下一步干嘛
+tradeagent live-check   # 只读检查：账户、权限、报价
 ```
 
-每条命令都会输出完整的 JSON 记录；在终端里运行时，还会附一段简短的总结（目前是英文）：
-
-```text
-Demo passed: synthetic data only, 0 broker calls.
-  150 forecasts recorded and scored, 15 learning runs, 5 challenger strategies created.
-
-Paper round trip: COMPLETED (simulated broker, no real orders)
-  buy  2 IWM @ 10.01 (filled)
-  sell 2 IWM @ 9.99 (filled)
-```
-
-`tradeagent inspect --state-dir ~/tradeagent-demo` 可以查看演示实验学到了什么。状态目录要放在本地
-Linux 磁盘上（ext4、btrfs 或 xfs）。网络共享盘和 `/mnt/c` 这类 Windows 挂载目录不受支持，
-因为那里的 SQLite 文件锁不可靠。
-
-## 连接 Robinhood
-
-你需要一个状态正常的 Robinhood 个人投资账户。授权 TradeAgent 时，Robinhood 会引导你开一个
-单独的**智能体账户**。TradeAgent 只在这个账户里交易，你的主账户完全不受影响。
-
-```bash
-tradeagent login        # 在浏览器里打开 Robinhood，授权 TradeAgent
-tradeagent doctor       # 离线自检：哪些已配好，下一步该做什么
-tradeagent live-check   # 只读检查：账户、权限、报价。永远不会下单。
-```
-
-`login` 使用 Robinhood 为 AI 应用提供的标准 OAuth 登录。密码只留在 Robinhood，TradeAgent
-在 `~/.config/tradeagent/robinhood-oauth.json` 里保存一个短期 access token 和一个 refresh
-token，文件权限为 600，仅你本人可读。它还会生成
-`~/.config/tradeagent/tradeagent.toml`，这是控制真实交易的唯一配置文件：
+真金白银只认 `tradeagent.toml` 这一个文件：
 
 ```toml
 [live]
-symbols = ["QQQ", "IWM"]   # TradeAgent 唯一允许买入的标的
-max_notional = "25"        # 单笔买入的硬性金额上限（美元）
-
+symbols = ["QQQ", "IWM"]   # 只准买这几只
+max_notional = "25"        # 单笔硬上限（美元）
 [entry]
-dollar_amount = "5"        # 每次实盘买入恰好花这么多
-
+dollar_amount = "5"        # 每次买入正好花这么多
 [exit]
 hold_seconds = 3600        # 一小时后自动卖出
 ```
 
-在没有浏览器的机器上，用 `tradeagent login --paste`，然后把 Robinhood 跳转后的地址粘贴回来。
-`tradeagent logout` 会删除保存的登录状态。
+## 日常怎么用
 
-## 日常使用
+**Dashboard。** `tradeagent dashboard` 会自己找到装好的定时任务和实盘记录。今天的交易时段做成时间轴，
+每个冻结的决策都能点开看 Codex 的逻辑，各组相对 SPY 和随机的成绩一目了然，每笔交易的成交也都在。
+只在本机跑，纯只读。[详细说明](docs/dashboard.md)
 
-TradeAgent 有三种用法，从研究到实盘交易。只有你自己启动实盘运行时，才会动用真钱。
+![研究页：各组成绩、结论和累计收益图](docs/images/dashboard-research.zh.png)
 
-### 1. 让分析师（Codex）来分析
-
-安装 [Codex CLI](https://github.com/openai/codex)，在 TradeAgent 文件夹里打开它，然后使用
-`trade-opportunity-analyst` 技能。下面的指令原样输入即可，技能会识别其中的 `LIVE` 等关键词：
-
-| 模式 | 输入 | 会发生什么 |
-| --- | --- | --- |
-| **研究** | `$trade-opportunity-analyst Analyze today's market and generate a TradePlan.` | 扫描市场，阅读候选标的的新闻，解释理由。不下单。 |
-| **实盘** | `$trade-opportunity-analyst LIVE: analyze today's market, show the purchase plan, execute if eligible, and report P&L.` | 当某个策略在该情形下通过证据门槛时买入；否则给出附带理由的 `NO_TRADE`。 |
-| **实验性实盘** | `$trade-opportunity-analyst EXPERIMENTAL LIVE: trade today's strongest quant signal with my $5 setting.` | 每天按最强的量化信号开最多一笔 5 美元的仓位，然后定时退出。真实成交单独记录，用于学习。 |
-
-同样的步骤也可以手动执行：`tradeagent opportunity scan`、`decide`、`show` 和 `compare`。
-详见[机会研究流程](docs/opportunity-workflow.md)。
-
-### 2. 让每日自动驾驶做模拟交易
-
-一个 systemd 定时器会在每个交易日自动运行研究流程，不需要打开聊天窗口，也不会真实下单。
-它需要先运行 `tradeagent login`、用 ChatGPT 账户登录 Codex CLI；在 WSL2 上还需要
-[启用 systemd](https://learn.microsoft.com/windows/wsl/systemd)：
+**每日自动驾驶。** systemd 定时器每个交易日跑一轮研究，不用开聊天窗口，也不下真单。先把仓库拉下来：
 
 ```bash
-python scripts/install_shadow.py --daily \
-  --python "$PWD/.venv/bin/python" \
+git clone https://github.com/danielye0010/TradeAgent.git && cd TradeAgent
+python3 -m venv .venv && source .venv/bin/activate && pip install -e .
+python scripts/install_shadow.py --daily --python "$PWD/.venv/bin/python" \
   --state-dir "$HOME/tradeagent-research/daily"
 ```
 
-美东时间 10:00，它扫描市场并让 Codex 给前三名候选排序，然后记录四种互相竞争的选择。四者的
-入场、退出时间和成本完全相同：
+美东 10:00 扫一遍市场，让 Codex 给前三名排序，然后冻结四组选择，入场、出场、成本完全一样：
+**纯量化**、**纯 Codex**、**量化 + Codex**、**随机**。加 `--protocol daily-news-v2` 还能测出
+“读新闻”到底值多少。[详细说明](docs/prospective-shadow.md)
 
-| 组别 | 怎么选 |
+**直接问分析师。** 在仓库里打开 [Codex CLI](https://github.com/openai/codex)，用
+`trade-opportunity-analyst` 技能，指令原样输入即可：
+
+| 输入 | 会发生什么 |
 | --- | --- |
-| **纯量化** | 量化信号最强的标的 |
-| **纯 Codex** | Codex 排名第一的*看多*标的 |
-| **量化 + Codex** | 两者都认可的最佳标的 |
-| **随机** | 在同一批候选中用固定种子随机抽取，或持有现金 |
+| `$trade-opportunity-analyst Analyze today's market and generate a TradePlan.` | 扫市场、读候选的新闻、讲清楚理由。不下单。 |
+| `$trade-opportunity-analyst LIVE: analyze today's market, show the purchase plan, execute if eligible, and report P&L.` | 某个策略在该情形下过了证据门槛才买；否则给出带理由的 `NO_TRADE`。 |
+| `$trade-opportunity-analyst EXPERIMENTAL LIVE: trade today's strongest quant signal with my $5 setting.` | 每天最多按最强量化信号开一笔 5 美元，然后定时平仓。 |
 
-每次运行后，状态目录里的 `daily-report.md` 会列出每组扣除成本后的盈亏，以及同一小时内相对
-SPY 的超额收益，Codex 始终和随机选股放在一起比较。另一个协议 `--protocol daily-news-v2`
-让 Codex 分别在联网搜索和不联网的情况下回答同一个问题，从而准确衡量“读新闻”到底值多少。
-详见[每日自动驾驶](docs/prospective-shadow.md)。
-
-### 3. 自己下一笔单
-
-```bash
-tradeagent run-once --live   # 按配置买入一笔，然后自动退出
-tradeagent status            # 只读查看当前这笔交易的状态
-tradeagent recover           # 恢复被中断的交易；只会卖出
-```
-
-这是单独的执行路径，最快能在你自己的账户上看到下单、成交和退出跑通。完整说明见
-[实盘执行](docs/one-shot.md)。
+**手动来一笔。** `tradeagent run-once --live` 按 TOML 买入、到点自己卖；`status` 看进度，
+`recover` 接着跑完被打断的那一笔（只卖不买）。[详细说明](docs/one-shot.md)
 
 ## 内置安全机制
 
-AI 负责建议，确定性的代码负责决定。每次下单前，引擎都会检查：
+AI 出主意，代码拍板。每次下单前都要过：
 
-- **硬性上限：** 你设定的金额、单笔上限、持仓和敞口限额、现金保留比例，以及每日亏损上限。
-  任何金额都不会被自动调大；没有杠杆、没有做空、没有融资。
-- **白名单：** 只交易配置里列出的标的，只在常规交易时段交易。
-- **数据新鲜：** 账户、报价、买卖价差和盘口深度都是几秒内的数据，且彼此一致，订单才会发出。
-- **不会重复下单：** 每笔订单在发出*之前*就带着唯一 ID 写入日志，并且绝不盲目重试，所以一次
-  超时不会把一笔买单变成两笔。
-- **内置退出路径：** 退出是同一次运行的一部分，在持有时间到期或临近收盘前执行。如果电脑休眠或
-  断网，`tradeagent recover` 会接着这次运行继续退出，`tradeagent status` 会显示退出是否已完成。
-  在状态目录（`~/.local/state/tradeagent/live`）里创建一个名为 `KILL` 的文件，就会停止买入并立即开始退出。
+- **硬上限**：每笔金额、单笔上限、持仓和敞口、现金保留、每日亏损上限。不加杠杆、不做空、不融资。
+- **白名单**：只买配置里的标的，只在常规交易时段。
+- **数据新鲜**：账户、报价、价差、盘口都得是几秒内的，而且互相对得上。
+- **只下一次**：订单发出去之前先带唯一 ID 落日志，绝不盲目重试。
+- **自带退路**：平仓是同一次运行的一部分。电脑睡着或断网，`recover` 接着跑；在
+  `~/.local/state/tradeagent/live` 放一个 `KILL` 文件，立刻停止买入并开始平仓。
 
-Robinhood 自己的审批设置同样生效。TradeAgent 还会自动跟进 Robinhood 的接口更新：逐个检查
-它用到的工具，新增字段之类的变化照常工作，并在 `live-check` 里提示；如果某个变化可能改变
-订单的含义，就暂停交易并给出明确原因。
+Robinhood 接口更新会逐个工具检查：只是加字段照常跑，可能改变订单含义的变化直接暂停交易并说明原因。
 
 ## 研究实验室
 
-在主流程之外，TradeAgent 还运行一组研究协议，各自使用独立的状态目录：
+几条实验并行跑，各用各的状态目录：`daily-four-arm-v1`（Codex vs 量化 vs 随机，每天在攒数据）、
+`daily-news-v2`（读新闻有没有用，每天在攒数据）、[`continuous-quant-v5`](docs/continuous-v5.md)
+（日内动量扛不扛得住决策延迟）、[`event-driven-v6`](docs/event-driven-v6.md)（让 Codex 读 SEC 公告），
+还有用看跌期权表达看空观点的 v3/v4（拿到期权报价权限后开启）。
 
-| 协议 | 研究问题 | 状态 |
-| --- | --- | --- |
-| `daily-four-arm-v1` | Codex 能否胜过量化信号和随机选股？ | 每日收集中 |
-| `daily-news-v2` | 联网搜索新闻能否改进 Codex 的选择？ | 每日收集中 |
-| `continuous-quant-v5` | 日内动量信号在 1–10 分钟的决策延迟后还有效吗？ | [文档](docs/continuous-v5.md) |
-| `event-driven-v6` | Codex 阅读 SEC 公告能否胜过机械规则基线？ | [文档](docs/event-driven-v6.md) |
-| `daily-bidirectional-v3`、`daily-call-put-v4` | 看空预测用看跌期权表达是否有效？ | 已实现；拿到期权报价权限后手动启用（[研究协议](docs/research-protocol.md)） |
+## 文档与开发
 
-## 项目结构
-
-```text
-.agents/skills/trade-opportunity-analyst/   Codex 技能
-src/tradeagent/
-  research/          扫描器、信号、交易计划、结果打分
-  prospective/       每日自动驾驶和行情数据源
-  oneshot.py         实盘买入、退出和恢复引擎
-  risk.py            持仓、敞口和现金限额
-  robinhood_login.py 浏览器登录和 token helper
-scripts/             systemd 安装脚本和发布检查
-docs/                设计说明和操作指南（英文）
-```
-
-延伸阅读：[架构](docs/architecture.md)、[研究协议](docs/research-protocol.md)、
-[更新日志](CHANGELOG.md)、[发布流程](docs/releasing.md)。
-
-## 开发
+[Dashboard](docs/dashboard.md) · [架构](docs/architecture.md) · [研究协议](docs/research-protocol.md) ·
+[进阶上手](docs/getting-started.md) · [更新日志](CHANGELOG.md)（文档目前是英文）
 
 ```bash
-pip install -e ".[dev]"
-pytest -q
-ruff check src tests scripts && ruff format --check src tests scripts
+pip install -e ".[dev]" && pytest -q && ruff check src tests scripts
 ```
 
-测试使用合成行情、模拟券商和模拟 OAuth 服务器，可以离线运行，大约两分钟。CI 覆盖 Python 3.12
-到 3.14，并对构建出的 wheel 做冒烟测试。参见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+测试用合成行情、模拟券商和模拟 OAuth 服务器，离线两分钟左右跑完。贡献方式见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ## 许可证
 
-[Apache 2.0](LICENSE)，部分内置组件为 MIT 许可（[详情](THIRD_PARTY.md)）。TradeAgent 是独立
-项目，与 Robinhood Markets, Inc. 和 OpenAI 均无关联。不构成投资建议；交易存在风险。
+[Apache 2.0](LICENSE)，部分内置组件为 MIT（[详情](THIRD_PARTY.md)）。TradeAgent 是独立项目，
+与 Robinhood Markets, Inc. 和 OpenAI 均无关联。不构成投资建议；交易有风险。
