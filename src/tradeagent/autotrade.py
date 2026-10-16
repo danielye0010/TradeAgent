@@ -136,6 +136,7 @@ def archive_previous(settings):
 def reserve_day(settings, day, decision_id, now):
     """One new-entry attempt per New York day; failed or unknown attempts keep the claim."""
     directory = settings.directory.with_name(settings.directory.name + ".autotrade-days")
+    created = not directory.exists()
     directory.mkdir(parents=True, exist_ok=True, mode=0o700)
     path = directory / f"{day.isoformat()}.json"
     try:
@@ -146,6 +147,14 @@ def reserve_day(settings, day, decision_id, now):
         json.dump({"decision_id": decision_id, "reserved_at": now}, stream)
         stream.flush()
         os.fsync(stream.fileno())
+    # The claim must survive power loss before any order: persist its directory entry
+    # (and the directory's own entry the first time it is created).
+    for folder in (directory, directory.parent) if created else (directory,):
+        descriptor = os.open(folder, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
     return path
 
 
@@ -214,11 +223,18 @@ def run(config, follow_dir, state_dir, *, clock=time.time, sleep=time.sleep):
         log("MARKET_CLOSED", day=day.isoformat())
         return 0
     settings = load_live_config(config)
+    base = {"session": day.isoformat(), "followed": f"{FOLLOWED_PROTOCOL}/{FOLLOWED_ARM}"}
+    # Exit-only recovery runs every session, before any no-trade return and under KILL.
+    try:
+        finish_previous(settings)
+    except Exception as error:  # never open a new position on top of an unresolved one
+        record(state_dir, day, {**base, "status": "STOPPED", "reason": str(error)})
+        log("STOPPED", reason=str(error))
+        return 2
     if (settings.directory / "KILL").exists():
         log("KILL_SWITCH", path=str(settings.directory / "KILL"))
         return 0
     check_owner_settings(settings)
-    base = {"session": day.isoformat(), "followed": f"{FOLLOWED_PROTOCOL}/{FOLLOWED_ARM}"}
 
     opens = datetime(day.year, day.month, day.day, *START, tzinfo=NY).timestamp()
     decision = find_decision(follow_dir, day)
@@ -239,7 +255,6 @@ def run(config, follow_dir, state_dir, *, clock=time.time, sleep=time.sleep):
         return 0
 
     try:
-        finish_previous(settings)
         archive_previous(settings)
         reserve_day(settings, day, decision["decision_id"], clock())
     except Exception as error:  # never open a new position on top of an unresolved one

@@ -184,7 +184,7 @@ def test_kill_switch_stops_before_reading_the_research(engine, tmp_path):
     (live / "KILL").write_text("")
     _decision(tmp_path / "v2", OPEN + 60)
     assert autotrade.run(config, tmp_path / "v2", tmp_path / "s", clock=Clock(OPEN)) == 0
-    assert engine.seen == []
+    assert engine.seen == ["recover"]  # exit-only recovery still runs under KILL
 
 
 def test_waits_for_the_frozen_decision_then_buys_at_its_entry_minute(engine, tmp_path):
@@ -224,7 +224,7 @@ def test_waits_for_the_frozen_decision_then_buys_at_its_entry_minute(engine, tmp
 def test_no_trade_outcomes_never_reach_the_engine(engine, tmp_path, kwargs, reason):
     _decision(tmp_path / "v2", OPEN + 60, **kwargs)
     assert autotrade.run(_config(), tmp_path / "v2", tmp_path / "s", clock=Clock(OPEN + 90)) == 0
-    assert engine.seen == []
+    assert engine.seen == ["recover"]
     record = _record(tmp_path / "s")
     assert record["status"] == "NO_TRADE" and reason in record["reason"]
 
@@ -235,7 +235,7 @@ def test_no_decision_by_the_end_of_the_window_is_a_quiet_no_trade(engine, tmp_pa
         autotrade.run(_config(), tmp_path / "v2", tmp_path / "s", clock=clock, sleep=clock.sleep)
         == 0
     )
-    assert engine.seen == [] and clock() >= OPEN + autotrade.DECISION_WAIT_SECONDS
+    assert engine.seen == ["recover"] and clock() >= OPEN + autotrade.DECISION_WAIT_SECONDS
     assert _record(tmp_path / "s")["reason"] == "no daily-news-v2 decision today"
 
 
@@ -247,7 +247,7 @@ def test_other_protocols_and_days_are_ignored(engine, tmp_path):
         autotrade.run(_config(), tmp_path / "v2", tmp_path / "s", clock=clock, sleep=clock.sleep)
         == 0
     )
-    assert engine.seen == []
+    assert engine.seen == ["recover"]
 
 
 def test_unresolved_previous_run_blocks_a_new_entry(engine, monkeypatch, tmp_path):
@@ -318,3 +318,20 @@ def test_mirror_buys_and_exits_through_the_real_engine(tmp_path, monkeypatch):
 def test_cli_dispatches_autotrade(capsys):
     assert main(["autotrade", "install", "--config", "/nonexistent/tradeagent.toml"]) == 2
     assert "STOPPED" in capsys.readouterr().out
+
+
+def test_open_exposure_is_recovered_even_on_a_cash_day(engine, tmp_path):
+    _decision(tmp_path / "v2", OPEN + 60, symbol=None)
+    assert autotrade.run(_config(), tmp_path / "v2", tmp_path / "s", clock=Clock(OPEN + 90)) == 0
+    assert engine.seen == ["recover"]
+    assert _record(tmp_path / "s")["status"] == "NO_TRADE"
+
+
+def test_the_daily_claim_directory_is_persisted(engine, tmp_path, monkeypatch):
+    synced = []
+    real = autotrade.os.fsync
+    monkeypatch.setattr(autotrade.os, "fsync", lambda fd: (synced.append(fd), real(fd)))
+    _decision(tmp_path / "v2", OPEN + 60)
+    clock = Clock(OPEN + 90)
+    autotrade.run(_config(), tmp_path / "v2", tmp_path / "s", clock=clock, sleep=clock.sleep)
+    assert len(synced) == 3  # claim file, its new directory, and that directory's parent
