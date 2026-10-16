@@ -23,22 +23,17 @@
         idle: "Waiting. Next run {when} ({rel})",
         idleNoTime: "Waiting for the next scheduled run",
         disabled: "Autopilot installed but switched off",
-        demo: "Demo data. Nothing is scheduled",
         none: "Nothing scheduled yet",
         offline: "Can't reach the dashboard server. Is `tradeagent dashboard` still running?",
       },
-      banner: {
-        demo: "Demo workspace: synthetic markets run through the real pipeline. No account, no orders, not a market view.",
-        demoHint: "Your own runs show up once you connect Robinhood or install the autopilot.",
-        errors: "Some state could not be read:",
-      },
+      banner: { errors: "Some state could not be read:" },
       today: {
         open: "Today's session",
         closed: "Market closed today",
         nextOpen: "Next session {day}, 9:30 ET",
         afterClose: "After the close",
         now: "now {time}",
-        example: "This is how the autopilot schedules its day once installed.",
+        example: "With the autopilot on, every trading day runs on this schedule.",
         noteDone: "Today's decisions are frozen. Results land after the holding window.",
         noteWaiting: "Next step: {what} at {time} ET.",
         noteClosed: "Nothing runs on market holidays and weekends.",
@@ -70,13 +65,13 @@
         "daily-call-put-v4": "Call/Put test",
         "continuous-quant-v5": "Intraday momentum",
         "event-driven-v6": "SEC filings",
-        "prospective-shadow": "Shadow collector",
+        "prospective-shadow": "Market collector",
       },
       questions: {
         "daily-four-arm-v1": "Does Codex pick better than quant signals or a random pick from the same shortlist?",
         "daily-news-v2": "Does letting Codex read the news improve its picks?",
       },
-      evidence: { synthetic: "Synthetic", prospective: "Shadow", replay: "Replay" },
+      evidence: { synthetic: "Test data", prospective: "Paper", replay: "Replay" },
       stance: { long: "long", avoid: "avoid", short: "short" },
       failures: {
         MISSED_DECISION_WINDOW: "Missed the decision window. Was the computer asleep or offline?",
@@ -91,12 +86,10 @@
         off: "Timer is off",
         unknown: "Timer state unknown (systemd not reachable)",
         last: "Last session {day}: {status}",
-        noneDemo: "The demo has no schedule. Once installed, the autopilot runs every trading day at 10:00 ET without opening a chat.",
-        none: "No autopilot installed. It paper-trades every session and scores Codex against Quant and Random:",
+        none: "No autopilot yet. Once installed it paper-trades every session and scores Codex against Quant and Random.",
       },
       trading: {
         title: "Live trading",
-        demoTitle: "Paper trade (demo)",
         notConnected: "Not connected to Robinhood yet.",
         symbols: "Allowed symbols",
         perEntry: "Per entry",
@@ -114,11 +107,10 @@
         title: "Getting started",
         steps: {
           install: "Install TradeAgent",
-          demo: "Look around the demo",
           login: "Sign in to Robinhood",
           live_check: "Run the read-only live check",
           autopilot: "Turn on the daily autopilot",
-          first_result: "Get the first real result",
+          first_result: "Get the first result",
         },
         ready: "Setup checks pass.",
         check: "Setup checks",
@@ -138,13 +130,13 @@
         vsBase: "Vs {base}",
         baseline: "baseline",
         chartTitle: "Cumulative return over SPY, per arm",
-        chartNote: "Sum of each session's net return minus SPY over the same window. Synthetic or not, read it together with the verdicts above.",
-        chartGate: "The chart appears after {need} paired sessions ({n} so far). Earlier curves are mostly noise.",
+        chartNote: "Each session's net return minus SPY over the same window, added up day by day.",
+        chartGate: "The chart appears after {need} paired sessions ({n} so far).",
         recent: "Recent sessions",
         date: "Session",
         pick: "Codex pick",
         none: "No research state found.",
-        noneHint: "Install the daily autopilot, or try the demo:",
+        noneHint: "Turn on the autopilot and the daily comparison shows up here:",
         lab: "Strategy lab",
         labLede: "The learning loop behind the quant signals: forecasts, scored outcomes and the weights it currently gives each strategy.",
         forecasts: "Forecasts",
@@ -188,7 +180,7 @@
         reconciled: "Reconciled",
         yes: "yes",
         no: "no",
-        empty: "No trades yet. Try a paper round trip:",
+        empty: "No trades yet. Once signed in and checked, one command places a trade:",
         timeline: "What happened",
         orders: "Orders",
         events: {
@@ -221,12 +213,12 @@
         loading: "Loading…",
         missing: "This session could not be loaded.",
       },
-      foot: { readonly: "Read-only: the dashboard never places orders or changes settings.", updated: "Updated {rel}" },
+      foot: { updated: "Updated {rel}" },
       rel: { now: "just now", s: "{n} s ago", m: "{n} min ago", h: "{n} h ago", inM: "in {n} min", inH: "in {h} h {m} min", inD: "in {n} days" },
       status: { COMPLETED: "completed", INCOMPLETE: "incomplete", STARTED: "running", HALTED: "halted", CLOSED_PARTIAL: "partly closed", NO_TRADE: "no trade", UNKNOWN: "unknown" },
       empty: {
-        title: "Nothing to show yet",
-        body: "The dashboard reads the state TradeAgent writes as it works. Start with the demo, or set up the real thing:",
+        title: "Welcome to TradeAgent",
+        body: "Sign in to Robinhood and turn on the autopilot, and status, AI decisions and trades show up here. A few steps to get going:",
       },
     },
     zh: {
@@ -234,56 +226,57 @@
       stop: "。",
       checks: {
         System: "系统",
-        Storage: "存储位置",
+        Storage: "数据目录",
         "Robinhood sign-in": "Robinhood 登录",
-        "Live settings": "实盘设置",
+        "Live settings": "实盘配置",
         "Codex CLI": "Codex CLI",
-        "Autopilot timer": "自动驾驶定时器",
+        "Autopilot timer": "Autopilot 定时器",
+      },
+      fixes: {
+        System: "请在 Linux 或 WSL2 中运行，Python 版本需 3.12 或以上。",
+        Storage: "把数据目录放在 Linux 本地磁盘上（ext4、btrfs 或 xfs），不要放在 `/mnt/c` 这类 Windows 目录。",
+        "Codex CLI": "从 https://github.com/openai/codex 安装后运行 `codex login`。",
+        "Autopilot timer": "在 WSL 中启用 systemd：https://learn.microsoft.com/windows/wsl/systemd",
       },
       lang: "EN",
       theme: { auto: "跟随系统", light: "浅色", dark: "深色" },
       skip: "跳到正文",
       close: "关闭",
       pulse: {
-        busy: "正在跑：{name}",
+        busy: "运行中：{name}",
         trade: "持仓中：{sym}，{when} 平仓",
-        idle: "待命，下次运行 {when}（{rel}）",
-        idleNoTime: "待命，等下一次定时运行",
-        disabled: "自动驾驶已安装，但定时器关着",
-        demo: "演示数据，没有定时任务",
-        none: "还没有定时任务",
-        offline: "连不上 dashboard 服务，`tradeagent dashboard` 还开着吗？",
+        idle: "下次运行 {when}（{rel}）",
+        idleNoTime: "等待下一次定时运行",
+        disabled: "Autopilot 已安装，定时器未开启",
+        none: "尚未安装定时任务",
+        offline: "连接不到 dashboard 服务，请确认 `tradeagent dashboard` 仍在运行",
       },
-      banner: {
-        demo: "演示工作区：合成行情喂给真实流水线跑出来的数据。不连账户、不下单，也不代表任何市场观点。",
-        demoHint: "连上 Robinhood 或装好自动驾驶后，这里就换成真实运行记录。",
-        errors: "有些状态读不出来：",
-      },
+      banner: { errors: "部分数据读取失败：" },
       today: {
-        open: "今天的交易时段",
-        closed: "今天休市",
-        nextOpen: "下个交易日 {day}，美东 9:30 开盘",
+        open: "今日交易时段",
+        closed: "今日休市",
+        nextOpen: "下一交易日 {day}，美东 9:30 开盘",
         afterClose: "收盘后",
-        now: "现在 {time}",
-        example: "装好自动驾驶后，一天大概就是这样排的。",
-        noteDone: "今天的决策已经冻结，持有窗口结束后出结果。",
+        now: "当前 {time}",
+        example: "开启 Autopilot 后，每个交易日按这个日程运行。",
+        noteDone: "今日决策已锁定，持有期结束后结算。",
         noteWaiting: "下一步：美东 {time} {what}。",
-        noteClosed: "周末和休市日不跑。",
-        noteAllDone: "今天排好的任务都跑完了。",
-        roles: { decide: "做决策", resolve: "算结果", report: "出日报", run: "运行" },
+        noteClosed: "周末和休市日不运行。",
+        noteAllDone: "今日任务已全部完成。",
+        roles: { decide: "决策", resolve: "结算", report: "日报", run: "运行" },
       },
       decisions: {
-        title: "最近的决策",
-        all: "看全部动态",
-        empty: "还没有研究记录。",
+        title: "最新决策",
+        all: "全部动态",
+        empty: "还没有决策记录。",
         topPick: "Codex 首选",
         cash: "空仓",
-        pending: "结果待出",
-        unavailable: "没给答案",
+        pending: "待结算",
+        unavailable: "无结果",
       },
       arms: {
         codex_only: "Codex",
-        codex_price: "Codex（只看价格）",
+        codex_price: "Codex（仅价格）",
         codex_news: "Codex + 新闻",
         quant_codex: "量化 + Codex",
         quant_codex_news: "量化 + Codex + 新闻",
@@ -291,121 +284,118 @@
         seeded_random: "随机",
       },
       protocols: {
-        "daily-four-arm-v1": "每日四组对照",
-        "daily-news-v2": "每日新闻实验",
-        "daily-bidirectional-v3": "多空双向实验",
-        "daily-call-put-v4": "看涨/看跌期权实验",
+        "daily-four-arm-v1": "每日四组对比",
+        "daily-news-v2": "新闻对比",
+        "daily-bidirectional-v3": "多空实验",
+        "daily-call-put-v4": "期权实验",
         "continuous-quant-v5": "日内动量",
         "event-driven-v6": "SEC 公告",
-        "prospective-shadow": "影子数据采集",
+        "prospective-shadow": "行情采集",
       },
       questions: {
-        "daily-four-arm-v1": "同一份候选名单，Codex 挑的能不能比量化信号、比随机抽签更好？",
-        "daily-news-v2": "让 Codex 读新闻，选股会不会更准？",
+        "daily-four-arm-v1": "同一批候选，Codex 的选择能否胜过量化信号和随机选股？",
+        "daily-news-v2": "让 Codex 读新闻，选股会更准吗？",
       },
-      evidence: { synthetic: "合成数据", prospective: "影子盘", replay: "回放" },
+      evidence: { synthetic: "测试数据", prospective: "模拟盘", replay: "回放" },
       stance: { long: "看多", avoid: "回避", short: "看空" },
       failures: {
-        MISSED_DECISION_WINDOW: "错过了决策窗口，电脑当时是不是睡着了或者断网了？",
-        CODEX_ASSESSMENT_UNAVAILABLE: "Codex 没按时给答案，其他组照常计入。",
-        MARKET_EVIDENCE_UNAVAILABLE: "没拿到行情数据，这天没有冻结决策。",
-        INTERRUPTED: "运行中途被打断了。",
+        MISSED_DECISION_WINDOW: "错过决策窗口，可能是电脑休眠或断网。",
+        CODEX_ASSESSMENT_UNAVAILABLE: "Codex 未按时返回，其他组照常计分。",
+        MARKET_EVIDENCE_UNAVAILABLE: "行情数据缺失，当天未生成决策。",
+        INTERRUPTED: "运行中途被中断。",
       },
       jobs: {
-        title: "自动驾驶",
-        running: "正在运行",
+        title: "Autopilot",
+        running: "运行中",
         next: "下次运行 {when}",
-        off: "定时器没开",
-        unknown: "读不到定时器状态（systemd 不可用）",
+        off: "定时器未开启",
+        unknown: "无法读取定时器状态（systemd 不可用）",
         last: "上次 {day}：{status}",
-        noneDemo: "演示没有定时任务。装好之后，每个交易日美东 10:00 自动跑一次，不用开聊天窗口。",
-        none: "还没装自动驾驶。它每个交易日做一次模拟交易，把 Codex 和量化、随机放在一起打分：",
+        none: "尚未安装 Autopilot。安装后每个交易日自动跑一轮模拟盘，给 Codex、量化和随机选股打分。",
       },
       trading: {
         title: "实盘",
-        demoTitle: "模拟交易（演示）",
-        notConnected: "还没连 Robinhood。",
-        symbols: "允许交易",
-        perEntry: "每笔金额",
-        cap: "硬上限",
+        notConnected: "尚未连接 Robinhood。",
+        symbols: "交易标的",
+        perEntry: "单笔金额",
+        cap: "金额上限",
         hold: "持有时长",
         kill: "KILL 开关",
-        killOn: "已开：停止买入",
-        killOff: "关",
+        killOn: "已开启，暂停买入",
+        killOff: "关闭",
         inTrade: "持仓中",
-        lastRun: "上一笔",
-        noRuns: "还没有实盘记录。",
+        lastRun: "最近一笔",
+        noRuns: "还没有实盘交易。",
         exitsAt: "{when} 平仓",
       },
       setup: {
-        title: "上手步骤",
+        title: "开始使用",
         steps: {
-          install: "装好 TradeAgent",
-          demo: "逛一圈演示",
+          install: "安装 TradeAgent",
           login: "登录 Robinhood",
-          live_check: "跑一次只读检查",
-          autopilot: "打开每日自动驾驶",
-          first_result: "拿到第一个真实结果",
+          live_check: "运行只读检查",
+          autopilot: "开启 Autopilot",
+          first_result: "拿到第一笔结果",
         },
         ready: "环境检查全部通过。",
         check: "环境检查",
       },
-      snapshot: { title: "对照实验进展", more: "去研究页" },
+      snapshot: { title: "对比进展", more: "查看研究" },
       research: {
         title: "研究",
-        lede: "每个选择都在市场给出答案之前冻结，事后扣掉成本，再和同一小时的 SPY 比。一个交易日算一个样本。",
-        progress: "配对样本 {n}/{need}",
-        progressDone: "配对样本 {n} 个",
-        firstRead: "攒满 {need} 个配对交易日才给结论。",
-        enough: "样本够看第一眼了，继续攒，区间会越来越窄。",
+        lede: "每个选择都在结果揭晓前锁定，扣除成本后与同一时段的 SPY 对比，每个交易日计为一个样本。",
+        progress: "已配对 {n}/{need} 个交易日",
+        progressDone: "已配对 {n} 个交易日",
+        firstRead: "满 {need} 个交易日后给出结论。",
+        enough: "样本已足够初步判断，区间会随样本增加继续收窄。",
         arm: "组别",
-        took: "出手天数",
-        avgNet: "每日平均净收益",
-        vsSpy: "相对 SPY（每日）",
+        took: "建仓天数",
+        avgNet: "日均净收益",
+        vsSpy: "相对 SPY（日均）",
         vsBase: "对比{base}",
         baseline: "基准",
         chartTitle: "各组相对 SPY 的累计收益",
-        chartNote: "把每天扣成本后的收益减去同一窗口的 SPY，再逐日累加。要和上面的结论一起看。",
-        chartGate: "攒满 {need} 个配对交易日才画图（目前 {n} 个），太早的曲线基本是噪音。",
-        recent: "最近几个交易日",
+        chartNote: "每天扣除成本后的收益减去同时段 SPY，逐日累加。",
+        chartGate: "满 {need} 个交易日后显示曲线（目前 {n} 个）。",
+        recent: "最近交易日",
         date: "交易日",
-        pick: "Codex 选的",
-        none: "没找到研究数据。",
-        noneHint: "装好每日自动驾驶，或者先看演示：",
+        pick: "Codex 首选",
+        none: "还没有研究数据。",
+        noneHint: "开启 Autopilot 后，每天的对比结果会显示在这里：",
         lab: "策略实验室",
-        labLede: "量化信号背后的学习循环：做了多少预测、打了多少分，以及它现在给每个策略的权重。",
+        labLede: "量化信号背后的学习循环：预测数量、已结算数量，以及当前各策略的权重。",
         forecasts: "预测",
-        scored: "已打分",
+        scored: "已结算",
         learning: "学习轮次",
         challengers: "挑战者",
         weights: "当前策略权重",
         verdict: {
-          collecting: "攒样本 {d}/{n}",
-          ahead: "跑赢",
-          behind: "跑输",
-          unclear: "差别还不明显",
+          collecting: "样本 {d}/{n}",
+          ahead: "领先",
+          behind: "落后",
+          unclear: "暂无明显差异",
         },
-        ci: "95% 区间 {lo} 到 {hi}",
-        star: "★ 是挑战者：实验室从原策略变异出来、正在和原版对打的新版本。",
-        ownReport: "这个协议按多空两条腿单独打分，dashboard 只列出它的交易日，完整成绩看它自己的报告：",
+        ci: "95% 区间 {lo} 至 {hi}",
+        star: "★ 为挑战者：从原策略变异而来、正在与原版对比的新版本。",
+        ownReport: "该实验按多空两侧分别计分，这里列出每个交易日，完整成绩见报告：",
       },
       activity: {
         title: "动态",
-        filters: { all: "全部", session: "AI 决策", trade: "交易", problem: "出问题的" },
+        filters: { all: "全部", session: "AI 决策", trade: "交易", problem: "异常" },
         session: "{proto}：{status}",
-        picked: "Codex 把 {sym} 排第一（{stance}）。",
+        picked: "Codex 首选 {sym}（{stance}）。",
         armsPicked: "各组仓位：{list}。",
-        scored: "结果：{list}。",
-        lab: "策略实验室从 {n} 条预测里学习（共 {runs} 轮）。",
-        trade: "{mode} 交易 {sym}：{status}",
+        scored: "结算：{list}。",
+        lab: "策略实验室基于 {n} 条预测完成 {runs} 轮学习。",
+        trade: "{mode} {sym}：{status}",
         pnl: "盈亏 {pnl}",
-        empty: "这里还没东西。",
+        empty: "暂无记录。",
         details: "详情",
       },
       trades: {
         title: "交易",
-        lede: "每一笔实盘和模拟交易：成交、盈亏，以及事后账户对没对上。",
-        started: "开始",
+        lede: "所有实盘与模拟交易的成交、盈亏和对账结果。",
+        started: "时间",
         mode: "模式",
         status: "状态",
         symbol: "标的",
@@ -415,45 +405,45 @@
         reconciled: "已对账",
         yes: "是",
         no: "否",
-        empty: "还没有交易。先来一次模拟往返：",
-        timeline: "过程",
+        empty: "还没有交易。完成登录和只读检查后，一条命令即可下单：",
+        timeline: "执行过程",
         orders: "订单",
         events: {
           proposal: "生成订单",
           risk_pass: "风控检查通过",
-          human_approval: "订单获批",
-          submission_started: "订单发给券商",
-          fill_reconciliation: "成交已和账户核对",
-          exit_due: "排好平仓时间",
+          human_approval: "订单确认",
+          submission_started: "已提交券商",
+          fill_reconciliation: "成交与账户核对一致",
+          exit_due: "已安排平仓",
         },
       },
       drawer: {
-        frozen: "{time} 冻结，比入场窗口早 {delay}，比平仓早 {hold}。冻结之后一个字都改不了。",
+        frozen: "{time} 锁定，距入场窗口 {delay}，距平仓 {hold}。锁定后不可更改。",
         outcome: "各组表现",
         candidates: "候选名单",
-        price: "Codex（只看价格）",
-        news: "Codex（读了新闻）",
+        price: "Codex（仅价格）",
+        news: "Codex（含新闻）",
         thesis: "核心逻辑",
         catalyst: "催化剂",
-        pricedIn: "是否已经反映在价格里",
-        invalidation: "什么情况算看错",
-        risks: "反方证据",
+        pricedIn: "是否已计入价格",
+        invalidation: "失效条件",
+        risks: "反方因素",
         sources: "来源",
         windowReturn: "近 1 小时",
         rel: "相对 SPY",
-        volume: "成交量",
-        noAnalysis: "Codex 没给这只的分析。",
-        net: "净 {v}",
-        excess: "超 SPY {v}",
+        volume: "量比",
+        noAnalysis: "Codex 未分析该标的。",
+        net: "净收益 {v}",
+        excess: "超额 {v}",
         loading: "加载中…",
-        missing: "这个交易日的数据读不出来。",
+        missing: "无法加载该交易日。",
       },
-      foot: { readonly: "只读：dashboard 不会下单，也不会改任何设置。", updated: "{rel}更新" },
+      foot: { updated: "{rel}更新" },
       rel: { now: "刚刚", s: "{n} 秒前", m: "{n} 分钟前", h: "{n} 小时前", inM: "{n} 分钟后", inH: "{h} 小时 {m} 分后", inD: "{n} 天后" },
-      status: { COMPLETED: "完成", INCOMPLETE: "未完成", STARTED: "进行中", HALTED: "已停止", CLOSED_PARTIAL: "部分平仓", NO_TRADE: "没出手", UNKNOWN: "未知" },
+      status: { COMPLETED: "完成", INCOMPLETE: "未完成", STARTED: "进行中", HALTED: "已停止", CLOSED_PARTIAL: "部分平仓", NO_TRADE: "未交易", UNKNOWN: "未知" },
       empty: {
-        title: "还没有可看的",
-        body: "dashboard 读的是 TradeAgent 运行时写下的状态。先看演示，或者直接把真家伙装起来：",
+        title: "欢迎使用 TradeAgent",
+        body: "登录 Robinhood、开启 Autopilot 后，运行状态、AI 决策和交易记录都会显示在这里。按下面几步开始：",
       },
     },
   };
@@ -660,6 +650,11 @@
     return t(key) === key ? name : t(key);
   }
 
+  function checkFix(c) {
+    const key = "fixes." + c.check;
+    return lang === "zh" && t(key) !== key ? t(key) : c.fix;
+  }
+
   function withCode(text) {
     return String(text).split("`").map((part, i) => (i % 2 ? h("code", { text: part }) : part));
   }
@@ -685,8 +680,7 @@
       else if (trade) {
         cls = "busy";
         text = t("pulse.trade", { sym: trade.orders[0]?.symbol || "", when: trade.exit_due ? fmtTime(trade.exit_due) : "" });
-      } else if (d.demo) { cls = "demo"; text = t("pulse.demo"); }
-      else if (next) { cls = "idle"; text = t("pulse.idle", { when: fmtDateTime(next), rel: rel(next) }); }
+      } else if (next) { cls = "idle"; text = t("pulse.idle", { when: fmtDateTime(next), rel: rel(next) }); }
       else if (d.jobs.length && d.jobs.every((j) => j.timer && !j.timer.enabled)) { text = t("pulse.disabled"); }
       else if (d.jobs.length) { cls = "idle"; text = t("pulse.idleNoTime"); }
       else { text = t("pulse.none"); }
@@ -701,7 +695,6 @@
     const el = document.getElementById("banner");
     const d = state.data;
     const parts = [];
-    if (d?.demo) parts.push(h("div", {}, h("strong", { text: t("banner.demo") }), h("span", { class: "muted", text: t("banner.demoHint") })));
     if (d?.errors?.length) {
       parts.push(h("div", {}, h("strong", { text: t("banner.errors") }), ...d.errors.map((e) => h("code", { text: e.path + ": " + e.message }))));
     }
@@ -712,9 +705,8 @@
   function renderFoot() {
     const d = state.data;
     document.getElementById("foot").replaceChildren(
-      h("span", { text: t("foot.readonly") + " " }),
-      state.fetchedAt ? h("span", { text: t("foot.updated", { rel: rel(state.fetchedAt / 1000) }) + t("stop") }) : null,
-      d ? h("span", { class: "muted", text: "  v" + d.version }) : null,
+      state.fetchedAt ? h("span", { text: t("foot.updated", { rel: rel(state.fetchedAt / 1000) }) }) : null,
+      d ? h("span", { class: "muted", text: "   TradeAgent " + d.version }) : null,
     );
   }
 
@@ -848,11 +840,7 @@
     const d = state.data;
     const panel = h("section", { class: "panel" }, h("h3", { text: t("jobs.title") }));
     if (!d.jobs.length) {
-      if (d.demo) panel.append(h("p", { class: "small muted", text: t("jobs.noneDemo") }));
-      else {
-        const cmd = d.setup.steps.find((s) => s.id === "autopilot")?.command;
-        panel.append(h("p", { class: "small muted", text: t("jobs.none") }), cmd ? h("code", { class: "small", text: cmd }) : null);
-      }
+      panel.append(h("p", { class: "small muted", text: t("jobs.none") }));
       return panel;
     }
     for (const j of d.jobs) {
@@ -881,10 +869,10 @@
 
   function tradingPanel() {
     const d = state.data;
-    const panel = h("section", { class: "panel" }, h("h3", { text: d.demo ? t("trading.demoTitle") : t("trading.title") }));
-    if (!d.demo) {
+    const panel = h("section", { class: "panel" }, h("h3", { text: t("trading.title") }));
+    {
       const settings = d.live?.settings;
-      if (!settings) panel.append(h("p", { class: "small muted", text: t("trading.notConnected") }), h("code", { class: "small", text: "tradeagent login" }));
+      if (!settings) panel.append(h("p", { class: "small muted", text: t("trading.notConnected") }));
       else {
         panel.append(h("dl", { class: "kv" },
           h("dt", { text: t("trading.symbols") }), h("dd", { text: (settings.symbols || []).join(", ") || "—" }),
@@ -895,7 +883,7 @@
         ));
       }
     }
-    const runs = d.executions.filter((r) => d.demo || r.mode === "LIVE");
+    const runs = d.executions.filter((r) => r.mode === "LIVE");
     const current = runs.find((r) => r.in_progress);
     const last = current || runs[0];
     if (last) {
@@ -905,7 +893,7 @@
         last.realized_pnl != null ? h("div", { class: "small " + tone(last.realized_pnl), text: money(last.realized_pnl) }) : null,
         current && last.exit_due ? h("div", { class: "small muted", text: t("trading.exitsAt", { when: fmtTime(last.exit_due) }) }) : null,
       ));
-    } else if (!d.demo && d.live?.settings) {
+    } else if (d.live?.settings) {
       panel.append(h("p", { class: "small muted", text: t("trading.noRuns") }));
     }
     return panel;
@@ -914,7 +902,7 @@
   function setupPanel() {
     const d = state.data;
     const steps = d.setup.steps;
-    if (steps.every((s) => s.done !== false) && !d.demo) return null;
+    if (steps.every((s) => s.done !== false)) return null;
     const list = h("ol", { class: "steps" }, ...steps.map((s) =>
       h("li", { class: s.done ? "done" : "" }, h("div", { text: t("setup.steps." + s.id) }), !s.done && s.command ? h("code", { text: s.command }) : null)));
     // Sign-in and settings are already steps above; list only the other checks.
@@ -922,17 +910,15 @@
     const failing = d.setup.checks.filter((c) => c.status !== "ok" && !covered.has(c.check));
     return h("section", { class: "panel" }, h("h3", { text: t("setup.title") }), list,
       failing.length ? h("div", { class: "job" }, h("div", { class: "job-name", text: t("setup.check") }),
-        ...failing.map((c) => h("div", { class: "small" }, h("span", { class: "status " + c.status, text: checkName(c.check) }), c.fix ? h("div", { class: "muted" }, withCode(c.fix)) : null)))
+        ...failing.map((c) => h("div", { class: "small" }, h("span", { class: "status " + c.status, text: checkName(c.check) }), c.fix ? h("div", { class: "muted" }, withCode(checkFix(c))) : null)))
         : h("p", { class: "small muted", text: t("setup.ready") }));
   }
 
   // ------------------------------------------------------------------ overview
 
   function emptyState() {
-    return h("section", { class: "section" }, h("div", { class: "empty stack" },
-      h("h2", { text: t("empty.title") }), h("p", { text: t("empty.body") }),
-      h("p", {}, h("code", { text: "tradeagent dashboard --demo" })),
-      h("p", {}, h("code", { text: "tradeagent login" }), "  ", h("code", { text: "tradeagent run-once --paper --state-dir ~/tradeagent-paper" }))));
+    return h("section", { class: "welcome" }, h("div", { class: "stack" },
+      h("h2", { text: t("empty.title") }), h("p", { text: t("empty.body") })));
   }
 
   function verdictChip(v, base) {
@@ -963,8 +949,14 @@
     const left = h("section", { class: "section" },
       h("div", { class: "section-head" }, h("h2", { text: t("decisions.title") }), h("a", { class: "push small", href: "#/activity", text: t("decisions.all") })),
       recent.length ? recent.map(decisionCard) : h("p", { class: "empty", text: t("decisions.empty") }));
+    if (nothing) {
+      // First run: the welcome and the setup steps take the main column.
+      return [ribbon(), h("div", { class: "cols" },
+        h("div", { class: "section" }, emptyState(), setupPanel()),
+        h("div", { class: "section" }, jobsPanel(), tradingPanel()))];
+    }
     const right = h("div", { class: "section" }, jobsPanel(), tradingPanel(), setupPanel());
-    return [ribbon(), nothing ? emptyState() : null, h("div", { class: "cols" }, left, right), snapshot()];
+    return [ribbon(), h("div", { class: "cols" }, left, right), snapshot()];
   }
 
   // ------------------------------------------------------------------ research
@@ -1129,12 +1121,12 @@
     const d = state.data;
     const parts = [h("div", { class: "section-head" }, h("h2", { text: t("research.title") })), h("p", { class: "lede", text: t("research.lede") })];
     if (!d.research.length && !d.labs.length) {
-      parts.push(h("div", { class: "empty stack" }, h("p", { text: t("research.none") + " " + t("research.noneHint") }), h("code", { text: "tradeagent dashboard --demo" })));
+      parts.push(h("div", { class: "empty stack" }, h("p", { text: t("research.none") + " " + t("research.noneHint") }), h("code", { text: d.setup.steps.find((s) => s.id === "autopilot")?.command || "" })));
     }
     for (const r of d.research) {
       const q = t("questions." + r.protocol);
       parts.push(h("section", { class: "protocol" },
-        h("div", { class: "section-head" }, h("h2", { text: protoName(r.protocol) }), evidenceBadge(r.evidence_kind), r.path && !d.demo ? h("span", { class: "aside mono", text: r.path }) : null),
+        h("div", { class: "section-head" }, h("h2", { text: protoName(r.protocol) }), evidenceBadge(r.evidence_kind)),
         q.startsWith("questions.") ? null : h("p", { class: "lede", text: q }),
         r.scored ? [progress(r), armsTable(r), chartPlaceholder(r)]
           : h("p", { class: "empty" }, t("research.ownReport"), r.report ? [" ", h("code", { text: r.report })] : null),
@@ -1194,7 +1186,7 @@
     const d = state.data;
     const head = [h("div", { class: "section-head" }, h("h2", { text: t("trades.title") })), h("p", { class: "lede", text: t("trades.lede") })];
     if (!d.executions.length) {
-      return h("section", { class: "section" }, ...head, h("div", { class: "empty stack" }, h("p", { text: t("trades.empty") }), h("code", { text: "tradeagent run-once --paper --state-dir ~/tradeagent-paper" })));
+      return h("section", { class: "section" }, ...head, h("div", { class: "empty stack" }, h("p", { text: t("trades.empty") }), h("code", { text: "tradeagent run-once --live" })));
     }
     const fill = (run, side) => {
       const o = run.orders.find((x) => x.side === side);

@@ -1,4 +1,4 @@
-"""Build a synthetic workspace so the dashboard has something to show before setup.
+"""Synthetic TradeAgent state for dashboard tests.
 
 Everything here runs the real research and execution code against generated
 market data: the strategy lab demo, a paper round trip on the simulated broker,
@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from ..calendar import session_bounds
+from tradeagent.calendar import session_bounds
 
 NY = ZoneInfo("America/New_York")
 DEMO_SESSIONS = 21  # just past the 20 paired sessions a comparison needs
@@ -186,7 +186,7 @@ def synthetic_assessment(report):
 
 def _sessions(end, count):
     days, day = [], end
-    from ..prospective import daily
+    from tradeagent.prospective import daily
 
     while len(days) < count:
         if daily.window(day):
@@ -197,7 +197,7 @@ def _sessions(end, count):
 
 def build_daily(directory, *, sessions=DEMO_SESSIONS, end=None):
     """Run the real daily four-arm pipeline over synthetic sessions; zero orders."""
-    from ..prospective import daily
+    from tradeagent.prospective import daily
 
     directory = Path(directory)
     end = end or datetime.now(NY).date() - timedelta(days=1)
@@ -244,8 +244,8 @@ def build(directory, *, rebuild=False, sessions=DEMO_SESSIONS):
     if not marker.exists():
         directory.mkdir(parents=True, exist_ok=True)
         directory.chmod(0o700)
-        from ..oneshot import run_paper
-        from ..research.demo import run_demo
+        from tradeagent.oneshot import run_paper
+        from tradeagent.research.demo import run_demo
 
         run_demo(directory / "lab")
         run_paper(directory / "paper", "25", 3600, 3, "full_fill", "full_fill", None)

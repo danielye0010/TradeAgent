@@ -9,11 +9,9 @@
   with fills, P&L and the execution timeline. Finds installed timers and the live run
   automatically; English and Simplified Chinese; light and dark. Loopback only, GET
   only, Host-checked, strict CSP, SQLite opened read-only; never reads tokens.
-- `tradeagent dashboard --demo`: builds a synthetic workspace once (strategy lab, a
-  paper round trip, 21 daily four-arm sessions through the real pipeline) so the
-  dashboard can be explored before any setup.
 - READMEs rewritten: a TL;DR up top, dashboard screenshots, about a third shorter;
-  details moved to `docs/` (new `docs/dashboard.md`).
+  details moved to `docs/` (new `docs/dashboard.md`). The Chinese README and dashboard
+  copy are written natively rather than translated.
 
 ## 1.0.0-beta.9 — 2026-10-15
 

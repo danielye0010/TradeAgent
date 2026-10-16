@@ -77,15 +77,13 @@ class Workspace:
         self,
         state_dirs=(),
         *,
-        demo=False,
         auto=True,
         live_dir=None,
         config_path=None,
         unit_dir=None,
         doctor=True,
     ):
-        self.demo = demo
-        self.auto = auto and not demo
+        self.auto = auto
         self.state_dirs = [Path(p).expanduser() for p in state_dirs]
         self.config_path = Path(config_path).expanduser() if config_path else default_config()
         self.live_dir = (
@@ -124,7 +122,7 @@ class Workspace:
             )
 
         for path in self.state_dirs:
-            add(path, "demo" if self.demo else "explicit")
+            add(path, "explicit")
         for job in self.jobs():
             if job["state_dir"]:
                 add(job["state_dir"], "job", job["unit"], job["kind"])
@@ -190,17 +188,14 @@ class Workspace:
             )
         schedule = self.schedule(jobs, research)
         checks = self.setup_checks()
-        live = None
-        if not self.demo:
-            live = {
-                "settings": readers.live_settings(self.config_path),
-                "kill_switch": (self.live_dir / "KILL").exists(),
-                "state_dir": str(self.live_dir),
-            }
+        live = {
+            "settings": readers.live_settings(self.config_path),
+            "kill_switch": (self.live_dir / "KILL").exists(),
+            "state_dir": str(self.live_dir),
+        }
         payload = {
             "generated_at": now,
             "version": version(),
-            "demo": self.demo,
             "market": market_clock(now),
             "jobs": jobs,
             "schedule": schedule,
@@ -210,7 +205,7 @@ class Workspace:
             "live": live,
             "setup": {
                 "checks": checks,
-                "steps": self.steps(checks, jobs, research, executions, self.demo),
+                "steps": self.steps(checks, jobs, research, executions),
             },
             "activity": self.activity(research, executions, labs),
             "errors": errors,
@@ -251,15 +246,10 @@ class Workspace:
         return {"example": True, "marks": marks}
 
     @staticmethod
-    def steps(checks, jobs, research, executions, demo=False):
+    def steps(checks, jobs, research, executions):
         status = {c["check"]: c["status"] for c in checks}
         return [
             {"id": "install", "done": True},
-            {
-                "id": "demo",
-                "done": True if demo else None,
-                "command": "tradeagent dashboard --demo",
-            },
             {
                 "id": "login",
                 "done": status.get("Robinhood sign-in") == "ok"
@@ -476,16 +466,6 @@ def main(argv=None):
     )
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     parser.add_argument(
-        "--demo", action="store_true", help="show a synthetic workspace (no accounts needed)"
-    )
-    parser.add_argument(
-        "--demo-dir",
-        type=Path,
-        default=None,
-        help="where the demo workspace lives (default: ~/.cache/tradeagent/dashboard-demo)",
-    )
-    parser.add_argument("--rebuild-demo", action="store_true", help="regenerate the demo data")
-    parser.add_argument(
         "--state-dir",
         type=Path,
         action="append",
@@ -501,18 +481,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     dirs = list(args.state_dir)
-    if args.demo:
-        from .demo import build
-
-        demo_dir = args.demo_dir or Path.home() / ".cache/tradeagent/dashboard-demo"
-        fresh = not (demo_dir / "demo-workspace.json").exists() or args.rebuild_demo
-        if fresh:
-            print(
-                "Building the demo workspace (synthetic data, about a minute, only once)...",
-                flush=True,
-            )
-        dirs = build(demo_dir, rebuild=args.rebuild_demo) + dirs
-    workspace = Workspace(dirs, demo=args.demo, auto=not args.no_discover)
+    workspace = Workspace(dirs, auto=not args.no_discover)
     server, port = serve(workspace, args.port)
     url = f"http://127.0.0.1:{port}/"
     print(f"TradeAgent dashboard: {url}")

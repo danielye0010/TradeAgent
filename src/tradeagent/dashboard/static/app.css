@@ -307,6 +307,9 @@ main { padding-top: 24px; padding-bottom: 56px; outline: none; }
 .steps li.done::before { content: "✓"; background: var(--signal); border-color: var(--signal); color: var(--panel); }
 .steps li.done { color: var(--muted); }
 .steps code { display: inline-block; margin-top: 3px; padding: 2px 6px; background: var(--panel-2); border-radius: 4px; word-break: break-all; }
+.welcome { margin-bottom: 14px; }
+.welcome h2 { font-size: 24px; letter-spacing: -0.02em; }
+.welcome p { color: var(--ink-2); max-width: 64ch; }
 .empty {
   border: 1px dashed var(--line-strong); border-radius: var(--radius-m); padding: 18px;
   color: var(--ink-2);

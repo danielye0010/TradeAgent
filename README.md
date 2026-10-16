@@ -19,9 +19,8 @@
 > - **What you get:** a daily autopilot that paper-trades every session on its own,
 >   one-command live trades with hard caps and an automatic exit, and a local dashboard
 >   that shows what is running, what the AI picked and why, and how each approach scores.
-> - **Start:** `pipx install tradeagent`, then `tradeagent dashboard --demo`. No accounts needed.
+> - **Start:** `pipx install tradeagent`, `tradeagent login`, `tradeagent dashboard`.
 
-![TradeAgent dashboard: today's schedule, the latest AI decisions and the autopilot](https://raw.githubusercontent.com/danielye0010/TradeAgent/main/docs/images/dashboard-overview.png)
 
 ## How it works
 
@@ -59,19 +58,15 @@ ChatGPT plan, with no per-token API bill.
 Linux or WSL2, Python 3.12+.
 
 ```bash
-pipx install tradeagent          # Ubuntu/WSL: sudo apt install pipx first
-tradeagent dashboard --demo      # the dashboard on a synthetic workspace
-tradeagent run-once --paper --state-dir ~/tradeagent-paper   # a full buy/sell round trip, simulated
+pipx install tradeagent   # Ubuntu/WSL: sudo apt install pipx first
+tradeagent login          # browser sign-in; creates ~/.config/tradeagent/tradeagent.toml
+tradeagent doctor         # what's set up, what's next
+tradeagent live-check     # account, permissions and quotes, no orders
+tradeagent dashboard      # opens the dashboard in the browser
 ```
 
-Connect Robinhood when ready. `login` opens the standard OAuth sign-in Robinhood offers to
-AI apps and sets up a separate **agentic account**, so the main portfolio stays untouched:
-
-```bash
-tradeagent login        # browser sign-in; creates ~/.config/tradeagent/tradeagent.toml
-tradeagent doctor       # offline checklist: what's set up, what's next
-tradeagent live-check   # read-only: account, permissions, quotes
-```
+`login` uses the standard OAuth sign-in Robinhood offers to AI apps and sets up a separate
+**agentic account**, so the main portfolio stays untouched.
 
 `tradeagent.toml` is the one file that controls real money:
 
@@ -92,7 +87,6 @@ own. Today's session as a timeline, every frozen decision with Codex's reasoning
 results against SPY and Random, and every trade with its fills. Local and read-only.
 [More](https://github.com/danielye0010/TradeAgent/blob/main/docs/dashboard.md)
 
-![Research view: per-arm results, verdicts and the cumulative chart](https://raw.githubusercontent.com/danielye0010/TradeAgent/main/docs/images/dashboard-research.png)
 
 **Daily autopilot.** A systemd timer runs the research loop every trading day, no chat
 window, no real orders. From a clone of this repo:
