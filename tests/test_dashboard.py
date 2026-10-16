@@ -254,3 +254,54 @@ def test_static_assets_avoid_inline_code_and_unsafe_html():
     assert "<script>" not in html and "style=" not in html
     assert "innerHTML" not in script and "eval(" not in script
     assert os.path.getsize(root / "app.js") < 200_000
+
+
+def test_live_directory_follows_the_configured_state_dir(tmp_path):
+    config = tmp_path / "tradeagent.toml"
+    custom = tmp_path / "elsewhere" / "live"
+    config.write_text(f'[live]\nstate_dir = "{custom}"\nsymbols = ["QQQ"]\n')
+    assert readers.configured_live_dir(config, tmp_path / "default") == custom.resolve()
+    config.write_text('[live]\nstate_dir = "relative/path"\n')
+    assert readers.configured_live_dir(config, tmp_path / "default") == tmp_path / "default"
+    assert readers.configured_live_dir(tmp_path / "absent.toml", tmp_path / "d") == tmp_path / "d"
+    config.write_text(f'[live]\nstate_dir = "{custom}"\n')
+    ws = Workspace([], config_path=config, doctor=False, unit_dir=tmp_path / "units")
+    assert ws.live_dir == custom.resolve()
+
+
+def test_protocols_with_their_own_scoring_are_listed_not_misread(workspace_dirs, tmp_path):
+    import shutil
+
+    copy = tmp_path / "v3"
+    shutil.copytree(workspace_dirs / "daily", copy)
+    deployment = json.loads((copy / "daily-deployment.json").read_text())
+    deployment["config"]["protocol"] = "daily-bidirectional-v3"
+    (copy / "daily-deployment.json").write_text(json.dumps(deployment))
+    state = readers.daily_state(copy)
+    assert state["scored"] is False and state["arms"] == [] and state["series"] == []
+    assert state["valid_paired_days"] == 0 and state["report"].endswith("daily-report.md")
+    assert all(run["outcome"] is None for run in state["runs"])
+
+
+def test_ribbon_shows_only_enabled_daily_schedules(tmp_path):
+    (tmp_path / "tradeagent-daily-research.service").write_text(
+        "[Service]\nExecStart=/venv/bin/python -m tradeagent.prospective.daily "
+        "--state-dir /srv/research/daily --oauth-helper /x\n"
+    )
+    (tmp_path / "tradeagent-daily-research.timer").write_text(
+        "[Timer]\nOnCalendar=Mon..Fri *-*-* 10:00:00 America/New_York\n"
+    )
+    (tmp_path / "tradeagent-continuous-v5.service").write_text(
+        "[Service]\nExecStart=/venv/bin/python -m tradeagent.prospective.continuous "
+        "--state-dir /srv/research/v5\n"
+    )
+    (tmp_path / "tradeagent-continuous-v5.timer").write_text(
+        "[Timer]\nOnCalendar=Mon..Fri *-*-* 09:31..59:00 America/New_York\n"
+    )
+    found = jobs.discover(tmp_path, systemctl=False)
+    schedule = Workspace.schedule(None, found, [])
+    assert schedule["example"] is False
+    assert [m["unit"] for m in schedule["marks"]] == ["tradeagent-daily-research"]
+    next(j for j in found if j["kind"] == "daily")["timer"] = {"enabled": False}
+    disabled = Workspace.schedule(None, found, [])
+    assert disabled == {"example": False, "marks": []}

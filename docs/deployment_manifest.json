@@ -29,8 +29,8 @@
     "src/tradeagent/dashboard/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "src/tradeagent/dashboard/demo.py": "ae4b62bffb653c436d5630ef2d3dbab0b714efdc9b22f1f5cbcdc50829d356d5",
     "src/tradeagent/dashboard/jobs.py": "8c582d472005e4de0d2daecdcd60c2986e0e2d239bd55f3855c71ba678f10bf0",
-    "src/tradeagent/dashboard/readers.py": "379ff2b0bd2c8365c494e780eb8d2ff0076497615bbe21cf9b6d83c27032f4dd",
-    "src/tradeagent/dashboard/server.py": "428a0035910ecfcd46d49f5a304497fd9bfd290cfa3d488e48e7fc1f56ed4a4b",
+    "src/tradeagent/dashboard/readers.py": "382f0f24146a0126317dabe8181f70c08c75d0311b47b733e208ff752a0ef181",
+    "src/tradeagent/dashboard/server.py": "7c0b9fb29c8b5fa3d3abfecbc3cf47c2b7def785150039ac19fc7a8fa5498b6d",
     "src/tradeagent/demo.py": "f561d340185e51ddeddc371bfbddf091a5902a09842aaf66af96ca34a608d67a",
     "src/tradeagent/doctor.py": "5421f2aa00f0c6aa1e4a594b4fd06f61126edaf7a0c3b6d591f454dcbcc9d892",
     "src/tradeagent/execution.py": "68ad4c75ffc857fa420b96e11c9bba836c6c6fae63fceb551fda09c5062d2369",
@@ -132,7 +132,7 @@
     "tests/test_daily_reporting.py": "b11acdcd2ce21b21aa7ea2c633ae5747c604cfabdf59b707ef02d7cfdf2785ee",
     "tests/test_daily_research.py": "f8f59118500905cd4bc8742a85938f7dd01234c5d45fede64fa8a4f7e1bf11b0",
     "tests/test_daily_signal_timing.py": "9a6a876884a3d99081a39131bee4458087b1f7f5b1f837a3d13a60354dd79919",
-    "tests/test_dashboard.py": "29ec29e4e9d1db165b1c1b2b3c4d6300b2a5f6dcb872052c9b1e10fe34d1aa7d",
+    "tests/test_dashboard.py": "56e366ca081648ef8914129a99c42f8ef327ae3ff9ac4a9ba148b13b4bdfba63",
     "tests/test_doctor.py": "65fc0aced9cde3aabbae2f20c5f50d5a6883cd7b9667ed9f90510896d9c6a517",
     "tests/test_events_v6.py": "753f0d0678a9c4987025c495ceff282df436b68165e77f165f6b8584e5b523a3",
     "tests/test_evidence_cohorts.py": "3c9b35eb2e056ebd6c5898f49dae454054d2a52eb96b1848cb33869ecf4d0dcf",
@@ -164,5 +164,5 @@
     "tests/test_tradeplan_engine.py": "8cb9735d0e593cfa49bb6d4ddb33093ef8e76d33d6cd06752ab18cb10dd5e80f",
     "tests/test_v5_supplement.py": "b8fc88af047f2a5a3c0c645613f16886bb4fa6b7175b7ef6d13263ce3ab1e770"
   },
-  "framework_sha256": "e372c3ee2e03a9e0343eeba1130384789a4c3196019a04837a504fac5e14d6cf"
+  "framework_sha256": "05d3a0735ee99715c56d1ffebbfbb58386c6e45adc0749e9bd354d6a322f0144"
 }

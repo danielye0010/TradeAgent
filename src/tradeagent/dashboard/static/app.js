@@ -160,6 +160,7 @@
         },
         ci: "95% range {lo} to {hi}",
         star: "★ marks a challenger: a mutated version the lab is testing against its parent.",
+        ownReport: "This protocol scores long and short sleeves with its own method; the dashboard lists its sessions, and the full scoring is in its report:",
       },
       activity: {
         title: "Activity",
@@ -386,6 +387,7 @@
         },
         ci: "95% 区间 {lo} 到 {hi}",
         star: "★ 是挑战者：实验室从原策略变异出来、正在和原版对打的新版本。",
+        ownReport: "这个协议按多空两条腿单独打分，dashboard 只列出它的交易日，完整成绩看它自己的报告：",
       },
       activity: {
         title: "动态",
@@ -943,10 +945,10 @@
 
   function snapshot() {
     const d = state.data;
-    if (!d.research.length) return null;
+    if (!d.research.some((r) => r.scored)) return null;
     return h("section", { class: "section" },
       h("div", { class: "section-head" }, h("h2", { text: t("snapshot.title") }), h("a", { class: "push small", href: "#/research", text: t("snapshot.more") })),
-      ...d.research.map((r) => h("div", { class: "panel" },
+      ...d.research.filter((r) => r.scored).map((r) => h("div", { class: "panel" },
         h("div", { class: "decision-head" }, h("span", { class: "when", text: protoName(r.protocol) }), h("span", { class: "badges" }, evidenceBadge(r.evidence_kind))),
         progress(r),
         h("div", { class: "arms" }, ...r.arms.map((a) => h("span", { class: "arm" },
@@ -1134,7 +1136,8 @@
       parts.push(h("section", { class: "protocol" },
         h("div", { class: "section-head" }, h("h2", { text: protoName(r.protocol) }), evidenceBadge(r.evidence_kind), r.path && !d.demo ? h("span", { class: "aside mono", text: r.path }) : null),
         q.startsWith("questions.") ? null : h("p", { class: "lede", text: q }),
-        progress(r), armsTable(r), chartPlaceholder(r),
+        r.scored ? [progress(r), armsTable(r), chartPlaceholder(r)]
+          : h("p", { class: "empty" }, t("research.ownReport"), r.report ? [" ", h("code", { text: r.report })] : null),
         h("div", { class: "section" }, h("div", { class: "section-head" }, h("h3", { text: t("research.recent") })), recentTable(r))));
     }
     for (const lab of d.labs) parts.push(labSection(lab));

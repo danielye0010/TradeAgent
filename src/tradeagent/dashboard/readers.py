@@ -319,10 +319,15 @@ def daily_state(directory):
                 "pending": bool(decision) and outcome is None,
             }
         )
+    supported = protocol in ARMS
     pools = (status.get("comparison") or {}).get("evidence_pools") or {}
+    if not supported:
+        # v3/v4 score long/short sleeves with their own schema; list their sessions and
+        # point to the protocol's own report instead of misreading them as v1/v2 arms.
+        pools = {}
     pool_name = config.get("evidence_kind") or next(iter(pools), "prospective")
     pool = pools.get(pool_name) or {}
-    arms = ARMS.get(protocol) or list((pool.get("arms") or {}).keys())
+    arms = ARMS.get(protocol, [])
     baseline = BASELINE.get(protocol)
     arm_rows = []
     for name in arms:
@@ -342,6 +347,10 @@ def daily_state(directory):
                 "vs_baseline_verdict": verdict(excess_diff) if name != baseline else None,
             }
         )
+    if not supported:
+        for run in runs:
+            run["outcome"] = None
+            run["pending"] = False
     series = []
     for run in runs:
         outcome = run["outcome"]
@@ -363,9 +372,18 @@ def daily_state(directory):
             "mode": config.get("mode"),
         },
         "last_tick": status.get("tick_completed_at"),
+        "scored": supported,
+        "report": next(
+            (
+                str(directory / name)
+                for name in ("daily-report.md", "daily-pnl.md")
+                if (directory / name).is_file()
+            ),
+            None,
+        ),
         "frozen_sessions": pool.get("frozen_sessions", len(decisions)),
-        "resolved_sessions": pool.get("resolved_sessions", len(outcomes)),
-        "valid_paired_days": pool.get("valid_paired_days", len(series)),
+        "resolved_sessions": pool.get("resolved_sessions", len(outcomes)) if supported else 0,
+        "valid_paired_days": pool.get("valid_paired_days", len(series)) if supported else 0,
         "pending_sessions": len(status.get("pending_sessions") or []),
         "baseline": baseline,
         "arms": arm_rows,
@@ -516,6 +534,18 @@ def execution_history(directory):
                 runs.append(view)
     runs.sort(key=lambda r: r.get("started") or 0, reverse=True)
     return runs
+
+
+def configured_live_dir(path, default):
+    """The live state directory the engine uses: `[live].state_dir` when set, else the default."""
+    try:
+        data = tomllib.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return Path(default)
+    value = (data.get("live") or {}).get("state_dir")
+    if isinstance(value, str) and Path(value).is_absolute():
+        return Path(value).resolve()
+    return Path(default)
 
 
 def live_settings(path):

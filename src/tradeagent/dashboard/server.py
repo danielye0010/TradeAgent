@@ -87,8 +87,12 @@ class Workspace:
         self.demo = demo
         self.auto = auto and not demo
         self.state_dirs = [Path(p).expanduser() for p in state_dirs]
-        self.live_dir = Path(live_dir).expanduser() if live_dir else default_live_state()
         self.config_path = Path(config_path).expanduser() if config_path else default_config()
+        self.live_dir = (
+            Path(live_dir).expanduser()
+            if live_dir
+            else readers.configured_live_dir(self.config_path, default_live_state())
+        )
         self.unit_dir = unit_dir
         self.doctor = doctor
         self._doctor = {"at": 0.0, "value": None}
@@ -224,9 +228,12 @@ class Workspace:
     def schedule(self, jobs, research):
         marks = []
         for job in jobs:
+            # Only daily research has decide/score/report steps; a disabled timer is not due.
+            if job["kind"] != "daily" or (job["timer"] and not job["timer"]["enabled"]):
+                continue
             for item in job["schedule"]:
                 marks.append({**item, "protocol": job["protocol"], "unit": job["unit"]})
-        if marks:
+        if marks or any(j["kind"] == "daily" for j in jobs):
             return {"example": False, "marks": marks}
         protocols = [r["protocol"] for r in research] or ["daily-four-arm-v1"]
         for protocol in dict.fromkeys(protocols):
