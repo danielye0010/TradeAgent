@@ -22,6 +22,10 @@
 >   Options trading (calls and puts) is coming soon.
 > - **Start:** `pipx install tradeagent`, `tradeagent login`, `tradeagent dashboard`.
 
+![Latest decisions in the dashboard: each arm's pick and its net result](https://raw.githubusercontent.com/danielye0010/TradeAgent/main/docs/images/dashboard-decisions.png)
+
+<sub>The dashboard on real Paper data, Oct 14–16, 2026 ([full records](https://github.com/danielye0010/TradeAgent/blob/main/docs/evidence/2026-10-16/README.md)).</sub>
+
 
 ## How it works
 
@@ -98,6 +102,8 @@ hold_seconds = 3600        # sell automatically after an hour
 own. Today's session as a timeline, every frozen decision with Codex's reasoning, per-arm
 results against SPY and Random, and every trade with its fills. Local and read-only.
 [More](https://github.com/danielye0010/TradeAgent/blob/main/docs/dashboard.md)
+
+![Research view: per-arm results and progress toward a verdict](https://raw.githubusercontent.com/danielye0010/TradeAgent/main/docs/images/dashboard-research.png)
 
 
 **Daily autopilot.** A systemd timer runs the research loop every trading day, no chat

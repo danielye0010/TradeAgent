@@ -979,7 +979,7 @@
         const ex = a.excess || {};
         return h("tr", {},
           h("td", {}, h("span", { class: "arm" }, h("i", { class: "key", style: `background:${armColor(a.arm)}` }), armName(a.arm))),
-          h("td", { class: "n", text: `${a.selected_days}/${a.observed_days}` }),
+          h("td", { class: "n", text: `${a.selected_days}/${r.frozen_sessions}` }),
           h("td", { class: "n " + tone(a.mean_net), text: pct(a.mean_net) }),
           h("td", { class: "n" }, h("span", { class: tone(ex.mean), text: pct(ex.mean) }),
             ex.standard_error != null && ex.days >= 2 ? h("span", { class: "muted small", text: ` ±${(1.96 * ex.standard_error * 100).toFixed(2)}` }) : null),
@@ -1076,13 +1076,17 @@
   function recentTable(r) {
     const rows = r.runs.slice(-12).reverse();
     const arms = r.arms.map((a) => a.arm);
+    // The pick column needs Codex's ranking; without it, failures still need a place.
+    const ranked = rows.some((run) => run.decision?.candidates.some((c) => c.analysis?.price));
+    const failures = rows.some((run) => run.failure_kind);
+    const pickCol = ranked || failures;
     return h("div", { class: "table-wrap" }, h("table", {},
-      h("thead", {}, h("tr", {}, h("th", { text: t("research.date") }), h("th", { text: t("research.pick") }), ...arms.map((a) => h("th", { class: "n", text: armName(a) })))),
+      h("thead", {}, h("tr", {}, h("th", { text: t("research.date") }), pickCol ? h("th", { text: ranked ? t("research.pick") : "" }) : null, ...arms.map((a) => h("th", { class: "n", text: armName(a) })))),
       h("tbody", {}, ...rows.map((run) => {
         const top = run.decision?.candidates.find((c) => c.analysis?.price?.rank === 1);
         const tr = h("tr", { class: run.decision ? "click" : "", tabindex: run.decision ? "0" : null },
           h("td", { text: fmtDay(run.session_date) }),
-          h("td", {}, top ? [top.symbol, " ", h("span", { class: "stance " + top.analysis.price.stance, text: t("stance." + top.analysis.price.stance) })] : h("span", { class: "muted", text: run.failure_kind ? t("failures." + run.failure_kind) : "—" })),
+          pickCol ? h("td", {}, top ? [top.symbol, " ", h("span", { class: "stance " + top.analysis.price.stance, text: t("stance." + top.analysis.price.stance) })] : h("span", { class: "muted", text: run.failure_kind ? t("failures." + run.failure_kind) : ranked ? "—" : "" })) : null,
           ...arms.map((a) => {
             const res = run.outcome?.arms?.[a];
             const pick = run.decision?.arms?.[a];

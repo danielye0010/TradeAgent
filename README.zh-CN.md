@@ -19,6 +19,10 @@
 >   本地 Dashboard 集中展示运行状态、AI 的选择和理由，以及各策略的表现。期权（Call/Put）交易即将上线。
 > - **快速开始**：`pipx install tradeagent`、`tradeagent login`、`tradeagent dashboard`。
 
+![Dashboard 最新决策：各组的选择和净收益](docs/images/dashboard-decisions.zh.png)
+
+<sub>Dashboard 展示的真实模拟盘数据，2026 年 10 月 14–16 日（[完整记录](docs/evidence/2026-10-16/README.md)）。</sub>
+
 
 ## 工作原理
 
@@ -92,6 +96,8 @@ hold_seconds = 3600        # 持有一小时后自动卖出
 **Dashboard。** `tradeagent dashboard` 会自动找到已安装的定时任务和实盘记录。今日交易时段以时间轴展示，
 每个锁定的决策都能点开查看 Codex 的分析，各组相对 SPY 和随机选股的表现、每笔交易的成交明细也都在这里。
 仅在本机运行，只读。[详细说明](docs/dashboard.md)
+
+![研究页：各组表现和样本进度](docs/images/dashboard-research.zh.png)
 
 
 **Autopilot。** 用 systemd 定时器在每个交易日自动运行，不需要打开聊天窗口，只跑模拟盘。需要先克隆仓库：
