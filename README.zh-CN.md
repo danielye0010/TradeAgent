@@ -18,10 +18,6 @@
 >   本地 Dashboard 集中展示运行状态、AI 的选择和理由，以及各策略的表现。期权（Call/Put）交易即将上线。
 > - **快速开始**：按[下面的步骤](#快速开始)安装，并分别登录 Codex 和 Robinhood。
 
-![Dashboard 最新决策：各组的选择和净收益](docs/images/dashboard-decisions.zh.png)
-
-<sub>Dashboard 展示的真实模拟盘数据，2026 年 10 月 14–16 日。</sub>
-
 ## 工作原理
 
 ```mermaid
