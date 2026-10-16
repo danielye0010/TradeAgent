@@ -16,7 +16,7 @@
 >   AI 到底有没有用，看数据。
 > - **主要功能**：Autopilot 每个交易日自动跑一轮模拟盘；一条命令完成实盘交易，带金额上限和自动平仓；
 >   本地 Dashboard 集中展示运行状态、AI 的选择和理由，以及各策略的表现。期权（Call/Put）交易即将上线。
-> - **快速开始**：`pipx install tradeagent`、`tradeagent login`、`tradeagent dashboard`。
+> - **快速开始**：按[下面的步骤](#快速开始)安装，并分别登录 Codex 和 Robinhood。
 
 ![Dashboard 最新决策：各组的选择和净收益](docs/images/dashboard-decisions.zh.png)
 
@@ -60,17 +60,34 @@ TradeAgent 专注补上其余方案缺的部分：
 
 ## 快速开始
 
-环境要求：Linux 或 WSL2，Python 3.12+。
+环境要求：Linux 或 WSL2，Python 3.12+。以下命令用同一个 Linux 用户执行，Windows 用户在 WSL 中操作。
+数据保存在 Linux 主目录下的 ext4/btrfs/xfs 本地磁盘，不要放在 `/mnt/c` 或网络盘。
+如果 pipx 默认用了旧版 Python，安装时加上 `--python python3.12`。
 
 ```bash
 pipx install tradeagent   # Ubuntu/WSL 需先 sudo apt install pipx
-tradeagent login          # 浏览器登录，同时生成 ~/.config/tradeagent/tradeagent.toml
-tradeagent doctor         # 检查环境，提示下一步
-tradeagent live-check     # 检查账户、权限和报价，不下单
-tradeagent dashboard      # 在浏览器里打开 Dashboard
+pipx ensurepath
+curl -fsSL https://chatgpt.com/codex/install.sh | sh  # Codex CLI 官方安装脚本
 ```
 
-`login` 使用 Robinhood 为 AI 应用提供的标准 OAuth 登录，并开通一个独立的 **Agent 账户**，主账户不受影响。
+重开终端，然后分别登录两个服务：
+
+```bash
+codex login              # ChatGPT 浏览器登录，账户需有 Codex 使用权限
+codex login status       # 确认 Codex 已登录；tradeagent doctor 只检查 CLI 是否存在
+tradeagent login         # Robinhood 浏览器登录，同时生成初始 TOML 配置
+tradeagent doctor        # 离线检查环境
+tradeagent live-check    # 只读检查账户、权限和报价，不下单
+tradeagent dashboard     # 打开本地 Dashboard，Ctrl+C 停止
+```
+
+AI 分析和 Autopilot 需要 Codex CLI。TradeAgent 会自动在后台调用
+[`codex exec`](https://learn.chatgpt.com/docs/non-interactive-mode)，**不需要一直开着 Codex 窗口**。
+未安装或未登录时，AI 分析会标记为不可用；查看 Dashboard 和手动交易不依赖 Codex。
+其他安装方式见 [Codex 官方指南](https://learn.chatgpt.com/docs/codex/cli)。
+
+`tradeagent login` 通过 Robinhood OAuth 连接独立的 **Agent 账户**。
+非交易时段 `live-check` 可能提示 NOT READY，不影响查看 Dashboard。
 
 实盘只认 `tradeagent.toml` 这一个配置文件：
 
@@ -92,21 +109,26 @@ hold_seconds = 3600        # 持有一小时后自动卖出
 
 ![研究页：各组表现和样本进度](docs/images/dashboard-research.zh.png)
 
-**Autopilot。** 用 systemd 定时器在每个交易日自动运行，不需要打开聊天窗口，只跑模拟盘。需要先克隆仓库：
+**Autopilot。** 需要单独安装定时任务，pipx 安装和打开 Dashboard 都不会自动开启。只跑模拟盘，
+需要 systemd 用户服务可用、电脑保持运行；Windows 用户还需保持 WSL 运行。在 Linux 主目录下克隆仓库：
 
 ```bash
 git clone https://github.com/danielye0010/TradeAgent.git && cd TradeAgent
 python3 -m venv .venv && source .venv/bin/activate && pip install -e .
 python scripts/install_shadow.py --daily --python "$PWD/.venv/bin/python" \
   --state-dir "$HOME/tradeagent-research/daily"
+systemctl --user list-timers tradeagent-daily-research.timer
 ```
+
+定时任务需要在 `~/.local/bin`、`/usr/local/bin`、`/usr/bin` 或 `/bin` 中找到 `codex`，
+不会继承仅在终端里设置的 PATH。每个研究协议需使用独立的数据目录。
 
 每天美东 10:00 扫描市场，由 Codex 对前三名排序，然后锁定四组选择，入场、出场和成本完全一致：
 **纯量化**、**纯 Codex**、**量化 + Codex**、**随机**。加上 `--protocol daily-news-v2` 还能测出读新闻能带来多少提升。
 [详细说明](docs/prospective-shadow.md)
 
-**直接问 Codex。** 在仓库里打开 [Codex CLI](https://github.com/openai/codex)，调用
-`trade-opportunity-analyst` skill，按下表原样输入：
+**直接问 Codex。** 先克隆仓库，或使用上面的已有目录；pipx 不会安装仓库里的 `.agents/skills`。
+在仓库目录运行 `codex`，调用 `trade-opportunity-analyst` skill，按下表原样输入：
 
 | 指令 | 效果 |
 | --- | --- |
