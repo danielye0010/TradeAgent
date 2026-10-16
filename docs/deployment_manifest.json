@@ -15,7 +15,7 @@
     "src/tradeagent/__init__.py": "4d6ac5a1a0ad94edd128dc9e0a30a6614df73456dbdc71ddad7e777731ee9221",
     "src/tradeagent/account_policy.py": "ac872bb24842f0defcb09960bfbd78d0dd94c52725835caa8df0a7e860114020",
     "src/tradeagent/accounting.py": "901e8f4d4682817402b54f5c2cc3d8c8fbf7ca514d3c207737a269b723450615",
-    "src/tradeagent/autotrade.py": "c23c6ec03836b31fcf82e326af42f95a5de77c8e31e1c44fea02ca87bfbb2056",
+    "src/tradeagent/autotrade.py": "5298046986496dcb42def9c4f038505da4379d09dcd0ebc745ff2a3b3c199c14",
     "src/tradeagent/broker.py": "76517b67ac2c5ade4918642ca4ef02c3ec54d7ace325a7e43e2b54c5984ddf97",
     "src/tradeagent/calendar.py": "77f40b61f84fb2f3b0064f6b87b5de1a8e5c9d9f3906fee24536a40ab1dcb37a",
     "src/tradeagent/canary_review.py": "8f308bba0c9dec6e6870b4366f77356fae63fddf658ab620a54cdb57816ddbe0",
@@ -118,7 +118,7 @@
     "tests/conftest.py": "28a01e1ab052c6da3d1576d66b0f59ee942fb18d3106bdccd215ba11639f3fb1",
     "tests/dashboard_fixtures.py": "8e4380e3bc7e067af4dbe41e802b038019661557b790543f537fead831043342",
     "tests/test_account_and_market_rules.py": "ebdb3d63a660990930473ae5dc847b8f9079fb5ee555d0552ad5b6170d2d465e",
-    "tests/test_autotrade.py": "6095503e0eb900b873d34cf2ba16e67741031bc6ea541787d186429c568124aa",
+    "tests/test_autotrade.py": "33c33c2397fbc5ba089138472536d1d2d7031b5ab2b5f552d7f11b118f1b041a",
     "tests/test_bidirectional.py": "45da54cd96543aba4889f684857bb91fcab6bc86096b1a6bb7f0fad3b1c9b043",
     "tests/test_broker_contract.py": "187d61ecf92092889d54718471f4772cb2a8d650d38b479cef76ede97b2984f0",
     "tests/test_call_put.py": "b79dc6daa03138cf7f0751d902ff0c031f447da6f285de275a9d429d732dccb8",
@@ -166,5 +166,5 @@
     "tests/test_tradeplan_engine.py": "8cb9735d0e593cfa49bb6d4ddb33093ef8e76d33d6cd06752ab18cb10dd5e80f",
     "tests/test_v5_supplement.py": "b8fc88af047f2a5a3c0c645613f16886bb4fa6b7175b7ef6d13263ce3ab1e770"
   },
-  "framework_sha256": "86f5e29e10a8b1f8196c0a632bd58bc193e37b8600b316c005604a7f3c84a6ce"
+  "framework_sha256": "22698a34c755412b7676cc3830b8d1fa0901e6514c590d620d216dd574d19010"
 }

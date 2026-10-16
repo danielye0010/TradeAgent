@@ -83,10 +83,14 @@ def run(config, state_dir, *, now=None):
         return 2
     state_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
     common = ["--config", str(config)]
-    if _opportunity(state_dir, "scan", "--candidates", "3", *common) != 0:
+    # Market captures use the same broker login, and the frozen plan the same hold, as LIVE.
+    helper = ["--oauth-helper", str(settings.oauth_helper)]
+    hold = ["--hold-seconds", str(settings.options["hold_seconds"])]
+    if _opportunity(state_dir, "scan", "--candidates", "3", *helper, *common) != 0:
         log("STOPPED", reason="market scan incomplete")
         return 2
-    if _opportunity(state_dir, "decide", "--refresh", "--policy", "experimental", *common) != 0:
+    decide = ["decide", "--refresh", "--policy", "experimental", *helper, *hold, *common]
+    if _opportunity(state_dir, *decide) != 0:
         log("STOPPED", reason="decision could not be frozen")
         return 2
     plan = json.loads((state_dir / "latest-plan.json").read_text())

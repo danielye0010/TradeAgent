@@ -28,12 +28,13 @@ def calls(monkeypatch, tmp_path):
 
     def opportunity(state_dir, *args):
         seen.append(args[0] if args[0] != "execute" else args)
+        calls.args[args[0]] = args
         if args[0] == "decide":
             plan = {"decision_id": "d-1", "experimental": {"plan": calls.plan}}
             (state_dir / "latest-plan.json").write_text(json.dumps(plan))
         return calls.codes.get(args[0], 0)
 
-    calls.plan, calls.codes = [{"symbol": "QQQ"}], {}
+    calls.plan, calls.codes, calls.args = [{"symbol": "QQQ"}], {}, {}
     monkeypatch.setattr(autotrade, "_opportunity", opportunity)
     monkeypatch.setattr(autotrade, "finish_previous", lambda settings: None)
     calls.seen = seen
@@ -142,3 +143,22 @@ def test_eligible_plan_goes_to_the_experimental_live_engine(calls, tmp_path):
 def test_cli_dispatches_autotrade(capsys):
     assert main(["autotrade", "install", "--config", "/nonexistent/tradeagent.toml"]) == 2
     assert "STOPPED" in capsys.readouterr().out
+
+
+def test_market_captures_use_the_configured_helper_and_hold(calls, tmp_path):
+    from tradeagent.execution_policy import load_live_config
+
+    config = _config()
+    config.write_text(
+        config.read_text()
+        .replace("hold_seconds = 3600", "hold_seconds = 900")
+        .replace('# oauth_helper = "', 'oauth_helper = "')
+    )
+    settings = load_live_config(config)
+    calls.plan = []
+    assert autotrade.run(config, tmp_path / "s", now=OPEN) == 0
+    for command in ("scan", "decide"):
+        args = calls.args[command]
+        assert args[args.index("--oauth-helper") + 1] == str(settings.oauth_helper)
+    decide = calls.args["decide"]
+    assert decide[decide.index("--hold-seconds") + 1] == "900"
