@@ -32,7 +32,7 @@ Everything comes from `~/.config/tradeagent/tradeagent.toml`:
 | --- | --- |
 | `[entry] dollar_amount` | Amount per trade, `$1` to `$5`. |
 | `[live] symbols` | Only these symbols can be bought. |
-| `[exit] hold_seconds` | Sell automatically after this long: `1800`, `3600` or `7200` (the frozen research horizons, after a 5-minute decision delay). |
+| `[exit] hold_seconds` | Sell automatically after this long: one of `1500`, `1800`, `3300`, `3600`, `6900` or `7200` (the frozen research horizons minus the 5-minute decision delay). |
 | `[risk] max_new_exposure_fraction` | One trade may use at most this share of the account. |
 
 `install` prints `account_value_needed`: the smallest account value at which the risk
