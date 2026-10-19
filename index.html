@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>TradeAgent: GPT vs Claude, one stock a day</title>
+<meta name="description" content="Every trading morning GPT (Codex) and Claude each read the news and pick one stock. Their frozen picks and results, updated after every close.">
+<meta property="og:title" content="TradeAgent: GPT vs Claude, one stock a day">
+<meta property="og:description" content="Two AIs, the same three stocks, the same hour. Live paper results, updated after every close.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2316191a'/%3E%3Cpath d='M7 21l6-6 4 4 8-9' stroke='%2300c805' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<header class="bar">
+  <div class="wrap bar-row">
+    <a class="mark" href="#top">TradeAgent</a>
+    <span class="live"><i></i><span id="live-label">Live paper results</span></span>
+    <nav class="bar-tools">
+      <button type="button" class="pill" id="lang">中文</button>
+      <a class="pill dark" id="gh" href="https://github.com/danielye0010/TradeAgent">GitHub</a>
+    </nav>
+  </div>
+</header>
+<main id="top" class="wrap"></main>
+<footer class="wrap foot" id="foot"></footer>
+<script id="data" type="application/json">{"schema":1,"generated_at":1792445132.6359115,"evidence_kind":"prospective","first_session":"2026-10-14","claude_since":null,"models":{"codex":"gpt-6.1-sol","claude":"claude-opus-5-5"},"holding_minutes":60,"sessions":[{"date":"2026-10-14","scored":true,"codex":{"symbol":"TLT","answered":true,"net":0.0014346891762408998},"claude":null,"quant":{"symbol":"LLY","answered":true,"net":0.0009972040737322718},"random":{"symbol":null,"answered":true,"net":0},"spy":-0.0018183112353516995},{"date":"2026-10-15","scored":true,"codex":{"symbol":"CRM","answered":true,"net":0.009856338003723764},"claude":null,"quant":{"symbol":"CRM","answered":true,"net":0.009856338003723764},"random":{"symbol":"XOM","answered":true,"net":-0.0034683613126772483},"spy":0.0035709631174247747},{"date":"2026-10-16","scored":true,"codex":{"symbol":"TLT","answered":true,"net":0.0013281515422387535},"claude":null,"quant":{"symbol":"GLD","answered":true,"net":-0.00425689671153906},"random":{"symbol":"CRM","answered":true,"net":-0.0027837365970496686},"spy":-0.003041945351791364},{"date":"2026-10-19","scored":true,"codex":{"symbol":"AMZN","answered":true,"net":0.01377369018887542},"claude":null,"quant":{"symbol":"AMZN","answered":true,"net":0.01377369018887542},"random":{"symbol":"AMZN","answered":true,"net":0.01377369018887542},"spy":0.003309446254071702}],"latest":{"date":"2026-10-19","codex":{"symbol":"AMZN","stance":"long","thesis":"Strongest supplied continuation setup: a 1.71% hourly advance, 1.56 percentage points of SPY outperformance and 1.21x volume support a conditional one-hour long.","catalyst":"No verified fresh catalyst explains this move. Telsey's October 9 Outperform reiteration provides older context only.","sources":[{"title":"Telsey reiterates Amazon stock Outperform rating after Prime event","url":"https://www.investing.com/news/analyst-ratings/telsey-reiterates-amazon-stock-outperform-rating-after-prime-event-93CH-4940535"}]}},"duel":{"codex_arm":"codex_news","claude_arm":"claude_news","scored_days":0,"codex_total":null,"claude_total":null,"wins":{"codex":0,"claude":0,"tie":0},"answered_both":0,"same_pick":0,"difference":null,"verdict":{"state":"collecting","days":0,"needed":20}},"repo":"https://github.com/danielye0010/TradeAgent"}</script>
+<script src="site.js"></script>
+</body>
+</html>
