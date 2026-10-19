@@ -108,6 +108,42 @@ def assess_news(report, *, executable="codex", timeout=300, now=None, search=Tru
             "web_searches": 0,
             "web_search_mode": NEWS_WEB_SEARCH if search else "disabled",
         }
+    prompt, schema = news_request(report, now=now, search=search)
+    document, provenance = run(
+        prompt,
+        schema,
+        candidates,
+        executable=executable,
+        timeout=timeout,
+        web_search=NEWS_WEB_SEARCH if search else "disabled",
+        allowed_items={"web_search"} if search else set(),
+        report_search=True,
+    )
+    if (
+        report.get("research_protocol") in {"daily-bidirectional-v3", "daily-call-put-v4"}
+        and search
+    ):
+        if not provenance["web_searches"]:
+            raise ValueError("live news requires an observed web search")
+        sources = [s for item in document["assessments"] for s in item["sources"]]
+        for source in sources:
+            url = urlparse(source["url"])
+            if url.scheme != "https" or not url.hostname or not source["title"].strip():
+                raise ValueError("invalid cited news source")
+            if source["published_at"] is not None:
+                published = timestamp(source["published_at"])
+                if now is not None and published > now:
+                    raise ValueError("future publication timestamp")
+        provenance["news_status"] = "CITED_NEWS" if sources else "NO_RELEVANT_NEWS"
+    return document, provenance
+
+
+def news_request(report, *, now=None, search=True):
+    """The daily news prompt and output schema, shared by every model that answers it.
+
+    Kept byte-for-byte stable: the prompt hash is part of each frozen assessment.
+    """
+    candidates = report["candidates"][:3]
     access = (
         "Search the web for news, filings, earnings, guidance or analyst actions about each "
         "symbol published BEFORE now"
@@ -146,33 +182,18 @@ def assess_news(report, *, executable="codex", timeout=300, now=None, search=Tru
         prompt += "\nBearish means a negative directional hypothesis for Put SHADOW research. Rising or falling price alone is insufficient: abstain without an attractive supported opportunity."
         if report.get("research_protocol") == "daily-call-put-v4":
             prompt += "\nBullish is a positive directional hypothesis for long Call SHADOW research, without claiming positive option expected value."
-    document, provenance = run(
-        prompt,
-        schema,
-        candidates,
-        executable=executable,
-        timeout=timeout,
-        web_search=NEWS_WEB_SEARCH if search else "disabled",
-        allowed_items={"web_search"} if search else set(),
-        report_search=True,
-    )
-    if (
-        report.get("research_protocol") in {"daily-bidirectional-v3", "daily-call-put-v4"}
-        and search
-    ):
-        if not provenance["web_searches"]:
-            raise ValueError("live news requires an observed web search")
-        sources = [s for item in document["assessments"] for s in item["sources"]]
-        for source in sources:
-            url = urlparse(source["url"])
-            if url.scheme != "https" or not url.hostname or not source["title"].strip():
-                raise ValueError("invalid cited news source")
-            if source["published_at"] is not None:
-                published = timestamp(source["published_at"])
-                if now is not None and published > now:
-                    raise ValueError("future publication timestamp")
-        provenance["news_status"] = "CITED_NEWS" if sources else "NO_RELEVANT_NEWS"
-    return document, provenance
+    return prompt, schema
+
+
+def check_document(document, schema, candidates, name="Codex"):
+    """Schema-valid, one assessment per frozen candidate, unique ranks."""
+    validate(document, schema)
+    symbols = [v["symbol"] for v in document["assessments"]]
+    if sorted(symbols) != sorted(c["symbol"] for c in candidates):
+        raise ValueError(f"{name} assessment does not cover the exact frozen shortlist")
+    ranks = [v["rank"] for v in document["assessments"]]
+    if len(set(ranks)) != len(ranks):
+        raise ValueError(f"{name} assessment ranks are not unique")
 
 
 def host_config_hash():
@@ -317,13 +338,7 @@ def run(
             and (r.get("item") or {}).get("id")
         }
         document = json.loads(output.read_text())
-        validate(document, schema_value)
-        symbols = [v["symbol"] for v in document["assessments"]]
-        if sorted(symbols) != sorted(c["symbol"] for c in candidates):
-            raise ValueError("Codex assessment does not cover the exact frozen shortlist")
-        ranks = [v["rank"] for v in document["assessments"]]
-        if len(set(ranks)) != len(ranks):
-            raise ValueError("Codex assessment ranks are not unique")
+        check_document(document, schema_value, candidates)
         provenance = {
             "model": MODEL,
             "status": "VALID",
