@@ -335,3 +335,85 @@ def test_the_daily_claim_directory_is_persisted(engine, tmp_path, monkeypatch):
     clock = Clock(OPEN + 90)
     autotrade.run(_config(), tmp_path / "v2", tmp_path / "s", clock=clock, sleep=clock.sleep)
     assert len(synced) == 3  # claim file, its new directory, and that directory's parent
+
+
+def _claude_decision(follow_dir, decided_at, symbol="IWM"):
+    """A daily-news-claude-v1 record: the same window, Claude's own news pick."""
+    value = _decision(follow_dir, decided_at, symbol="AAPL", name="c-1")
+    value["research_protocol"] = "daily-news-claude-v1"
+    value["comparisons"]["claude_news"] = {
+        "symbol": symbol,
+        "decision": "SHADOW_LONG",
+        "status": "VALID",
+        "plan": None,
+    }
+    (follow_dir / "decisions" / "c-1.json").write_text(json.dumps(value))
+    return value
+
+
+def test_claude_can_be_chosen_and_mirrors_its_own_pick(engine, tmp_path):
+    clock = Clock(OPEN)
+    _decision(tmp_path / "v2", OPEN + 100)  # Codex picked AAPL in v2...
+    _claude_decision(tmp_path / "claude", OPEN + 100)  # ...Claude picked IWM.
+    code = autotrade.run(
+        _config(),
+        tmp_path / "claude",
+        tmp_path / "s",
+        model="claude",
+        clock=clock,
+        sleep=clock.sleep,
+    )
+    assert code == 0
+    plan, prediction = engine.seen[2]
+    assert plan.instrument == "IWM"
+    assert prediction.strategy_id == "mirror:daily-news-claude-v1:claude_news"
+    record = _record(tmp_path / "s")
+    assert record["model"] == "claude" and record["followed"] == "daily-news-claude-v1/claude_news"
+
+
+def test_claude_never_reads_a_codex_record(engine, tmp_path):
+    clock = Clock(OPEN)
+    _decision(tmp_path / "claude", OPEN + 100)  # a v2 record in the wrong directory
+    autotrade.run(
+        _config(),
+        tmp_path / "claude",
+        tmp_path / "s",
+        model="claude",
+        clock=clock,
+        sleep=clock.sleep,
+    )
+    assert _record(tmp_path / "s")["status"] == "NO_TRADE"
+    assert len(engine.seen) == 1  # recovery only
+
+
+def test_the_default_install_is_unchanged_and_claude_is_opt_in(tmp_path):
+    codex = autotrade.units("/py", tmp_path / "c.toml", tmp_path / "v2", tmp_path / "s")
+    assert "--model" not in codex["tradeagent-autotrade.service"]
+    claude = autotrade.units("/py", tmp_path / "c.toml", tmp_path / "cl", tmp_path / "s", "claude")
+    assert claude["tradeagent-autotrade.service"].rstrip().count("--model claude") == 1
+    assert "daily-news-claude-v1 claude_news" in claude["tradeagent-autotrade.timer"]
+    (tmp_path / "cl").mkdir()
+    summary = autotrade.install(
+        _config(),
+        tmp_path / "cl",
+        tmp_path / "s",
+        enable=False,
+        model="claude",
+        unit_dir=tmp_path,
+        systemctl=False,
+    )
+    assert summary["model"] == "Claude"
+    assert summary["follows"].startswith("daily-news-claude-v1 claude_news")
+
+
+def test_claude_install_without_the_comparison_points_to_its_installer(tmp_path):
+    with pytest.raises(ValueError, match="tradeagent claude install"):
+        autotrade.install(
+            _config(),
+            None,
+            tmp_path / "s",
+            enable=False,
+            model="claude",
+            unit_dir=tmp_path,
+            systemctl=False,
+        )

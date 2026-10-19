@@ -209,6 +209,7 @@ class Workspace:
         autotrade = (
             {
                 "unit": mirror["unit"],
+                "model": mirror.get("model") or "codex",
                 "timer": mirror["timer"],
                 "records": readers.autotrade_records(mirror["state_dir"])
                 if mirror["state_dir"]

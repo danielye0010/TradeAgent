@@ -105,6 +105,8 @@ def command(executable, schema, search):
         "--permission-mode",
         "dontAsk",
         "--strict-mcp-config",
+        # The working directory is an empty temporary folder; loading only its
+        # (absent) project settings keeps user hooks, CLAUDE.md and memory out.
         "--setting-sources",
         "project",
         "--disable-slash-commands",

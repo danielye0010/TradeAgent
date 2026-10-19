@@ -29,11 +29,14 @@ Daily research (no orders):
   opportunity decide    freeze a TradePlan or NO_TRADE for the shortlist
   opportunity show      latest plan and research status
   opportunity compare   how Quant, Codex and both together have done so far
+  claude install        Claude answers the same daily question next to Codex (GPT)
+  claude doctor         check the Claude Code CLI and subscription login
 
 Real money (only when you run it):
   run-once --live       one entry from your config, then the automatic exit
   status                read-only state of the current live run
-  autotrade install     daily small LIVE copy of the news-Codex research pick
+  autotrade install     daily small LIVE copy of the news-reading AI pick
+                        (--model codex, the default, or --model claude)
   recover               finish an interrupted run; only ever exits
 
 Run `tradeagent <command> --help` for options. Docs: README.md and docs/.

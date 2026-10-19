@@ -1,27 +1,31 @@
 # Autotrade
 
-`tradeagent autotrade` places a small LIVE copy of the daily news-Codex research pick,
-with nothing to run by hand once it is installed. It follows the `codex_news` arm of the
-`daily-news-v2` research service: the same frozen selection, the same entry minute and
-the same one-hour hold, for your configured dollar amount.
+`tradeagent autotrade` places a small LIVE copy of the daily news-reading AI pick, with
+nothing to run by hand once it is installed. By default it follows Codex: the
+`codex_news` arm of the `daily-news-v2` research service. With `--model claude` it
+follows Claude's answer to the same question instead (the `claude_news` arm of
+[`daily-news-claude-v1`](claude.md)). Either way it copies the same frozen selection, the
+same entry minute and the same one-hour hold, for your configured dollar amount.
 
 ```bash
 tradeagent autotrade install --enable                       # finds the installed v2 timer
 tradeagent autotrade install --enable --follow-dir DIR      # or name its state directory
+tradeagent autotrade install --enable --model claude        # follow Claude instead of Codex
 systemctl --user list-timers tradeagent-autotrade.timer
 tradeagent autotrade uninstall                              # stop and remove the timer
 ```
 
-The `daily-news-v2` research timer must already be installed and running; autotrade
-only reads its frozen decisions and never re-decides.
+The `daily-news-v2` research timer must already be installed and running (and, for
+`--model claude`, the Claude comparison timer too); autotrade only reads frozen
+decisions and never re-decides.
 
 ## What a run does
 
 The timer starts at 10:30 New York time, when the research decision window opens.
 
 1. Skips the day if the market is closed or `KILL` exists in the live state directory.
-2. Waits up to nine minutes for that day's frozen `daily-news-v2` decision.
-3. Reads the `codex_news` selection. Cash, an unavailable assessment, an invalid window
+2. Waits up to nine minutes for that day's frozen decision of the followed model.
+3. Reads its selection (`codex_news` or `claude_news`). Cash, an unavailable assessment, an invalid window
    or a symbol outside your `[live] symbols` is recorded as `NO_TRADE`.
 4. Finishes any interrupted earlier trade (exit only) and archives the closed one. If
    that cannot be closed, no new trade is opened.

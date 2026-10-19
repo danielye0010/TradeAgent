@@ -378,3 +378,58 @@ def test_trade_totals_and_account_history_cover_every_live_run(tmp_path):
     assert len(payload["executions"]) == 50
     assert len(payload["ledger"]) == 55
     assert payload["trade_totals"]["closed"] == 55 and payload["trade_totals"]["wins"] == 44
+
+
+@pytest.fixture(scope="module")
+def duel_dirs(tmp_path_factory):
+    return demo.build_duel(tmp_path_factory.mktemp("duel"), sessions=3)
+
+
+def test_gpt_vs_claude_pairs_each_claude_arm_with_its_codex_arm(duel_dirs):
+    v2, claude = duel_dirs
+    before = tree(v2)
+    state = readers.daily_state(claude)
+    assert state["protocol"] == "daily-news-claude-v1" and state["scored"]
+    assert state["baseline"] is None
+    rows = {a["arm"]: a for a in state["arms"]}
+    assert rows["claude_news"]["baseline"] == "codex_news"
+    assert rows["claude_price"]["baseline"] == "codex_price"
+    assert rows["codex_news"]["baseline"] == "seeded_random"
+    assert rows["claude_news"]["vs_baseline"]["days"] == 3
+    news = state["duel"]["modes"]["news"]
+    assert news["scored_days"] == 3 and len(news["series"]) == 3
+    assert sum(news["wins"].values()) == 3
+    assert news["answered_both"] == 3 and 0 <= news["same_pick"] <= 3
+    assert news["verdict"]["state"] == "collecting"
+    totals = {
+        n: sum(r["outcome"]["arms"][n]["net"] for r in state["runs"])
+        for n in ("codex_news", "claude_news")
+    }
+    assert news["codex_total"] == pytest.approx(totals["codex_news"])
+    assert news["claude_total"] == pytest.approx(totals["claude_news"])
+    assert state["duel"]["models"]["claude"] == "claude-opus-5-5"
+    # The session drawer puts Codex's own notes next to Claude's.
+    decision_id = state["runs"][-1]["decision"]["decision_id"]
+    detail = readers.run_detail(claude, decision_id)
+    analysis = detail["decision"]["candidates"][0]["analysis"]
+    assert {"price", "news", "codex_price", "codex_news"} <= set(analysis)
+    assert tree(v2) == before
+    v2_state = readers.daily_state(v2)
+    assert v2_state["duel"] is None and v2_state["baseline"] == "seeded_random"
+
+
+def test_autotrade_reports_which_model_it_follows(tmp_path):
+    (tmp_path / "tradeagent-autotrade.service").write_text(
+        "[Service]\nExecStart=/py -m tradeagent.autotrade run --config c --follow-dir f "
+        f"--state-dir {tmp_path / 'r'} --model claude\n"
+    )
+    payload = Workspace([], unit_dir=tmp_path, doctor=False, live_dir=tmp_path / "live").overview()
+    assert payload["autotrade"]["model"] == "claude"
+    tmp_path = tmp_path / "default"  # a fresh unit directory (discovery is cached)
+    tmp_path.mkdir()
+    (tmp_path / "tradeagent-autotrade.service").write_text(
+        "[Service]\nExecStart=/py -m tradeagent.autotrade run --config c --follow-dir f "
+        f"--state-dir {tmp_path / 'r'}\n"
+    )
+    payload = Workspace([], unit_dir=tmp_path, doctor=False, live_dir=tmp_path / "live").overview()
+    assert payload["autotrade"]["model"] == "codex"

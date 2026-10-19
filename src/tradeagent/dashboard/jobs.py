@@ -17,7 +17,10 @@ MODULES = {
     "tradeagent.prospective.continuous": "continuous",
     "tradeagent.prospective.events": "events",
     "tradeagent.autotrade": "autotrade",
+    "tradeagent.prospective.claude_compare": "daily",
 }
+# Modules that run one fixed protocol and take no --protocol option.
+MODULE_PROTOCOL = {"tradeagent.prospective.claude_compare": "daily-news-claude-v1"}
 DEFAULT_PROTOCOL = {
     "daily": "daily-four-arm-v1",
     "continuous": "continuous-quant-v5",
@@ -42,7 +45,7 @@ def _arguments(text):
     def option(name):
         return words[words.index(name) + 1] if name in words[:-1] else None
 
-    return module, option("--state-dir"), option("--protocol")
+    return module, option("--state-dir"), option("--protocol"), option("--model")
 
 
 def parse_calendar(line):
@@ -110,7 +113,7 @@ def discover(unit_dir=None, *, systemctl=True):
             continue
         if not parsed or parsed[0] not in MODULES:
             continue
-        module, state_dir, protocol = parsed
+        module, state_dir, protocol, model = parsed
         kind = MODULES[module]
         timer_file = service.with_suffix(".timer")
         schedule = []
@@ -125,8 +128,10 @@ def discover(unit_dir=None, *, systemctl=True):
         job = {
             "unit": service.stem,
             "kind": kind,
-            "protocol": protocol or DEFAULT_PROTOCOL[kind],
+            "protocol": protocol or MODULE_PROTOCOL.get(module) or DEFAULT_PROTOCOL[kind],
             "state_dir": state_dir,
+            # Which AI an autotrade timer mirrors; units without --model follow Codex.
+            "model": (model or "codex") if kind == "autotrade" else None,
             "schedule": schedule,
             "timer": None,
             "service": None,

@@ -18,6 +18,7 @@ Stop it with Ctrl+C.
 | --- | --- |
 | **Account** | How is my money doing? The live account value, profit in dollars and percent, a value chart (hover to see any point; 1W / 1M / 3M / All), recent trades, and a card for today: waiting for Codex, what it picked, holding with the sell time, the result, or why nothing was bought. Also the autotrade settings and Codex's paper record. |
 | **Decisions** | Today's session as a timeline with the scheduled steps, the latest frozen decisions, timers, live settings and the setup checklist. **Full activity** lists every session, trade and learning run; filter to AI decisions, trades or problems. |
+| **GPT vs Claude** | Is Claude picking better than Codex on the same shortlist? Each model's added-up net return, sessions where each did better, how often they picked the same stock, a verdict on the difference after 20 sessions, a chart, and every session with both picks; select one to read both models' reasoning side by side. Switch between the news and price-only questions. See [Claude next to Codex](claude.md). |
 | **Research** | Per protocol: how many paired sessions exist, each group's positions and average net return, its return over SPY with a 95% range, its verdict against Random, and a cumulative net-return chart from the second scored session. Also the strategy lab's current weights. |
 | **Trades** | Total profit, closed trades and win rate, then every trade newest first; select one for its prices, times and execution timeline. |
 

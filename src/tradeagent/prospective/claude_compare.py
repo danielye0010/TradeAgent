@@ -174,6 +174,22 @@ def selections(decision, assessments, statuses):
     return {name: arms[name] for name in ARMS}
 
 
+def _mean(values):
+    return sum(values) / len(values) if values else None
+
+
+def _difference(rows, arm, other):
+    """Paired excess difference over the sessions where both arms have an outcome."""
+    both = [
+        o
+        for o in rows
+        if o["comparisons"].get(arm) is not None and o["comparisons"].get(other) is not None
+    ]
+    return paired(
+        [residual(o["comparisons"][arm]) - residual(o["comparisons"][other]) for o in both]
+    )
+
+
 def compare(store):
     """Paired daily comparison; one session is one observation, cash counts as zero."""
     decisions = {
@@ -193,26 +209,13 @@ def compare(store):
         rows = [outcomes[d["decision_id"]] for d in ds if d["decision_id"] in outcomes]
         complete = [o for o in rows if all(o["comparisons"].get(n) is not None for n in ARMS)]
 
-        def mean(values):
-            return sum(values) / len(values) if values else None
-
-        def difference(arm, other):
-            both = [
-                o
-                for o in rows
-                if o["comparisons"].get(arm) is not None and o["comparisons"].get(other) is not None
-            ]
-            return paired(
-                [residual(o["comparisons"][arm]) - residual(o["comparisons"][other]) for o in both]
-            )
-
         stats = {
             n: {
                 "observed_days": sum(o["comparisons"].get(n) is not None for o in rows),
                 "selected_days": sum(bool(d["comparisons"][n]["shadow_direction"]) for d in ds),
                 "unavailable_days": sum(d["comparisons"][n]["status"] == "UNAVAILABLE" for d in ds),
-                "paired_mean_base_net": mean([o["comparisons"][n]["base_net"] for o in complete]),
-                "paired_mean_stress_net": mean(
+                "paired_mean_base_net": _mean([o["comparisons"][n]["base_net"] for o in complete]),
+                "paired_mean_stress_net": _mean(
                     [o["comparisons"][n]["stress_net"] for o in complete]
                 ),
                 "paired_excess_over_benchmark": paired(
@@ -223,7 +226,7 @@ def compare(store):
         }
         differences = {
             n: {
-                b: difference(n, b)
+                b: _difference(rows, n, b)
                 for b in ((COUNTERPART[n],) if n in COUNTERPART else ()) + BASELINES
                 if b != n
             }
@@ -324,7 +327,8 @@ class Companion:
             return {
                 "status": "UNAVAILABLE",
                 "error": type(error).__name__,
-                "reason": str(error)[:200],
+                # Only this package's own fixed messages; never model output or CLI text.
+                "reason": str(error)[:200] if type(error) is ValueError else None,
                 "frozen_at": None,
                 "provenance": {},
                 "assessments": {},
@@ -401,6 +405,7 @@ class Companion:
                 "directory": str(self.follow.directory),
             },
             "scan_id": report["scan_id"],
+            "skill_version": decision.get("skill_version"),
             "session_open": decision["session_open"],
             "session_close": decision["session_close"],
             "decision_time": decision["decision_time"],
