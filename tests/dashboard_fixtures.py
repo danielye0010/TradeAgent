@@ -256,3 +256,69 @@ def build(directory, *, rebuild=False, sessions=DEMO_SESSIONS):
             )
         )
     return [directory / "lab", directory / "paper", directory / "daily-four-arm"]
+
+
+def synthetic_news_assessor(name):
+    """A stand-in news-reading analyst; ``name`` gives each model its own judgement."""
+
+    def assess(report, now=None, search=True):
+        salted = {**report, "scan_id": f"{name}:{search}:{report['scan_id']}"}
+        document, _ = synthetic_assessment(salted)
+        for item in document["assessments"]:
+            item.update(hypothesis_type="price_action", sources=[])
+            if search:
+                item["catalyst"] = "Synthetic headline read (demo, no real news)"
+        return document, {"model": f"synthetic-{name}", "web_searches": int(search)}
+
+    return assess
+
+
+def build_duel(directory, *, sessions=DEMO_SESSIONS, end=None):
+    """daily-news-v2 (synthetic Codex) plus the Claude companion (synthetic Claude)."""
+    from tradeagent.prospective import claude_compare, daily
+
+    directory = Path(directory)
+    end = end or datetime.now(NY).date() - timedelta(days=1)
+    days = [d for d in _sessions(end, sessions + 5) if daily.window(d, daily.NEWS_PROTOCOL)]
+    days = days[-sessions:]
+    clock = [daily.window(days[0], daily.NEWS_PROTOCOL)[0] + 5]
+    market = SyntheticMarket(lambda: clock[0])
+    v2 = daily.Pipeline(
+        directory / "daily-news-v2",
+        collector=market,
+        assessor=synthetic_assessment,
+        news_assessor=synthetic_news_assessor("codex"),
+        clock=lambda: clock[0],
+        evidence_kind="synthetic",
+        protocol=daily.NEWS_PROTOCOL,
+    )
+    v2.tick()  # writes the v2 deployment the companion checks before it starts
+    companion = claude_compare.Companion(
+        directory / "daily-news-claude-v1",
+        directory / "daily-news-v2",
+        assessor=synthetic_news_assessor("claude"),
+        clock=lambda: clock[0],
+        sleep=lambda seconds: clock.__setitem__(0, clock[0] + seconds),
+    )
+    try:
+        for day in days:
+            clock[0] = daily.window(day, daily.NEWS_PROTOCOL)[0] + 5
+            v2.tick()
+            companion.tick()
+            decision = next(
+                (
+                    d
+                    for d in v2.store.records("decisions")
+                    if datetime.fromtimestamp(d["session_open"], NY).date() == day
+                ),
+                None,
+            )
+            if decision:
+                clock[0] = decision["outcome_exit_time"]
+                v2.tick()
+                companion.tick()
+            shutil.rmtree(directory / "daily-news-v2" / "captures", ignore_errors=True)
+    finally:
+        companion.close()
+        v2.store.close()
+    return [directory / "daily-news-v2", directory / "daily-news-claude-v1"]

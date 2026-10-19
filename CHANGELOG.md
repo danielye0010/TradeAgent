@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.4.0 — 2026-10-19
+
+Python distribution version: `1.4.0`.
+
+- Claude can now answer the daily research question next to Codex. The new
+  `daily-news-claude-v1` service follows `daily-news-v2`: it takes the shortlist v2
+  froze, asks Claude (Claude Code CLI, `claude -p`, on the owner's Claude subscription;
+  never an API key) the same prompt with the same schema and deadline, with web search
+  only for the news arm, and scores Claude's picks over the v2 decision's own entry,
+  exit and costs. Answers frozen after the v2 entry time, failed calls and late starts
+  are recorded as unavailable, never as cash; the v2 records are only read.
+- `tradeagent claude doctor [--probe]`, `tradeagent claude install --enable` and
+  `tradeagent claude uninstall` set it up as a systemd timer next to v2.
+- `tradeagent autotrade install --model claude` trades Claude's news pick instead of
+  Codex's. Codex stays the default, and existing installs are unchanged.
+- Dashboard: a **GPT vs Claude** page with each model's added-up net return, wins,
+  agreement, a verdict on the paired difference after 20 sessions, a chart and every
+  session with both picks; the session view shows both models' reasoning side by side.
+  The Account page names whichever model autotrade follows.
+- `tradeagent doctor` lists Claude Code as an optional check.
+
 ## 1.3.0 — 2026-10-19
 
 Python distribution version: `1.3.0`.

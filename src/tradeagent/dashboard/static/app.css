@@ -25,6 +25,8 @@
   --combo: #eb6834;
   --quant: #1baf7a;
   --random: #8b918d;
+  --claude: #d9946b;
+  --claude-news: #b4502a;
   --ribbon-past: #eef1f0;
   --shadow: 0 1px 2px rgba(22, 25, 26, 0.06);
   --radius-s: 6px;
@@ -61,6 +63,8 @@
     --combo: #d95926;
     --quant: #199e70;
     --random: #7f8781;
+    --claude: #b88466;
+    --claude-news: #ee8a5f;
     --ribbon-past: #151a1a;
     --shadow: none;
   }
@@ -92,6 +96,8 @@
   --combo: #d95926;
   --quant: #199e70;
   --random: #7f8781;
+  --claude: #b88466;
+  --claude-news: #ee8a5f;
   --ribbon-past: #151a1a;
   --shadow: none;
 }
@@ -382,6 +388,64 @@ tr.click:hover td { background: var(--panel-2); }
 .weights li { display: grid; grid-template-columns: minmax(0, 220px) minmax(0, 1fr) 54px; gap: 12px; align-items: center; font-size: 13px; padding: 4px 0; }
 .weights .w { height: 8px; border-radius: 0 4px 4px 0; background: var(--codex); }
 .weights .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------------------------------------------------------------- GPT vs Claude */
+
+.seg { display: flex; gap: 4px; }
+.duel-board {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  border: 1px solid var(--line); border-radius: var(--radius-m); background: var(--panel);
+  box-shadow: var(--shadow); margin-top: 4px;
+}
+.duel-side { padding: 22px 24px; }
+.duel-side.claude { text-align: right; }
+.duel-side.claude .duel-name { justify-content: flex-end; }
+.duel-name { display: flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+.duel-name .key { width: 12px; height: 12px; border-radius: 3px; }
+.duel-via { color: var(--muted); font-size: 12px; margin-top: 2px; font-family: var(--mono); }
+.duel-total { margin-top: 14px; font-size: 40px; line-height: 1.1; font-weight: 650; letter-spacing: -0.02em; }
+.duel-total.up { color: var(--up); }
+.duel-total.down { color: var(--down); }
+.duel-sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+.duel-wins { margin-top: 10px; font-size: 14px; font-weight: 600; color: var(--ink-2); }
+.duel-side.lead .duel-wins { color: var(--ink); }
+.duel-mid {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  padding: 0 18px; border-left: 1px solid var(--line); border-right: 1px solid var(--line);
+}
+.duel-vs { font-size: 14px; font-weight: 750; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.duel-facts { margin-top: 14px; }
+.duel-facts > * + * { margin-top: 4px; }
+.duel-verdict { font-size: 16px; font-weight: 650; }
+.duel-verdict.collecting, .duel-verdict.unclear { color: var(--ink-2); }
+.duel-table td { vertical-align: middle; }
+.duel-pick { display: inline-flex; gap: 10px; align-items: baseline; white-space: nowrap; }
+.duel-table td.day { white-space: nowrap; }
+.duel-table td.win.codex { box-shadow: inset 3px 0 0 var(--codex-news); }
+.duel-table td.win.claude { box-shadow: inset 3px 0 0 var(--claude-news); }
+.duel-pick b { font-weight: 700; min-width: 3.5em; }
+.duel-claude { color: var(--claude-news); font-weight: 600; }
+.duel-codex { color: var(--codex-news); font-weight: 600; }
+.duel-setup .steps code { word-break: normal; }
+.side-duel { display: flex; justify-content: space-between; gap: 12px; margin: 2px 0 2px; }
+.duel-fig { display: flex; flex-direction: column; gap: 2px; }
+.duel-fig + .duel-fig { text-align: right; align-items: flex-end; }
+.duel-who { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-2); font-weight: 600; }
+.duel-who .key { width: 10px; height: 10px; border-radius: 3px; }
+.duel-fig .num { font-size: 22px; font-weight: 650; letter-spacing: -0.01em; }
+.duel-fig .num.up { color: var(--up); }
+.duel-fig .num.down { color: var(--down); }
+
+@media (max-width: 560px) {
+  .duel-board { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .duel-mid { grid-column: 1 / -1; grid-row: 2; flex-direction: row; padding: 8px; border: 0; border-top: 1px solid var(--line); }
+  .duel-side { padding: 16px; }
+  .duel-total { font-size: 30px; }
+  .duel-table th:nth-child(4), .duel-table td:nth-child(4) { display: none; }
+  .duel-table th, .duel-table td { padding: 9px 8px; }
+  .duel-pick { gap: 6px; }
+  .duel-pick b { min-width: 0; }
+}
 
 /* ---------------------------------------------------------------- activity */
 

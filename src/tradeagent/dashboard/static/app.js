@@ -11,7 +11,8 @@
 
   const I18N = {
     en: {
-      tabs: { home: "Account", overview: "Decisions", activity: "Activity", research: "Research", trades: "Trades" },
+      tabs: { home: "Account", overview: "Decisions", compare: "GPT vs Claude", activity: "Activity", research: "Research", trades: "Trades" },
+      models: { codex: "Codex (GPT)", claude: "Claude" },
       updown: { us: "Green up", cn: "Red up" },
       home: {
         account: "Live account",
@@ -33,34 +34,35 @@
           result: "{pnl} ({ret})",
           noTrade: "No trade today",
           problem: "Today's trade did not run",
-          picked: "Codex picked {sym}",
+          picked: "{model} picked {sym}",
           soon: "Buys at the research entry time, about 10:36 ET",
           waiting: "Waiting for today's pick",
           noPick: "No pick today",
-          waitingLine: "Codex reads the news and decides at 10:30 ET",
+          waitingLine: "{model} reads the news and decides at 10:30 ET",
           closedNow: "Market closed",
           holiday: "Market closed today",
           next: "Next trading day: {day}",
         },
         reasons: {
-          cash: "Codex chose to stay in cash.",
-          unavailable: "Codex did not answer in time, so nothing was bought.",
+          cash: "{model} chose to stay in cash.",
+          unavailable: "{model} did not answer in time, so nothing was bought.",
           noDecision: "The research did not run today (computer asleep or offline?).",
-          notAllowed: "Codex picked {sym}, which is not on your list of allowed symbols.",
+          notAllowed: "{model} picked {sym}, which is not on your list of allowed symbols.",
           already: "Today's trade was already attempted.",
           late: "The entry window had passed, so nothing was bought.",
         },
         auto: {
           title: "Autotrade",
           rule: "Follows",
-          ruleValue: "Codex reading the news",
+          ruleValue: "{model} reading the news",
           next: "Next run",
           off: "Off",
           amount: "Per trade",
           hold: "Holds for",
           notInstalled: "Daily live trading is not set up.",
         },
-        ai: { title: "Codex + news, paper results", perDay: "per day on average", days: "{n} of {need} trading days scored" },
+        ai: { title: "{model} + news, paper results", perDay: "per day on average", days: "{n} of {need} trading days scored" },
+        duel: { title: "GPT vs Claude", line: "{n} scored sessions, same picks on {same}", early: "Claude is running next to Codex; scores start after the first session." },
       },
       stop: ". ",
       lang: "中文",
@@ -94,7 +96,7 @@
         title: "Latest decisions",
         all: "Full activity",
         empty: "No research sessions yet.",
-        topPick: "Codex's top pick",
+        topPick: "{model}'s top pick",
         cash: "cash",
         pending: "result pending",
         unavailable: "no answer",
@@ -105,12 +107,16 @@
         codex_news: "Codex + news",
         quant_codex: "Quant + Codex",
         quant_codex_news: "Quant + Codex + news",
+        claude_news: "Claude + news",
+        claude_price: "Claude, price only",
+        quant_claude_news: "Quant + Claude + news",
         quant_only: "Quant",
         seeded_random: "Random",
       },
       protocols: {
         "daily-four-arm-v1": "Daily four-arm",
         "daily-news-v2": "Daily news test",
+        "daily-news-claude-v1": "Claude vs Codex",
         "daily-bidirectional-v3": "Long/short test",
         "daily-call-put-v4": "Call/Put test",
         "continuous-quant-v5": "Intraday momentum",
@@ -121,6 +127,7 @@
       questions: {
         "daily-four-arm-v1": "Does Codex pick better than quant signals or a random pick from the same shortlist?",
         "daily-news-v2": "Does letting Codex read the news improve its picks?",
+        "daily-news-claude-v1": "Same shortlist, same question, same hour: does Claude pick better than Codex (GPT)?",
       },
       evidence: { synthetic: "Test data", prospective: "Paper", replay: "Replay" },
       stance: { long: "long", avoid: "avoid", short: "short" },
@@ -129,6 +136,10 @@
         CODEX_ASSESSMENT_UNAVAILABLE: "Codex didn't answer in time; the other arms still count.",
         MARKET_EVIDENCE_UNAVAILABLE: "Market data was unavailable, so no decision was frozen.",
         INTERRUPTED: "The run was interrupted before it finished.",
+        CLAUDE_ASSESSMENT_UNAVAILABLE: "Claude didn't answer in time (or isn't signed in); the other arms still count.",
+        V2_SCAN_UNAVAILABLE: "The Codex research saved no shortlist this session, so Claude was not asked.",
+        V2_DECISION_UNAVAILABLE: "The Codex research froze no decision this session, so nothing could be scored.",
+        LATE_START: "Claude started too long after the shortlist was frozen, so the session was skipped to keep it fair.",
       },
       jobs: {
         title: "Autopilot",
@@ -179,6 +190,8 @@
         avgNet: "Avg net per session",
         vsSpy: "Vs SPY, per session",
         vsBase: "Vs {base}",
+        vsPaired: "Vs its pair",
+        vsArm: "vs {arm}",
         baseline: "baseline",
         chartTitle: "Cumulative net return, per group",
         chartNote: "Each session's return after costs, added up day by day.",
@@ -186,7 +199,7 @@
         chartEarly: "Only {n} of {need} sessions so far: the line can still swing a lot.",
         recent: "Recent sessions",
         date: "Session",
-        pick: "Codex pick",
+        pick: "{model} pick",
         none: "No research state found.",
         noneHint: "Turn on the autopilot and the daily comparison shows up here:",
         lab: "Strategy lab",
@@ -210,7 +223,7 @@
         title: "Activity",
         filters: { all: "All", session: "AI decisions", trade: "Trades", problem: "Problems" },
         session: "{proto}: {status}",
-        picked: "Codex ranked {sym} first ({stance}).",
+        picked: "{model} ranked {sym} first ({stance}).",
         armsPicked: "Positions: {list}.",
         scored: "Scored: {list}.",
         lab: "Strategy lab learned from {n} forecasts ({runs} learning runs).",
@@ -253,8 +266,8 @@
         frozen: "Frozen at {time}, {delay} before the entry window opened and {hold} before the exit. Nothing here can change afterwards.",
         outcome: "How each arm did",
         candidates: "The shortlist",
-        price: "Codex, price data",
-        news: "Codex, with news",
+        price: "{model}, price data",
+        news: "{model}, with news",
         thesis: "Thesis",
         catalyst: "Catalyst",
         pricedIn: "Priced in?",
@@ -264,11 +277,45 @@
         windowReturn: "1h move",
         rel: "vs SPY",
         volume: "volume",
-        noAnalysis: "No Codex note for this symbol.",
+        noAnalysis: "No {model} note for this symbol.",
+        noNote: "No note.",
         net: "net {v}",
         excess: "over SPY {v}",
         loading: "Loading…",
         missing: "This session could not be loaded.",
+      },
+      duel: {
+        title: "GPT vs Claude",
+        lede: "Every trading day both models get the same three stocks, the same market evidence and the same question at 10:30 ET. Each pick is scored over the same hour with the same costs. Research only: no money is traded on this page.",
+        modes: { news: "With news", price: "Price only" },
+        codex: "GPT",
+        claude: "Claude",
+        via: { codex: "Codex CLI · {model}", claude: "Claude Code · {model}" },
+        total: "added up over {n} scored sessions",
+        wins: "better on {n}",
+        ties: "{n} even",
+        verdict: {
+          collecting: "Too early to call: {d} of {n} sessions",
+          ahead: "Claude is ahead of GPT",
+          behind: "GPT is ahead of Claude",
+          unclear: "No clear difference so far",
+        },
+        ci: "Claude minus GPT, per session: 95% range {lo} to {hi}",
+        same: "Same pick on {same} of {n} sessions where both answered.",
+        chart: "Cumulative net return",
+        chartNote: "Each session's modeled return after costs, added up. A gap over a few sessions is mostly luck; the verdict waits for {need} sessions.",
+        sessions: "Session by session",
+        better: "better",
+        even: "even",
+        trading: "Your live autotrade follows {model}.",
+        none: "Claude isn't running next to Codex yet.",
+        setupTitle: "Set up Claude",
+        setup: [
+          "Install Claude Code, then run `claude` once and sign in with your Claude subscription (no API key).",
+          "Check it: `tradeagent claude doctor`",
+          "Start the daily comparison: `tradeagent claude install --enable`",
+          "Optional, real money: trade Claude's pick instead of Codex's: `tradeagent autotrade install --model claude --enable`",
+        ],
       },
       foot: { updated: "Updated {rel}" },
       rel: { now: "just now", s: "{n} s ago", m: "{n} min ago", h: "{n} h ago", inM: "in {n} min", inH: "in {h} h {m} min", inD: "in {n} days" },
@@ -279,7 +326,8 @@
       },
     },
     zh: {
-      tabs: { home: "账户", overview: "AI 决策", activity: "动态", research: "研究", trades: "交易记录" },
+      tabs: { home: "账户", overview: "AI 决策", compare: "GPT vs Claude", activity: "动态", research: "研究", trades: "交易记录" },
+      models: { codex: "Codex（GPT）", claude: "Claude" },
       updown: { us: "绿涨红跌", cn: "红涨绿跌" },
       home: {
         account: "实盘账户",
@@ -301,34 +349,35 @@
           result: "{pnl}（{ret}）",
           noTrade: "今天不交易",
           problem: "今天的交易没有执行",
-          picked: "Codex 选了 {sym}",
+          picked: "{model} 选了 {sym}",
           soon: "按研究的入场时间买入，约美东 10:36",
           waiting: "等待今天的选择",
           noPick: "今天没有选择",
-          waitingLine: "Codex 美东 10:30 读新闻后做决定",
+          waitingLine: "{model} 美东 10:30 读新闻后做决定",
           closedNow: "已收盘",
           holiday: "今天休市",
           next: "下个交易日：{day}",
         },
         reasons: {
-          cash: "Codex 选择空仓。",
-          unavailable: "Codex 没有按时给出答案，所以没有买入。",
+          cash: "{model} 选择空仓。",
+          unavailable: "{model} 没有按时给出答案，所以没有买入。",
           noDecision: "今天研究没有运行（电脑是否休眠或断网？）。",
-          notAllowed: "Codex 选了 {sym}，不在你允许交易的标的里。",
+          notAllowed: "{model} 选了 {sym}，不在你允许交易的标的里。",
           already: "今天已经尝试过下单。",
           late: "错过了入场时间，所以没有买入。",
         },
         auto: {
           title: "自动交易",
           rule: "跟随",
-          ruleValue: "读新闻的 Codex",
+          ruleValue: "读新闻的 {model}",
           next: "下次运行",
           off: "已关闭",
           amount: "每笔金额",
           hold: "持有时间",
           notInstalled: "还没有开启每日实盘。",
         },
-        ai: { title: "Codex 读新闻 · 模拟盘表现", perDay: "日均", days: "已计分 {n}/{need} 个交易日" },
+        ai: { title: "{model} 读新闻 · 模拟盘表现", perDay: "日均", days: "已计分 {n}/{need} 个交易日" },
+        duel: { title: "GPT vs Claude", line: "已计分 {n} 个交易日，其中 {same} 天选得一样", early: "Claude 已在 Codex 旁边运行，第一个交易日后开始计分。" },
       },
       stop: "。",
       checks: {
@@ -337,12 +386,14 @@
         "Robinhood sign-in": "Robinhood 登录",
         "Live settings": "实盘配置",
         "Codex CLI": "Codex CLI",
+        "Claude Code": "Claude Code",
         "Autopilot timer": "Autopilot 定时器",
       },
       fixes: {
         System: "请在 Linux 或 WSL2 中运行，Python 版本需 3.12 或以上。",
         Storage: "把数据目录放在 Linux 本地磁盘上（ext4、btrfs 或 xfs），不要放在 `/mnt/c` 这类 Windows 目录。",
         "Codex CLI": "从 https://github.com/openai/codex 安装后运行 `codex login`。",
+        "Claude Code": "安装 Claude Code 后运行一次 `claude`，用 Claude 订阅登录，再运行 `tradeagent claude doctor`。",
         "Autopilot timer": "在 WSL 中启用 systemd：https://learn.microsoft.com/windows/wsl/systemd",
       },
       lang: "EN",
@@ -376,7 +427,7 @@
         title: "最新决策",
         all: "全部动态",
         empty: "还没有决策记录。",
-        topPick: "Codex 首选",
+        topPick: "{model} 首选",
         cash: "空仓",
         pending: "待结算",
         unavailable: "无结果",
@@ -387,12 +438,16 @@
         codex_news: "Codex + 新闻",
         quant_codex: "量化 + Codex",
         quant_codex_news: "量化 + Codex + 新闻",
+        claude_news: "Claude + 新闻",
+        claude_price: "Claude（仅价格）",
+        quant_claude_news: "量化 + Claude + 新闻",
         quant_only: "量化",
         seeded_random: "随机",
       },
       protocols: {
         "daily-four-arm-v1": "每日四组对比",
         "daily-news-v2": "新闻对比",
+        "daily-news-claude-v1": "Claude 对比 Codex",
         "daily-bidirectional-v3": "多空实验",
         "daily-call-put-v4": "期权实验",
         "continuous-quant-v5": "日内动量",
@@ -403,6 +458,7 @@
       questions: {
         "daily-four-arm-v1": "同一批候选，Codex 的选择能否胜过量化信号和随机选股？",
         "daily-news-v2": "让 Codex 读新闻，选股会更准吗？",
+        "daily-news-claude-v1": "同一批候选、同一个问题、同一个小时：Claude 选得比 Codex（GPT）好吗？",
       },
       evidence: { synthetic: "测试数据", prospective: "模拟盘", replay: "回放" },
       stance: { long: "看多", avoid: "回避", short: "看空" },
@@ -411,6 +467,10 @@
         CODEX_ASSESSMENT_UNAVAILABLE: "Codex 未按时返回，其他组照常计分。",
         MARKET_EVIDENCE_UNAVAILABLE: "行情数据缺失，当天未生成决策。",
         INTERRUPTED: "运行中途被中断。",
+        CLAUDE_ASSESSMENT_UNAVAILABLE: "Claude 未按时返回（或未登录），其他组照常计分。",
+        V2_SCAN_UNAVAILABLE: "Codex 研究当天没有保存候选名单，所以没有问 Claude。",
+        V2_DECISION_UNAVAILABLE: "Codex 研究当天没有锁定决策，无法计分。",
+        LATE_START: "Claude 在候选名单锁定后启动太晚，为保证公平跳过当天。",
       },
       jobs: {
         title: "Autopilot",
@@ -461,6 +521,8 @@
         avgNet: "日均净收益",
         vsSpy: "相对 SPY（日均）",
         vsBase: "对比{base}",
+        vsPaired: "对比组",
+        vsArm: "对比 {arm}",
         baseline: "基准",
         chartTitle: "各组累计净收益",
         chartNote: "每天扣除成本后的收益，逐日累加。",
@@ -468,7 +530,7 @@
         chartEarly: "目前只有 {n}/{need} 个交易日，曲线还会大幅波动。",
         recent: "最近交易日",
         date: "交易日",
-        pick: "Codex 首选",
+        pick: "{model} 首选",
         none: "还没有研究数据。",
         noneHint: "开启 Autopilot 后，每天的对比结果会显示在这里：",
         lab: "策略实验室",
@@ -492,7 +554,7 @@
         title: "动态",
         filters: { all: "全部", session: "AI 决策", trade: "交易", problem: "异常" },
         session: "{proto}：{status}",
-        picked: "Codex 首选 {sym}（{stance}）。",
+        picked: "{model} 首选 {sym}（{stance}）。",
         armsPicked: "各组仓位：{list}。",
         scored: "结算：{list}。",
         lab: "策略实验室基于 {n} 条预测完成 {runs} 轮学习。",
@@ -535,8 +597,8 @@
         frozen: "{time} 锁定，距入场窗口 {delay}，距平仓 {hold}。锁定后不可更改。",
         outcome: "各组表现",
         candidates: "候选名单",
-        price: "Codex（仅价格）",
-        news: "Codex（含新闻）",
+        price: "{model}（仅价格）",
+        news: "{model}（含新闻）",
         thesis: "核心逻辑",
         catalyst: "催化剂",
         pricedIn: "是否已计入价格",
@@ -546,11 +608,45 @@
         windowReturn: "近 1 小时",
         rel: "相对 SPY",
         volume: "量比",
-        noAnalysis: "Codex 未分析该标的。",
+        noAnalysis: "{model} 未分析该标的。",
+        noNote: "没有分析。",
         net: "净收益 {v}",
         excess: "超额 {v}",
         loading: "加载中…",
         missing: "无法加载该交易日。",
+      },
+      duel: {
+        title: "GPT vs Claude",
+        lede: "每个交易日美东 10:30，两个模型拿到同样的三只股票、同样的行情证据和同一个问题；选出的股票按同一个小时、同样的成本计分。这里只是研究，不下单。",
+        modes: { news: "读新闻", price: "仅价格" },
+        codex: "GPT",
+        claude: "Claude",
+        via: { codex: "Codex CLI · {model}", claude: "Claude Code · {model}" },
+        total: "{n} 个计分交易日累计",
+        wins: "{n} 天更好",
+        ties: "{n} 天持平",
+        verdict: {
+          collecting: "样本还太少：{d}/{n} 个交易日",
+          ahead: "Claude 领先 GPT",
+          behind: "GPT 领先 Claude",
+          unclear: "目前没有明显差异",
+        },
+        ci: "Claude 减 GPT（每个交易日）：95% 区间 {lo} 至 {hi}",
+        same: "两边都给出答案的 {n} 个交易日里，有 {same} 天选得一样。",
+        chart: "累计净收益",
+        chartNote: "每个交易日扣除成本后的模拟收益逐日累加。几天的差距多半是运气，满 {need} 个交易日才给结论。",
+        sessions: "逐日对比",
+        better: "更好",
+        even: "持平",
+        trading: "你的实盘自动交易跟随 {model}。",
+        none: "Claude 还没有在 Codex 旁边运行。",
+        setupTitle: "开启 Claude",
+        setup: [
+          "安装 Claude Code，运行一次 `claude`，用 Claude 订阅登录（不需要 API key）。",
+          "检查：`tradeagent claude doctor`",
+          "开启每日对比：`tradeagent claude install --enable`",
+          "可选（真钱）：改为跟随 Claude 的选择下单：`tradeagent autotrade install --model claude --enable`",
+        ],
       },
       foot: { updated: "{rel}更新" },
       rel: { now: "刚刚", s: "{n} 秒前", m: "{n} 分钟前", h: "{n} 小时前", inM: "{n} 分钟后", inH: "{h} 小时 {m} 分后", inD: "{n} 天后" },
@@ -574,9 +670,16 @@
   let lang = store.get("ta.lang", (navigator.language || "en").toLowerCase().startsWith("zh") ? "zh" : "en");
   let theme = store.get("ta.theme", "auto");
   let updown = store.get("ta.updown", lang === "zh" ? "cn" : "us");
-  const TABS = ["home", "overview", "research", "trades"];
+  const TABS = ["home", "overview", "compare", "research", "trades"];
   const ROUTES = [...TABS, "activity"];
-  const state = { data: null, etag: null, fetchedAt: 0, offline: false, route: "home", filter: "all", range: "all" };
+  const state = { data: null, etag: null, fetchedAt: 0, offline: false, route: "home", filter: "all", range: "all", duel: store.get("ta.duel", "news") };
+  const CLAUDE_P = "daily-news-claude-v1";
+  // Which research record and arm each autotrade model follows.
+  const FOLLOW = { codex: { protocol: "daily-news-v2", arm: "codex_news" }, claude: { protocol: CLAUDE_P, arm: "claude_news" } };
+  const followedModel = () => (state.data?.autotrade?.model in FOLLOW ? state.data.autotrade.model : "codex");
+  const modelName = (m) => t("models." + m);
+  // Whose notes a protocol's price/news analyses are.
+  const analystOf = (protocol) => (protocol === CLAUDE_P ? "Claude" : "Codex");
 
   function t(path, vars) {
     const pick = (table) => path.split(".").reduce((o, k) => (o == null ? o : o[k]), table);
@@ -699,6 +802,9 @@
     codex_news: "var(--codex-news)",
     quant_codex: "var(--combo)",
     quant_codex_news: "var(--combo)",
+    claude_news: "var(--claude-news)",
+    claude_price: "var(--claude)",
+    quant_claude_news: "var(--combo)",
     quant_only: "var(--quant)",
     seeded_random: "var(--random)",
   };
@@ -1058,6 +1164,7 @@
       opened: toTs(buy?.filled_at) || run.started,
       closed: toTs(sell?.filled_at) || run.finished,
       mirror: String(run.strategy || "").startsWith("mirror:"),
+      model: String(run.strategy || "").includes(":claude_") ? "claude" : "codex",
     };
   }
 
@@ -1204,12 +1311,13 @@
     return h("section", { class: "history" }, head, h("div", { class: "trade-list" }, ...items.slice(0, limit).map(tradeRow)));
   }
 
-  function reasonText(reason) {
+  function reasonText(reason, model = followedModel()) {
     const r = String(reason || "");
-    if (/chose cash/.test(r)) return t("home.reasons.cash");
-    if (/assessment unavailable/.test(r)) return t("home.reasons.unavailable");
-    if (/no daily-news-v2 decision/.test(r)) return t("home.reasons.noDecision");
-    if (/not in the owner/.test(r)) return t("home.reasons.notAllowed", { sym: r.split(" ")[0] });
+    const who = modelName(model);
+    if (/chose cash/.test(r)) return t("home.reasons.cash", { model: who });
+    if (/assessment unavailable/.test(r)) return t("home.reasons.unavailable", { model: who });
+    if (/no daily-news-\S+ decision/.test(r)) return t("home.reasons.noDecision");
+    if (/not in the owner/.test(r)) return t("home.reasons.notAllowed", { sym: r.split(" ")[0], model: who });
     if (/already attempted/.test(r)) return t("home.reasons.already");
     if (/entry window passed/.test(r)) return t("home.reasons.late");
     return r;
@@ -1221,9 +1329,11 @@
     const runs = liveRuns();
     const open = runs.find((r) => r.in_progress);
     const record = (d.autotrade?.records || []).find((r) => r.session === day);
-    const news = d.research.find((r) => r.protocol === "daily-news-v2");
+    const model = followedModel();
+    const who = modelName(model);
+    const news = d.research.find((r) => r.protocol === FOLLOW[model].protocol);
     const run = news?.runs?.find((r) => r.session_date === day);
-    const pick = run?.decision?.arms?.codex_news;
+    const pick = run?.decision?.arms?.[FOLLOW[model].arm];
     if (open) {
       const x = tradeOf(open);
       return { tone: "busy", title: t("home.today.holding", { sym: x.symbol || "" }),
@@ -1236,14 +1346,15 @@
         return { tone: dir(x?.pnl), title: t("home.today.done", { sym: record.symbol }),
           lines: [x ? t("home.today.result", { pnl: signedMoney(x.pnl), ret: pct(x.ret) }) : null] };
       }
-      if (record.status === "NO_TRADE") return { tone: "idle", title: t("home.today.noTrade"), lines: [reasonText(record.reason)] };
-      return { tone: "trouble", title: t("home.today.problem"), lines: [reasonText(record.reason) || statusName(record.status)] };
+      const recordModel = record.model in FOLLOW ? record.model : model;
+      if (record.status === "NO_TRADE") return { tone: "idle", title: t("home.today.noTrade"), lines: [reasonText(record.reason, recordModel)] };
+      return { tone: "trouble", title: t("home.today.problem"), lines: [reasonText(record.reason, recordModel) || statusName(record.status)] };
     }
     if (pick?.symbol && d.market?.session && Date.now() / 1000 < d.market.session.close)
-      return { tone: "busy", title: t("home.today.picked", { sym: pick.symbol }), lines: [t("home.today.soon")] };
+      return { tone: "busy", title: t("home.today.picked", { sym: pick.symbol, model: who }), lines: [t("home.today.soon")] };
     const nowTs = Date.now() / 1000;
     if (d.market?.session && nowTs < d.market.session.open + 4800)  // pick is due by about 10:50 ET
-      return { tone: "idle", title: t("home.today.waiting"), lines: [t("home.today.waitingLine")] };
+      return { tone: "idle", title: t("home.today.waiting"), lines: [t("home.today.waitingLine", { model: who })] };
     if (d.market?.session && nowTs < d.market.session.close)
       return { tone: "trouble", title: t("home.today.noPick"), lines: [t("home.reasons.noDecision")] };
     return { tone: "idle", title: d.market?.session ? t("home.today.closedNow") : t("home.today.holiday"),
@@ -1262,7 +1373,7 @@
     const settings = d.live?.settings;
     const rows = [];
     if (at) {
-      rows.push([t("home.auto.rule"), t("home.auto.ruleValue")]);
+      rows.push([t("home.auto.rule"), t("home.auto.ruleValue", { model: modelName(followedModel()) })]);
       rows.push([t("home.auto.next"), at.timer?.enabled === false ? t("home.auto.off") : at.timer?.next_run ? fmtDateTime(at.timer.next_run) : "—"]);
     }
     if (settings) {
@@ -1274,13 +1385,25 @@
       h("p", { class: "side-label", text: t("home.auto.title") }),
       at ? h("dl", { class: "side-kv" }, ...rows.flatMap(([k, v]) => [h("dt", { text: k }), h("dd", { text: v })]))
         : h("div", {}, h("p", { class: "side-line", text: t("home.auto.notInstalled") }), h("code", { text: "tradeagent autotrade install --enable" }))));
-    const news = d.research.find((r) => r.protocol === "daily-news-v2");
-    const arm = news?.arms?.find((a) => a.arm === "codex_news");
+    const model = followedModel();
+    const news = d.research.find((r) => r.protocol === FOLLOW[model].protocol);
+    const arm = news?.arms?.find((a) => a.arm === FOLLOW[model].arm);
     if (arm) {
       parts.push(h("a", { class: "side-block side-link", href: "#/research" },
-        h("p", { class: "side-label", text: t("home.ai.title") }),
+        h("p", { class: "side-label", text: t("home.ai.title", { model: modelName(model) }) }),
         h("p", { class: "side-big" }, h("span", { class: "num " + dir(arm.mean_net), text: pct(arm.mean_net) }), h("span", { class: "muted small", text: " " + t("home.ai.perDay") })),
         h("p", { class: "side-line", text: t("home.ai.days", { n: news.valid_paired_days || 0, need: MIN_DAYS }) })));
+    }
+    const duel = duelSource();
+    if (duel) {
+      const m = duel.duel.modes.news;
+      const scored = m.scored_days > 0;
+      parts.push(h("a", { class: "side-block side-link", href: "#/compare" },
+        h("p", { class: "side-label", text: t("home.duel.title") }),
+        scored ? h("div", { class: "side-duel" },
+          duelFigure("codex", m.codex_arm, m.codex_total),
+          duelFigure("claude", m.claude_arm, m.claude_total)) : null,
+        h("p", { class: "side-line", text: scored ? t("home.duel.line", { n: m.scored_days, same: m.same_pick }) : t("home.duel.early") })));
     }
     const setup = setupPanel();
     return h("aside", { class: "home-side" }, h("div", { class: "side-card" }, ...parts), setup);
@@ -1342,11 +1465,11 @@
   }
 
   function armsTable(r) {
-    const base = armName(r.baseline);
+    const base = r.baseline ? t("research.vsBase", { base: armName(r.baseline) }) : t("research.vsPaired");
     return h("div", { class: "table-wrap" }, h("table", {},
       h("thead", {}, h("tr", {},
         h("th", { text: t("research.arm") }), h("th", { class: "n", text: t("research.took") }), h("th", { class: "n", text: t("research.avgNet") }),
-        h("th", { class: "n", text: t("research.vsSpy") }), h("th", { text: t("research.vsBase", { base }) }))),
+        h("th", { class: "n", text: t("research.vsSpy") }), h("th", { text: base }))),
       h("tbody", {}, ...r.arms.map((a) => {
         const ex = a.excess || {};
         return h("tr", {},
@@ -1355,7 +1478,8 @@
           h("td", { class: "n " + tone(a.mean_net), text: pct(a.mean_net) }),
           h("td", { class: "n" }, h("span", { class: tone(ex.mean), text: pct(ex.mean) }),
             ex.standard_error != null && ex.days >= 2 ? h("span", { class: "muted small", text: ` ±${(1.96 * ex.standard_error * 100).toFixed(2)}` }) : null),
-          h("td", {}, a.vs_baseline_verdict ? verdictChip(a.vs_baseline_verdict) : h("span", { class: "muted small", text: t("research.baseline") })));
+          h("td", {}, a.vs_baseline_verdict ? verdictChip(a.vs_baseline_verdict) : h("span", { class: "muted small", text: t("research.baseline") }),
+            !r.baseline && a.vs_baseline_verdict ? h("span", { class: "muted small", text: " " + t("research.vsArm", { arm: armName(a.baseline) }) }) : null));
       }))));
   }
 
@@ -1382,8 +1506,9 @@
 
   function drawCharts() {
     for (const box of document.querySelectorAll("[data-chart]")) {
-      const r = state.data.research.find((x) => x.id === box.dataset.chart);
+      const r = chartSources[box.dataset.chart] || state.data.research.find((x) => x.id === box.dataset.chart);
       if (!r) continue;
+      const label = (a) => r.names?.[a] || armName(a);
       const plot = box.querySelector(".plot");
       const W = Math.max(320, plot.clientWidth || 640), H = 240;
       const pad = { l: 52, r: 120, t: 12, b: 28 };
@@ -1404,7 +1529,7 @@
         svg.append(s("line", { class: v === 0 ? "zero" : "grid", x1: pad.l, x2: W - pad.r, y1: y(v), y2: y(v) }));
         svg.append(s("text", { class: "axis", x: pad.l - 8, y: y(v) + 4, "text-anchor": "end" }, pct(v, 1)));
       }
-      const labelAt = [0, Math.floor((n - 1) / 2), n - 1];
+      const labelAt = W < 560 ? [0, n - 1] : [0, Math.floor((n - 1) / 2), n - 1];
       for (const i of new Set(labelAt)) {
         svg.append(s("text", { class: "axis", x: x(i), y: H - 8, "text-anchor": i === 0 ? "start" : i === n - 1 ? "end" : "middle" }, fmtDay(r.series[i].session_date)));
       }
@@ -1418,7 +1543,7 @@
         ends.sort((p, q) => p.y - q.y);
         for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 14) ends[i].y = ends[i - 1].y + 14;
         for (const e of ends) {
-          svg.append(s("text", { class: "end-label", x: W - pad.r + 8, y: e.y + 4 }, `${armName(e.a)} ${pct(e.v, 1)}`));
+          svg.append(s("text", { class: "end-label", x: W - pad.r + 8, y: e.y + 4 }, `${label(e.a)} ${pct(e.v, 1)}`));
         }
       }
       const cross = s("line", { class: "cross", y1: pad.t, y2: H - pad.b, x1: -10, x2: -10 });
@@ -1432,7 +1557,7 @@
         cross.setAttribute("x1", x(i)); cross.setAttribute("x2", x(i));
         const rows = arms.map((a) => ({ a, v: cum[a][i] })).sort((p, q) => q.v - p.v);
         tip.replaceChildren(h("div", { class: "small", text: fmtDay(r.series[i].session_date) }),
-          ...rows.map((row) => h("div", { class: "row" }, h("span", {}, h("i", { style: `background:${armColor(row.a)}` }), armName(row.a)), h("span", { class: "num", text: pct(row.v) }))));
+          ...rows.map((row) => h("div", { class: "row" }, h("span", {}, h("i", { style: `background:${armColor(row.a)}` }), label(row.a)), h("span", { class: "num", text: pct(row.v) }))));
         tip.hidden = false;
         const left = (x(i) / W) * rect.width;
         tip.style.left = Math.min(left + 14, rect.width - 180) + "px";
@@ -1453,7 +1578,7 @@
     const failures = rows.some((run) => run.failure_kind);
     const pickCol = ranked || failures;
     return h("div", { class: "table-wrap" }, h("table", {},
-      h("thead", {}, h("tr", {}, h("th", { text: t("research.date") }), pickCol ? h("th", { text: ranked ? t("research.pick") : "" }) : null, ...arms.map((a) => h("th", { class: "n", text: armName(a) })))),
+      h("thead", {}, h("tr", {}, h("th", { text: t("research.date") }), pickCol ? h("th", { text: ranked ? t("research.pick", { model: analystOf(r.protocol) }) : "" }) : null, ...arms.map((a) => h("th", { class: "n", text: armName(a) })))),
       h("tbody", {}, ...rows.map((run) => {
         const top = run.decision?.candidates.find((c) => c.analysis?.price?.rank === 1);
         const tr = h("tr", { class: run.decision ? "click" : "", tabindex: run.decision ? "0" : null },
@@ -1516,13 +1641,143 @@
     return h("section", { class: "section" }, ...parts);
   }
 
+  // ------------------------------------------------------------------ GPT vs Claude
+
+  const chartSources = {};
+
+  function duelSource() {
+    return (state.data?.research || []).find((r) => r.protocol === CLAUDE_P && r.duel);
+  }
+
+  function duelFigure(who, arm, total) {
+    return h("div", { class: "duel-fig" },
+      h("span", { class: "duel-who" }, h("i", { class: "key", style: `background:${armColor(arm)}`, "aria-hidden": "true" }), t("duel." + who)),
+      h("span", { class: "num " + dir(total), text: total == null ? "—" : pct(total) }));
+  }
+
+  function duelVerdict(m) {
+    const v = m.verdict || {};
+    const text = v.state === "collecting" ? t("duel.verdict.collecting", { d: v.days, n: v.needed || MIN_DAYS }) : t("duel.verdict." + v.state);
+    return h("p", { class: "duel-verdict " + (v.state || "") }, text);
+  }
+
+  function duelSide(who, m, models) {
+    const arm = who === "codex" ? m.codex_arm : m.claude_arm;
+    const total = who === "codex" ? m.codex_total : m.claude_total;
+    const lead = m.codex_total != null && m.claude_total != null && Math.abs(m.claude_total - m.codex_total) > 1e-12
+      && (who === "claude") === (m.claude_total > m.codex_total);
+    return h("div", { class: "duel-side " + who + (lead ? " lead" : "") },
+      h("p", { class: "duel-name" }, h("i", { class: "key", style: `background:${armColor(arm)}`, "aria-hidden": "true" }), t("duel." + who)),
+      h("p", { class: "duel-via", text: t("duel.via." + who, { model: models[who] || "—" }) }),
+      h("p", { class: "duel-total num " + dir(total), text: total == null ? "—" : pct(total) }),
+      h("p", { class: "duel-sub", text: m.scored_days ? t("duel.total", { n: m.scored_days }) : "\u00a0" }),
+      h("p", { class: "duel-wins", text: t("duel.wins", { n: m.wins[who] || 0 }) }));
+  }
+
+  function duelPick(pick, res, outcome) {
+    if (!pick) return h("span", { class: "muted", text: "—" });
+    if (pick.status === "UNAVAILABLE") return h("span", { class: "muted", text: t("decisions.unavailable") });
+    const what = pick.symbol || t("decisions.cash");
+    return h("span", { class: "duel-pick" },
+      h("b", { text: what }),
+      outcome ? h("span", { class: "num " + (pick.symbol ? tone(res?.net) : "muted"), text: res ? pct(res.net) : "—" })
+        : h("span", { class: "muted small", text: t("decisions.pending") }));
+  }
+
+  function duelRows(r, m) {
+    const runs = r.runs.slice().reverse();
+    if (!runs.length) return h("p", { class: "empty", text: t("decisions.empty") });
+    return h("div", { class: "table-wrap" }, h("table", { class: "duel-table" },
+      h("thead", {}, h("tr", {}, h("th", { text: t("research.date") }), h("th", { text: t("duel.codex") }), h("th", { text: t("duel.claude") }), h("th", { class: "n", text: "" }))),
+      h("tbody", {}, ...runs.map((run) => {
+        const arms = run.decision?.arms || {};
+        const out = run.outcome?.arms || {};
+        const a = out[m.codex_arm], b = out[m.claude_arm];
+        let mark = "";
+        if (a && b) {
+          const gap = b.net - a.net;
+          mark = Math.abs(gap) < 1e-12 ? t("duel.even") : `${t(gap > 0 ? "duel.claude" : "duel.codex")} ${t("duel.better")}`;
+        }
+        const winner = a && b && Math.abs(b.net - a.net) >= 1e-12 ? (b.net > a.net ? "claude" : "codex") : null;
+        const tr = h("tr", { class: run.decision ? "click" : "", tabindex: run.decision ? "0" : null },
+          h("td", { class: "day", text: fmtDay(run.session_date) }),
+          run.decision ? h("td", { class: winner === "codex" ? "win codex" : "" }, duelPick(arms[m.codex_arm], a, run.outcome)) : h("td", { colspan: "3", class: "muted", text: run.failure_kind ? t("failures." + run.failure_kind) : statusName(run.status) }),
+          run.decision ? h("td", { class: winner === "claude" ? "win claude" : "" }, duelPick(arms[m.claude_arm], b, run.outcome)) : null,
+          run.decision ? h("td", { class: "n small " + (mark && b && a ? (Math.abs(b.net - a.net) < 1e-12 ? "muted" : b.net > a.net ? "duel-claude" : "duel-codex") : "muted"), text: mark }) : null);
+        if (run.decision) {
+          const open = () => openRun(r.id, run.decision.decision_id);
+          tr.addEventListener("click", open);
+          tr.addEventListener("keydown", (e) => { if (e.key === "Enter") open(); });
+        }
+        return tr;
+      }))));
+  }
+
+  function duelSetup() {
+    return h("div", { class: "panel duel-setup" },
+      h("h3", { text: t("duel.setupTitle") }),
+      h("p", { class: "muted small", text: t("duel.none") }),
+      h("ol", { class: "steps" }, ...t("duel.setup").map((step) => h("li", {}, withCode(step)))));
+  }
+
+  function compare() {
+    const r = duelSource();
+    const mode = state.duel === "price" ? "price" : "news";
+    const head = h("div", { class: "section-head" }, h("h2", { text: t("duel.title") }), r ? evidenceBadge(r.evidence_kind) : null,
+      r ? h("div", { class: "push seg", role: "tablist" }, ...["news", "price"].map((k) =>
+        h("button", { type: "button", role: "tab", class: "range", "aria-selected": String(k === mode), text: t("duel.modes." + k),
+          onclick: () => { state.duel = k; store.set("ta.duel", k); render(); } }))) : null);
+    const parts = [head, h("p", { class: "lede", text: t("duel.lede") })];
+    if (!r) {
+      parts.push(duelSetup());
+      return h("section", { class: "section" }, ...parts);
+    }
+    const m = r.duel.modes[mode];
+    const models = r.duel.models || {};
+    parts.push(h("div", { class: "duel-board" },
+      duelSide("codex", m, models),
+      h("div", { class: "duel-mid" }, h("span", { class: "duel-vs", text: "vs" }), h("span", { class: "small muted", text: t("duel.ties", { n: m.wins.tie || 0 }) })),
+      duelSide("claude", m, models)));
+    const diff = m.difference || {};
+    parts.push(h("div", { class: "duel-facts" },
+      duelVerdict(m),
+      diff.days >= 2 && diff.standard_error != null ? h("p", { class: "small muted", text: t("duel.ci", { lo: pct(diff.mean - 1.96 * diff.standard_error), hi: pct(diff.mean + 1.96 * diff.standard_error) }) }) : null,
+      m.answered_both ? h("p", { class: "small muted", text: t("duel.same", { same: m.same_pick, n: m.answered_both }) }) : null,
+      progress({ valid_paired_days: m.scored_days })));
+    const followed = state.data.autotrade ? followedModel() : null;
+    if (followed) parts.push(h("p", { class: "small muted", text: t("duel.trading", { model: modelName(followed) }) }));
+    const id = "duel-" + mode;
+    chartSources[id] = { id, arms: [{ arm: m.codex_arm }, { arm: m.claude_arm }], series: m.series, names: { [m.codex_arm]: t("duel.codex"), [m.claude_arm]: t("duel.claude") } };
+    if (m.series.length >= 2) {
+      parts.push(h("div", { class: "chart", "data-chart": id },
+        h("h3", { text: t("duel.chart") }),
+        h("div", { class: "legend" }, ...[m.codex_arm, m.claude_arm].map((a) => h("span", {}, h("i", { style: `background:${armColor(a)}` }), chartSources[id].names[a]))),
+        h("div", { class: "plot" }),
+        h("p", { class: "small muted", text: t("duel.chartNote", { need: MIN_DAYS }) })));
+    } else {
+      parts.push(h("p", { class: "empty gate", text: t("research.chartGate", { n: m.series.length }) }));
+    }
+    parts.push(h("div", { class: "section" }, h("div", { class: "section-head" }, h("h3", { text: t("duel.sessions") })), duelRows(r, m)));
+    return h("section", { class: "section" }, ...parts);
+  }
+
+  function duelNotes(a) {
+    const pair = (mode, gpt, claude) => (gpt || claude ? h("div", { class: "note" },
+      h("h4", { text: t("duel.modes." + mode) }),
+      h("div", { class: "split" },
+        analysisBlock(t("duel.codex"), gpt) || h("p", { class: "small muted", text: `${t("duel.codex")}: ${t("drawer.noNote")}` }),
+        analysisBlock(t("duel.claude"), claude) || h("p", { class: "small muted", text: `${t("duel.claude")}: ${t("drawer.noNote")}` }))) : null);
+    const blocks = [pair("news", a.codex_news, a.news), pair("price", a.codex_price, a.price)].filter(Boolean);
+    return blocks.length ? h("div", {}, ...blocks) : h("p", { class: "small muted note", text: t("drawer.noNote") });
+  }
+
   // ------------------------------------------------------------------ activity
 
   function activityText(item) {
     if (item.kind === "session") {
       const lines = [h("div", {}, h("strong", { text: t("activity.session", { proto: protoName(item.protocol), status: statusName(item.status) }) }), " ", evidenceBadge(item.evidence_kind))];
       if (item.failure_kind) lines.push(h("div", { class: "failure", text: t("failures." + item.failure_kind) }));
-      if (item.top) lines.push(h("div", { text: t("activity.picked", { sym: item.top.symbol, stance: t("stance." + item.top.stance) }) + " " }, h("span", { class: "muted", text: item.top.thesis || "" })));
+      if (item.top) lines.push(h("div", { text: t("activity.picked", { sym: item.top.symbol, stance: t("stance." + item.top.stance), model: analystOf(item.protocol) }) + " " }, h("span", { class: "muted", text: item.top.thesis || "" })));
       if (item.picks) lines.push(armChips(item.picks, item.outcome, item.protocol));
       if (item.decision_id) lines.push(h("button", { class: "link small", type: "button", onclick: () => openRun(item.source_id, item.decision_id), text: t("activity.details") }));
       return lines;
@@ -1655,8 +1910,9 @@
             c.relative_strength != null ? h("span", { text: `${t("drawer.rel")} ${pct(c.relative_strength)}` }) : null,
             c.volume_ratio != null ? h("span", { text: `${t("drawer.volume")} ×${Number(c.volume_ratio).toFixed(1)}` }) : null,
             ...c.categories.map((cat) => h("span", { class: "muted", text: cat.replace(/_/g, " ") }))),
-          a.price || a.news ? h("div", { class: a.price && a.news ? "split" : "" }, analysisBlock(t("drawer.price"), a.price), analysisBlock(t("drawer.news"), a.news))
-            : h("p", { class: "small muted note", text: t("drawer.noAnalysis") })));
+          run.protocol === CLAUDE_P ? duelNotes(a)
+            : a.price || a.news ? h("div", { class: a.price && a.news ? "split" : "" }, analysisBlock(t("drawer.price", { model: analystOf(run.protocol) }), a.price), analysisBlock(t("drawer.news", { model: analystOf(run.protocol) }), a.news))
+            : h("p", { class: "small muted note", text: t("drawer.noAnalysis", { model: analystOf(run.protocol) }) })));
       }
     }
     document.getElementById("drawer-body").replaceChildren(...body.filter(Boolean));
@@ -1669,7 +1925,7 @@
       [t("trades.detail.sold"), x.sell ? `${price(x.sell.price)}, ${fmtDateTime(x.closed)}` : run.in_progress && run.exit_due ? t("home.today.sellsAt", { when: fmtTime(run.exit_due) }) : "—"],
       [t("trades.detail.amount"), usd(x.cost)],
       [t("trades.detail.shares"), x.buy?.quantity != null ? String(x.buy.quantity) : "—"],
-      [t("trades.detail.rule"), x.mirror ? t("home.auto.ruleValue") : t("trades.detail.manual")],
+      [t("trades.detail.rule"), x.mirror ? t("home.auto.ruleValue", { model: modelName(x.model) }) : t("trades.detail.manual")],
       [t("trades.detail.status"), statusName(run.status)],
       [t("trades.detail.reconciled"), run.reconciled == null ? "—" : run.reconciled ? t("trades.yes") : t("trades.no")],
     ];
@@ -1698,7 +1954,7 @@
       main.replaceChildren(h("p", { class: "muted", text: state.offline ? t("pulse.offline") : "…" }));
       return;
     }
-    const views = { home, overview, activity, research, trades };
+    const views = { home, overview, compare, activity, research, trades };
     heroScrub = null;
     main.replaceChildren(...[views[state.route]()].flat().filter(Boolean));
     drawHero();

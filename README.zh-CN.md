@@ -98,6 +98,11 @@ systemctl --user list-timers tradeagent-daily-news.timer tradeagent-autotrade.ti
 tradeagent autotrade uninstall
 ```
 
+想让 Claude 和 Codex 回答同一个每日问题：用 Claude 订阅登录 Claude Code，然后运行
+`tradeagent claude install --enable`。仪表盘的 **GPT vs Claude** 页面会并排对比两者；
+`tradeagent autotrade install --model claude` 可改为跟随 Claude 的选择下单。详见
+[Claude 与 Codex 对比](docs/claude.md)。
+
 已有交易用 `tradeagent status` 查看；运行中断后，用 `tradeagent recover` 接着管理平仓。
 账户资金要求、配置和平仓恢复见[自动交易说明](docs/autotrade.md)。
 
@@ -124,7 +129,7 @@ AI 选择交易，执行引擎落实你的设置。每笔订单都需要新鲜�
 ## 文档
 
 [安装与配置](docs/getting-started.md) · [自动交易](docs/autotrade.md) ·
-[Dashboard](docs/dashboard.md) · [手动交易](docs/one-shot.md) ·
+[Dashboard](docs/dashboard.md) · [GPT vs Claude](docs/claude.md) · [手动交易](docs/one-shot.md) ·
 [架构](docs/architecture.md) · [参与贡献](CONTRIBUTING.md) · [更新日志](CHANGELOG.md)（详细文档为英文）
 
 ## 许可证

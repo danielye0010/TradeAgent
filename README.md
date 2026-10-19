@@ -109,6 +109,11 @@ To stop future scheduled runs:
 tradeagent autotrade uninstall
 ```
 
+To put Claude next to Codex on the same daily question, sign in to Claude Code with your
+Claude subscription and run `tradeagent claude install --enable`; the dashboard's
+**GPT vs Claude** page compares them, and `tradeagent autotrade install --model claude`
+trades Claude's pick instead. See [Claude next to Codex](docs/claude.md).
+
 Use `tradeagent status` to check an existing trade and `tradeagent recover` to resume
 its exit if interrupted. See [automatic trading](docs/autotrade.md) for account funding,
 configuration and recovery details.
@@ -139,7 +144,7 @@ interruption, check the position and use `tradeagent recover`. AI decisions can 
 ## Documentation
 
 [Setup](docs/getting-started.md) · [Automatic trading](docs/autotrade.md) ·
-[Dashboard](docs/dashboard.md) · [Manual trading](docs/one-shot.md) ·
+[Dashboard](docs/dashboard.md) · [GPT vs Claude](docs/claude.md) · [Manual trading](docs/one-shot.md) ·
 [Architecture](docs/architecture.md) · [Contributing](CONTRIBUTING.md) · [Changelog](CHANGELOG.md)
 
 ## License

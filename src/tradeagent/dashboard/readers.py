@@ -26,12 +26,34 @@ ARMS = {
         "seeded_random",
     ],
 }
-BASELINE = {"daily-four-arm-v1": "seeded_random", "daily-news-v2": "seeded_random"}
+CLAUDE_PROTOCOL = "daily-news-claude-v1"
+# GPT (Codex) vs Claude on the daily-news-v2 shortlist: each Claude arm next to the
+# Codex arm that answered the same question.
+ARMS[CLAUDE_PROTOCOL] = [
+    "claude_news",
+    "codex_news",
+    "claude_price",
+    "codex_price",
+    "quant_only",
+    "seeded_random",
+]
+DUEL = {"news": ("codex_news", "claude_news"), "price": ("codex_price", "claude_price")}
+# One baseline per protocol, or per arm ("*" for the rest).
+BASELINE = {
+    "daily-four-arm-v1": "seeded_random",
+    "daily-news-v2": "seeded_random",
+    CLAUDE_PROTOCOL: {
+        "claude_news": "codex_news",
+        "claude_price": "codex_price",
+        "*": "seeded_random",
+    },
+}
 # How the installer schedules each protocol (New York time); used when no
 # systemd timer file is available, e.g. in the demo.
 DEFAULT_SCHEDULE = {
     "daily-four-arm-v1": [("10:00", "decide"), ("11:30", "resolve"), ("17:00", "report")],
     "daily-news-v2": [("10:30", "decide"), ("12:00", "resolve"), ("17:05", "report")],
+    CLAUDE_PROTOCOL: [("10:30", "decide"), ("12:10", "resolve"), ("17:10", "report")],
 }
 
 _lock = threading.Lock()
@@ -332,10 +354,12 @@ def daily_state(directory):
     arm_rows = []
     for name in arms:
         stats = (pool.get("arms") or {}).get(name) or {}
-        excess_diff = ((pool.get("paired_excess_differences") or {}).get(name) or {}).get(baseline)
+        own = baseline.get(name, baseline.get("*")) if isinstance(baseline, dict) else baseline
+        excess_diff = ((pool.get("paired_excess_differences") or {}).get(name) or {}).get(own)
         arm_rows.append(
             {
                 "arm": name,
+                "baseline": own,
                 "observed_days": stats.get("observed_days", 0),
                 "selected_days": stats.get("selected_days", 0),
                 "unavailable_days": stats.get("unavailable_days", 0),
@@ -343,8 +367,8 @@ def daily_state(directory):
                 "mean_stress_net": stats.get("paired_mean_stress_net"),
                 "excess": stats.get("paired_excess_over_benchmark"),
                 "excess_verdict": verdict(stats.get("paired_excess_over_benchmark")),
-                "vs_baseline": excess_diff if name != baseline else None,
-                "vs_baseline_verdict": verdict(excess_diff) if name != baseline else None,
+                "vs_baseline": excess_diff if name != own else None,
+                "vs_baseline_verdict": verdict(excess_diff) if name != own else None,
             }
         )
     if not supported:
@@ -370,6 +394,7 @@ def daily_state(directory):
             "candidates": config.get("candidates"),
             "universe_size": len(config.get("universe") or []),
             "codex_model": config.get("codex_model"),
+            "claude_model": config.get("claude_model"),
             "mode": config.get("mode"),
         },
         "last_tick": status.get("tick_completed_at"),
@@ -386,8 +411,9 @@ def daily_state(directory):
         "resolved_sessions": pool.get("resolved_sessions", len(outcomes)) if supported else 0,
         "valid_paired_days": pool.get("valid_paired_days", len(series)) if supported else 0,
         "pending_sessions": len(status.get("pending_sessions") or []),
-        "baseline": baseline,
+        "baseline": baseline if isinstance(baseline, str) else None,
         "arms": arm_rows,
+        "duel": duel(runs, pool, config) if protocol == CLAUDE_PROTOCOL and supported else None,
         "series": series,
         "runs": runs,
         "data_gaps": [
@@ -402,6 +428,65 @@ def daily_state(directory):
     }
 
 
+def duel(runs, pool, config):
+    """GPT (Codex) vs Claude on the same shortlist: totals, wins, agreement and the
+    paired verdict, once with news and once on price alone."""
+    differences = pool.get("paired_excess_differences") or {}
+    modes = {}
+    for mode, (codex, claude) in DUEL.items():
+        series, totals, wins = [], {codex: 0.0, claude: 0.0}, {"codex": 0, "claude": 0, "tie": 0}
+        answered = same = 0
+        for run in runs:
+            picks = (run["decision"] or {}).get("arms") or {}
+            a, b = picks.get(codex) or {}, picks.get(claude) or {}
+            if a.get("status") == "VALID" and b.get("status") == "VALID":
+                answered += 1
+                same += a.get("symbol") == b.get("symbol")
+            arms = (run["outcome"] or {}).get("arms") or {}
+            nets = {n: (arms.get(n) or {}).get("net") for n in (codex, claude)}
+            if None in nets.values():
+                continue
+            for name, value in nets.items():
+                totals[name] += value
+            gap = nets[claude] - nets[codex]
+            wins["tie" if abs(gap) < 1e-12 else "claude" if gap > 0 else "codex"] += 1
+            series.append({"session_date": run["session_date"], "net": nets})
+        difference = (differences.get(claude) or {}).get(codex)
+        modes[mode] = {
+            "codex_arm": codex,
+            "claude_arm": claude,
+            "scored_days": len(series),
+            "codex_total": totals[codex] if series else None,
+            "claude_total": totals[claude] if series else None,
+            "wins": wins,
+            "answered_both": answered,
+            "same_pick": same,
+            "difference": difference,
+            "verdict": verdict(difference),
+            "series": series,
+        }
+    return {
+        "models": {"codex": config.get("codex_model"), "claude": config.get("claude_model")},
+        "modes": modes,
+    }
+
+
+def _follow_analyses(follow_dir):
+    """Codex's own notes from the followed daily-news-v2 directory, read-only."""
+    if not follow_dir:
+        return {}
+    db = connect(Path(follow_dir) / "experience.sqlite3")
+    if db is None:
+        return {}
+    try:
+        return {
+            (item["scan_id"], item["symbol"], item["assessor"]): item["research"]
+            for item, _ in _records(db, Path(follow_dir), "assessments", summarize_assessment)
+        }
+    finally:
+        db.close()
+
+
 def run_detail(directory, decision_id):
     """Everything a person wants to see about one frozen session decision."""
     state = daily_state(directory)
@@ -411,6 +496,20 @@ def run_detail(directory, decision_id):
     )
     if run is None:
         return None
+    if state["protocol"] == CLAUDE_PROTOCOL:
+        # Put Codex's answer to the same question next to Claude's.
+        config = (read_json(Path(directory) / "daily-deployment.json") or {}).get("config") or {}
+        codex = _follow_analyses(config.get("follow_dir"))
+        decision = run["decision"]
+        candidates = []
+        for c in decision["candidates"]:
+            analysis = dict(c["analysis"])
+            for tag in ("price", "news"):
+                found = codex.get((decision["scan_id"], c["symbol"], tag))
+                if found:
+                    analysis["codex_" + tag] = found
+            candidates.append({**c, "analysis": analysis})
+        run = {**run, "decision": {**decision, "candidates": candidates}}
     return {"protocol": state["protocol"], "evidence_kind": state["evidence_kind"], **run}
 
 
@@ -613,7 +712,17 @@ def autotrade_records(directory, limit=90):
     directory = Path(directory)
     if not directory.is_dir():
         return []
-    keep = ("session", "status", "symbol", "reason", "decision_id", "followed", "pnl", "position")
+    keep = (
+        "session",
+        "status",
+        "symbol",
+        "reason",
+        "decision_id",
+        "followed",
+        "model",
+        "pnl",
+        "position",
+    )
     records = []
     for path in sorted(directory.glob("????-??-??.json"))[-limit:]:
         value = read_json(path)

@@ -109,6 +109,17 @@ def check_codex():
     return OK, "Codex CLI installed (sign in with `codex login` if you have not)", None
 
 
+def check_claude():
+    if shutil.which("claude") is None:
+        return (
+            OK,
+            "Claude Code not installed (optional: Claude next to Codex in the daily research)",
+            "Install Claude Code, run `claude` to sign in with your Claude subscription, "
+            "then `tradeagent claude doctor`.",
+        )
+    return OK, "Claude Code installed; check the login with `tradeagent claude doctor`", None
+
+
 def check_systemd():
     if shutil.which("systemctl") is None:
         return WARN, "systemd not available (needed only for the daily autopilot)", None
@@ -133,6 +144,7 @@ CHECKS = [
     ("Robinhood sign-in", check_login, True),
     ("Live settings", check_config, True),
     ("Codex CLI", check_codex, False),
+    ("Claude Code", check_claude, False),
     ("Autopilot timer", check_systemd, False),
 ]
 
