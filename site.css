@@ -65,8 +65,7 @@ h1, h2, h3, p { margin: 0; }
 .hero { padding: 72px 0 36px; }
 .eyebrow { color: var(--muted); font-size: 14px; font-weight: 650; letter-spacing: 0.02em; }
 .hero h1 { margin-top: 12px; font-size: clamp(34px, 5.4vw, 60px); line-height: 1.05; letter-spacing: -0.035em; font-weight: 750; max-width: 15ch; }
-.hero h1 .gpt { color: var(--gpt); }
-.hero h1 .claude { color: var(--claude); }
+.hero h1 .mark-up { background: linear-gradient(transparent 62%, color-mix(in srgb, var(--up) 28%, transparent) 62%); }
 .lede { margin-top: 18px; font-size: 19px; color: var(--ink-2); max-width: 60ch; }
 .cta { margin-top: 26px; display: flex; gap: 10px; flex-wrap: wrap; }
 .btn { display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; padding: 11px 20px; font-weight: 650; font-size: 15px; text-decoration: none; border: 1px solid var(--ink); }
@@ -88,6 +87,14 @@ section.block { padding: 56px 0 0; }
 .head h2 { font-size: 26px; letter-spacing: -0.02em; }
 .head .aside { color: var(--muted); font-size: 14px; }
 .head .push { margin-left: auto; }
+
+.section-lede { color: var(--ink-2); max-width: 64ch; margin: -6px 0 18px; }
+
+/* trust */
+.trust { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.point { border-top: 2px solid var(--ink); padding-top: 14px; }
+.point h3 { font-size: 17px; letter-spacing: -0.01em; }
+.point p { margin-top: 6px; color: var(--ink-2); font-size: 15px; }
 
 /* chart */
 .chart { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); padding: 18px 18px 10px; position: relative; }
@@ -159,6 +166,7 @@ td.win { box-shadow: inset 3px 0 0 var(--w); }
   .cell:nth-child(3) { border-left: 0; }
   .cell:nth-child(n + 3) { border-top: 1px solid var(--line); }
   .picks, .vs, .steps, .run { grid-template-columns: minmax(0, 1fr); }
+  .trust { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 560px) {
   .wrap { padding: 0 16px; }
@@ -168,5 +176,6 @@ td.win { box-shadow: inset 3px 0 0 var(--w); }
   .cell .big { font-size: 26px; }
   th, td { padding: 10px 10px; font-size: 14px; }
   .hide-s { display: none; }
+  .trust { grid-template-columns: minmax(0, 1fr); }
 }
 @media (prefers-reduced-motion: reduce) { .live i { animation: none; } html { scroll-behavior: auto; } }
