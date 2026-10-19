@@ -300,8 +300,8 @@ class Companion:
     def freeze(self, report, call, tag):
         """Freeze one bounded Claude answer, or record it unavailable; never partial."""
         try:
-            document, provenance = call.result()
-            frozen = self.clock()
+            # Each answer keeps the time its own call returned, not when it is stored.
+            (document, provenance), frozen = call.result()
             with self.store.db:
                 for item in document["assessments"]:
                     self.store.assessment(
@@ -364,11 +364,13 @@ class Companion:
                 reason=f"started {lag:.0f}s after the v2 scan; the limit is {START_LAG_SECONDS}s",
             )
         self.store.save("scans", report, report["scan_id"], report["decision_time"])
+
+        def timed(search):
+            answer = self.assessor(report, now=started, search=search)
+            return answer, self.clock()
+
         with ThreadPoolExecutor(max_workers=2) as pool:
-            calls = {
-                tag: pool.submit(self.assessor, report, now=started, search=tag == "news")
-                for tag in ("price", "news")
-            }
+            calls = {tag: pool.submit(timed, tag == "news") for tag in ("price", "news")}
             answers = {tag: self.freeze(report, call, tag) for tag, call in calls.items()}
         decision = self.await_value(
             lambda: self.follow.decision(report["scan_id"], report["decision_time"]),
@@ -559,6 +561,10 @@ class Companion:
                     result = self.session(day, target)
             resolved = self.resolve()
             comparison = compare(self.store)
+            # An outcome or a terminal failure settles a session; neither is pending.
+            settled = {o["decision_id"] for o in self.store.records("outcomes")} | {
+                r["decision_id"] for r in self.store.records("resolution_failures")
+            }
             status = {
                 "mode": "SHADOW",
                 "protocol": PROTOCOL,
@@ -571,8 +577,7 @@ class Companion:
                 "pending_sessions": [
                     d["decision_id"]
                     for d in self.store.records("decisions")
-                    if d["decision_id"]
-                    not in {o["decision_id"] for o in self.store.records("outcomes")}
+                    if d["decision_id"] not in settled
                 ],
                 "orders_submitted": 0,
                 "tick_completed_at": self.clock(),
