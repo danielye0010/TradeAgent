@@ -20,6 +20,11 @@ Python distribution version: `1.4.0`.
   session with both picks; the session view shows both models' reasoning side by side.
   The Account page names whichever model autotrade follows.
 - `tradeagent doctor` lists Claude Code as an optional check.
+- Each concurrent Claude answer keeps its own completion time, so a slow price-only
+  answer cannot make a finished news answer late; sessions with a terminal v2
+  resolution failure are no longer listed as pending.
+- READMEs rewritten around what a user does and sees: a trading day at a glance,
+  three-step setup, automatic trading, and adding Claude.
 
 ## 1.3.0 — 2026-10-19
 
