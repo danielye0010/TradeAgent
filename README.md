@@ -13,6 +13,8 @@ Every trading morning, an AI reads the market and the news, picks one US stock o
 that pick with a small amount you choose and sells it an hour later, through Robinhood's
 official agentic trading API.
 
+**[See the live results →](https://danielye0010.github.io/TradeAgent/)** GPT and Claude, the same stocks every day, updated after every close.
+
 - **Pick your AI.** Codex (GPT) makes the daily pick. Add Claude to answer the same
   question on the same stocks, compare the two, and choose whose pick to trade.
 - **Use the subscriptions you already have.** Codex signs in with ChatGPT, Claude with
@@ -143,6 +145,22 @@ tradeagent autotrade install --enable                  # back to Codex (default)
 A few days of results are mostly luck; the page gives a verdict after 20 trading
 days. See [GPT vs Claude](docs/claude.md).
 
+## The dashboard
+
+`tradeagent dashboard` opens a local page in your browser. It only reads; it never trades.
+
+| Page | What you see |
+| --- | --- |
+| **Account** | Account value and profit, a chart you can scrub, today's trade and recent trades. |
+| **Decisions** | Today's schedule, each frozen AI pick and why it was made. |
+| **GPT vs Claude** | Who is ahead, how often they agree, every day's picks and both models' reasoning. |
+| **Research** | Each strategy's results against SPY and a random pick. |
+| **Trades** | Every trade with prices, times and total profit. |
+
+Want others to follow along? `tradeagent publish install` puts the paper results (never
+your account) on a public page like [ours](https://danielye0010.github.io/TradeAgent/) after every close. See
+[publishing](docs/publish.md).
+
 ## Ask the agent yourself
 
 Run `codex` from the checkout and ask for an analysis:
@@ -172,7 +190,8 @@ AI picks can lose money. Start small.
 ## Documentation
 
 [Setup](docs/getting-started.md) · [Automatic trading](docs/autotrade.md) ·
-[Dashboard](docs/dashboard.md) · [GPT vs Claude](docs/claude.md) · [Manual trading](docs/one-shot.md) ·
+[Dashboard](docs/dashboard.md) · [GPT vs Claude](docs/claude.md) · [Public results page](docs/publish.md) ·
+[Manual trading](docs/one-shot.md) ·
 [Architecture](docs/architecture.md) · [Contributing](CONTRIBUTING.md) · [Changelog](CHANGELOG.md)
 
 ## License

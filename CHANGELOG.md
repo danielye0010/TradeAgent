@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.5.0 — 2026-10-19
+
+Python distribution version: `1.5.0`.
+
+- `tradeagent publish`: a public results page built from the paper research. It shows
+  each day's frozen GPT and Claude picks with results after costs, SPY over the same
+  hour, a running chart, the latest reasoning with sources, a head-to-head scoreboard and
+  every pick. `publish install --remote URL --enable` rebuilds it and pushes it to the
+  repository's `gh-pages` branch every weekday at 17:20 New York time. The live account
+  is never read.
+- READMEs link the live results page and describe each dashboard page.
+- The dashboard's session outcomes include SPY's move over the same window.
+
 ## 1.4.0 — 2026-10-19
 
 Python distribution version: `1.4.0`.

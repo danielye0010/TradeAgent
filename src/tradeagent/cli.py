@@ -30,6 +30,10 @@ def main(argv=None):
         from .autotrade import main as autotrade_main
 
         return autotrade_main(supplied[1:])
+    if supplied[0] == "publish":
+        from .publish import main as publish_main
+
+        return publish_main(supplied[1:])
     if supplied[0] == "claude":
         from .claude_cli import main as claude_main
 

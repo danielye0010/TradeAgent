@@ -12,6 +12,7 @@ TradeAgent: an AI analyst picks the trade, a deterministic engine places it.
 
 See what it is doing:
   dashboard             local web dashboard: schedule, AI decisions, results, trades
+  publish install       public results page (paper research only), after every close
 
 Try it (no accounts needed):
   demo                  synthetic strategy lab: forecasts, scoring, learning

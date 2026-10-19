@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>TradeAgent: GPT vs Claude, one stock a day</title>
+<meta name="description" content="Every trading morning GPT (Codex) and Claude each read the news and pick one stock. Their frozen picks and results, updated after every close.">
+<meta property="og:title" content="TradeAgent: GPT vs Claude, one stock a day">
+<meta property="og:description" content="Two AIs, the same three stocks, the same hour. Live paper results, updated after every close.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2316191a'/%3E%3Cpath d='M7 21l6-6 4 4 8-9' stroke='%2300c805' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<header class="bar">
+  <div class="wrap bar-row">
+    <a class="mark" href="#top">TradeAgent</a>
+    <span class="live"><i></i><span id="live-label">Live paper results</span></span>
+    <nav class="bar-tools">
+      <button type="button" class="pill" id="lang">中文</button>
+      <a class="pill dark" id="gh" href="https://github.com/danielye0010/TradeAgent">GitHub</a>
+    </nav>
+  </div>
+</header>
+<main id="top" class="wrap"></main>
+<footer class="wrap foot" id="foot"></footer>
+<script id="data" type="application/json">__DATA__</script>
+<script src="site.js"></script>
+</body>
+</html>
