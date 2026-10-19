@@ -233,8 +233,11 @@ def summarize_outcome(o):
     for symbol, value in (o.get("candidate_outcomes") or {}).items():
         if isinstance(value, dict) and "gross" in value:
             symbols[symbol] = {"gross": value.get("gross"), "net": value.get("base_net")}
-            if spy is None and value.get("benchmark") == "SPY":
-                # Every candidate shares the session's window, so SPY's move is the same.
+            # Every candidate shares the session's window, so SPY's move is the same.
+            # SPY as a candidate is benchmarked against another index; use its own move.
+            if symbol == "SPY":
+                spy = value.get("gross")
+            elif spy is None and value.get("benchmark") == "SPY":
                 spy = value.get("benchmark_gross")
     return {"decision_id": o.get("decision_id"), "arms": arms, "symbols": symbols, "spy": spy}
 
