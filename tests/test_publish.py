@@ -1,0 +1,118 @@
+"""`tradeagent publish`: a public results page built from the paper research only."""
+
+import json
+import subprocess
+
+import dashboard_fixtures as demo
+import pytest
+
+from tradeagent import publish
+from tradeagent.cli import main
+from tradeagent.dashboard import jobs
+
+
+@pytest.fixture(scope="module")
+def research(tmp_path_factory):
+    return demo.build_duel(tmp_path_factory.mktemp("research"), sessions=3)
+
+
+def test_snapshot_has_both_models_spy_and_the_latest_reasoning(research):
+    v2, claude = research
+    data = publish.snapshot(v2, claude, now=1)
+    assert data["first_session"] == data["claude_since"]
+    assert data["models"] == {"codex": "gpt-6.1-sol", "claude": "claude-opus-5-5"}
+    assert len(data["sessions"]) == 3 and all(s["scored"] for s in data["sessions"])
+    for session in data["sessions"]:
+        assert set(session) == {"date", "scored", "codex", "claude", "quant", "random", "spy"}
+        assert isinstance(session["spy"], float)
+        for key in ("codex", "claude", "quant", "random"):
+            assert set(session[key]) == {"symbol", "answered", "net"}
+    latest = data["latest"]
+    assert latest["date"] == data["sessions"][-1]["date"]
+    assert latest["codex"]["thesis"] and latest["claude"]["thesis"]
+    assert data["duel"]["scored_days"] == 3 and "series" not in data["duel"]
+
+
+def test_snapshot_holds_nothing_from_the_live_account(research):
+    text = json.dumps(publish.snapshot(*research, now=1)).lower()
+    for word in ("nav", "cash_balance", "account", "order", "robinhood", "/home", "token"):
+        assert word not in text
+
+
+def test_codex_only_research_still_publishes(research):
+    data = publish.snapshot(research[0], None, now=1)
+    assert data["claude_since"] is None and data["duel"] is None
+    assert all(s["claude"] is None for s in data["sessions"])
+
+
+def test_build_writes_a_self_contained_page(research, tmp_path):
+    data = publish.snapshot(*research, now=1)
+    out = publish.build(tmp_path / "site", data)
+    page = (out / "index.html").read_text()
+    assert "__DATA__" not in page and '"schema":1' in page
+    assert json.loads((out / "data.json").read_text()) == data
+    assert {p.name for p in out.iterdir()} == set(publish.SITE_FILES)
+
+
+def test_push_commits_the_site_to_gh_pages(research, tmp_path):
+    remote = tmp_path / "remote.git"
+    subprocess.run(["git", "init", "-q", "--bare", str(remote)], check=True)
+    data = publish.snapshot(*research, now=1)
+    first = publish.push(data, str(remote), tmp_path / "work")
+    assert first["status"] == "PUBLISHED" and first["through"] == data["latest"]["date"]
+    again = publish.push(data, str(remote), tmp_path / "work")
+    assert again["status"] == "UNCHANGED"
+    # A fresh checkout (e.g. a new computer) continues the same branch.
+    newer = {**data, "generated_at": 2}
+    assert publish.push(newer, str(remote), tmp_path / "other")["status"] == "PUBLISHED"
+    log = subprocess.run(
+        ["git", "--git-dir", str(remote), "log", "--format=%s", "gh-pages"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.splitlines()
+    assert len(log) == 2 and log[0].startswith("Results through")
+    files = subprocess.run(
+        ["git", "--git-dir", str(remote), "ls-tree", "--name-only", "gh-pages"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.split()
+    assert set(files) == set(publish.SITE_FILES)
+
+
+def test_push_failure_explains_how_to_sign_in(research, tmp_path):
+    data = publish.snapshot(*research, now=1)
+    with pytest.raises(RuntimeError, match="gh auth login"):
+        publish.push(data, str(tmp_path / "missing.git"), tmp_path / "work")
+
+
+def test_timer_publishes_after_the_close_and_finds_the_research(research, tmp_path):
+    v2, claude = research
+    units = tmp_path / "units"
+    units.mkdir()
+    for name, module, state, extra in (
+        ("tradeagent-daily-news", "tradeagent.prospective.daily", v2, " --protocol daily-news-v2"),
+        ("tradeagent-claude-compare", "tradeagent.prospective.claude_compare", claude, ""),
+    ):
+        (units / f"{name}.service").write_text(
+            f"[Service]\nExecStart=/py -m {module} --state-dir {state}{extra}\n"
+        )
+    found = publish.research_dirs(unit_dir=units)
+    assert found == (v2.resolve(), claude.resolve())
+    summary = publish.install(
+        "git@github.com:me/TradeAgent.git", *found, enable=False, unit_dir=units, systemctl=False
+    )
+    assert summary["runs"] == "weekdays 17:20 New York time"
+    service = (units / "tradeagent-publish.service").read_text()
+    assert "-m tradeagent.publish run --remote git@github.com:me/TradeAgent.git" in service
+    assert "Persistent=true" in (units / "tradeagent-publish.timer").read_text()
+    # The dashboard does not mistake the publisher for a research job.
+    assert all(j["unit"] != "tradeagent-publish" for j in jobs.discover(units, systemctl=False))
+    assert publish.uninstall(units, systemctl=False)["published_site"] == "kept"
+
+
+def test_cli_dispatches_publish(capsys):
+    with pytest.raises(SystemExit):
+        main(["publish", "--help"])
+    assert "results page" in capsys.readouterr().out

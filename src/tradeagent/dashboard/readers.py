@@ -229,11 +229,14 @@ def summarize_outcome(o):
                 "excess": residual(value),
             }
         )
-    symbols = {}
+    symbols, spy = {}, None
     for symbol, value in (o.get("candidate_outcomes") or {}).items():
         if isinstance(value, dict) and "gross" in value:
             symbols[symbol] = {"gross": value.get("gross"), "net": value.get("base_net")}
-    return {"decision_id": o.get("decision_id"), "arms": arms, "symbols": symbols}
+            if spy is None and value.get("benchmark") == "SPY":
+                # Every candidate shares the session's window, so SPY's move is the same.
+                spy = value.get("benchmark_gross")
+    return {"decision_id": o.get("decision_id"), "arms": arms, "symbols": symbols, "spy": spy}
 
 
 def _records(db, directory, table, summarize):

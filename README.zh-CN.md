@@ -11,6 +11,8 @@
 每个交易日早上，AI 看行情、读新闻，从当天的美股或 ETF 里选出一只（或者决定不买），并说明理由。
 开启自动交易后，TradeAgent 会通过 Robinhood 官方 Agent 交易接口，用你设定的小金额买入，一小时后自动卖出。
 
+**[查看实时战绩 →](https://danielye0010.github.io/TradeAgent/)** GPT 和 Claude 每天面对同样的股票，每天收盘后更新。
+
 - **选择你的 AI。** 每天由 Codex（GPT）做选择；加上 Claude 后，它会对同样的股票回答同一个问题，
   你可以对比两者，并决定跟随谁下单。
 - **用你已有的订阅。** Codex 用 ChatGPT 登录，Claude 用你的 Claude 订阅登录，Robinhood 用官方浏览器登录。
@@ -133,6 +135,21 @@ tradeagent autotrade install --enable                  # 换回 Codex（默认�
 
 几天的差距多半是运气；满 20 个交易日后页面才给出结论。详见 [GPT vs Claude](docs/claude.md)。
 
+## 仪表盘
+
+`tradeagent dashboard` 会在浏览器里打开一个本地页面。它只读取数据，从不下单。
+
+| 页面 | 能看到什么 |
+| --- | --- |
+| **账户** | 账户价值和盈亏、可拖动查看的走势图、今天的交易和最近的交易。 |
+| **AI 决策** | 今天的时间安排，每一次锁定的 AI 选择和理由。 |
+| **GPT vs Claude** | 谁领先、多常选得一样、每天的选择和两个模型各自的理由。 |
+| **研究** | 各策略相对 SPY 和随机选股的成绩。 |
+| **交易记录** | 每笔交易的价格、时间和累计盈亏。 |
+
+想让别人也能看到？`tradeagent publish install` 会在每天收盘后，把模拟盘结果（不含你的账户信息）
+发布成公开网页，就像[我们的这个](https://danielye0010.github.io/TradeAgent/)。详见[公开结果页](docs/publish.md)。
+
 ## 直接问 Agent
 
 在仓库目录运行 `codex`，输入：
@@ -157,7 +174,8 @@ AI 的选择也可能亏钱，请从小金额开始。
 ## 文档
 
 [安装与配置](docs/getting-started.md) · [自动交易](docs/autotrade.md) ·
-[Dashboard](docs/dashboard.md) · [GPT vs Claude](docs/claude.md) · [手动交易](docs/one-shot.md) ·
+[Dashboard](docs/dashboard.md) · [GPT vs Claude](docs/claude.md) · [公开结果页](docs/publish.md) ·
+[手动交易](docs/one-shot.md) ·
 [架构](docs/architecture.md) · [参与贡献](CONTRIBUTING.md) · [更新日志](CHANGELOG.md)（详细文档为英文）
 
 ## 许可证
