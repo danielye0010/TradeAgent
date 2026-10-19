@@ -1,8 +1,8 @@
 # Dashboard
 
 `tradeagent dashboard` starts a local web page that shows what TradeAgent is doing:
-the day's schedule, each frozen AI decision and why it was made, how each research
-arm is scoring, and every live or paper trade.
+your live account and today's trade first, then each frozen AI decision and why it
+was made, how each research group is scoring, and every trade.
 
 ```bash
 tradeagent dashboard
@@ -16,10 +16,13 @@ Stop it with Ctrl+C.
 
 | Page | Answers |
 | --- | --- |
-| **Overview** | Is anything running or due? Today's session as a timeline with the scheduled decide/score/report steps, the latest decisions, autopilot timers, live settings and the current trade, and the setup checklist. |
-| **Activity** | Every session, trade and learning run in time order; filter to AI decisions, trades or problems. |
-| **Research** | Per protocol: how many paired sessions exist, each arm's positions and average net return, its return over SPY with a 95% range, and its verdict against Random. A cumulative chart appears from 20 paired sessions. Also the strategy lab's current weights. |
-| **Trades** | Live and paper runs with fills, P&L, reconciliation and the step-by-step execution timeline. |
+| **Account** | How is my money doing? The live account value, profit in dollars and percent, a value chart (hover to see any point; 1W / 1M / 3M / All), recent trades, and a card for today: waiting for Codex, what it picked, holding with the sell time, the result, or why nothing was bought. Also the autotrade settings and Codex's paper record. |
+| **Decisions** | Today's session as a timeline with the scheduled steps, the latest frozen decisions, timers, live settings and the setup checklist. **Full activity** lists every session, trade and learning run; filter to AI decisions, trades or problems. |
+| **Research** | Per protocol: how many paired sessions exist, each group's positions and average net return, its return over SPY with a 95% range, its verdict against Random, and a cumulative net-return chart from the second scored session. Also the strategy lab's current weights. |
+| **Trades** | Total profit, closed trades and win rate, then every trade newest first; select one for its prices, times and execution timeline. |
+
+Gains and losses use green up / red down by default and red up / green down in Chinese;
+the button in the header switches between them.
 
 Click any decision to see the frozen record: the shortlist, the scanner numbers,
 Codex's thesis, catalyst, invalidation and sources (price-only and news-reading notes
@@ -39,8 +42,10 @@ The dashboard reads the files TradeAgent already writes:
 - **Daily research:** `daily-deployment.json`, `daily-status.json` and the append-only
   records in `experience.sqlite3` in each state directory.
 - **Live trading:** `~/.local/state/tradeagent/live` (current run) and
-  `live.history/` (archived runs); the summary of `~/.config/tradeagent/tradeagent.toml`
-  (symbols, amount, cap, hold time only).
+  `live.history/` (archived runs), including the account value and cash each run started
+  from; the summary of `~/.config/tradeagent/tradeagent.toml` (symbols, amount, cap, hold
+  time only).
+- **Autotrade:** the daily outcome files in the autotrade timer's state directory.
 - **Anything else:** add directories with `--state-dir DIR` (repeatable): a daily
   research directory, a live or paper run directory, or a strategy lab.
 

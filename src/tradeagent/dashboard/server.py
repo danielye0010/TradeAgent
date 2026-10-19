@@ -169,6 +169,23 @@ class Workspace:
             except Exception as error:  # one broken directory must not hide the rest
                 errors.append({"path": str(path), "message": f"{type(error).__name__}: {error}"})
         executions.sort(key=lambda r: r.get("started") or 0, reverse=True)
+        # Account history and trade totals use every live run, not just the newest page.
+        live_runs = [r for r in executions if r["mode"] == "LIVE" and not r["synthetic"]]
+        ledger = [
+            {
+                "started": r["started"],
+                "finished": r["finished"],
+                "pnl": r["realized_pnl"],
+                **(r["account"] or {}),
+            }
+            for r in reversed(live_runs)
+        ]
+        closed = [r["realized_pnl"] for r in live_runs if r["realized_pnl"] is not None]
+        trade_totals = {
+            "pnl": sum(closed),
+            "closed": len(closed),
+            "wins": sum(1 for v in closed if v > 0),
+        }
         jobs = []
         for job in self.jobs():
             state = next((r for r in research if r.get("job") == job["unit"]), None)
@@ -188,6 +205,18 @@ class Workspace:
             )
         schedule = self.schedule(jobs, research)
         checks = self.setup_checks()
+        mirror = next((j for j in jobs if j["kind"] == "autotrade"), None)
+        autotrade = (
+            {
+                "unit": mirror["unit"],
+                "timer": mirror["timer"],
+                "records": readers.autotrade_records(mirror["state_dir"])
+                if mirror["state_dir"]
+                else [],
+            }
+            if mirror
+            else None
+        )
         live = {
             "settings": readers.live_settings(self.config_path),
             "kill_switch": (self.live_dir / "KILL").exists(),
@@ -201,8 +230,11 @@ class Workspace:
             "schedule": schedule,
             "research": [self._trim(r) for r in research],
             "executions": executions[:50],
+            "ledger": ledger,
+            "trade_totals": trade_totals,
             "labs": labs,
             "live": live,
+            "autotrade": autotrade,
             "setup": {
                 "checks": checks,
                 "steps": self.steps(checks, jobs, research, executions),
