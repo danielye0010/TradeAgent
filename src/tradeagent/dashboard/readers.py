@@ -357,8 +357,9 @@ def daily_state(directory):
         if not outcome:
             continue
         values = {name: (outcome["arms"].get(name) or {}).get("excess") for name in arms}
-        if all(v is not None for v in values.values()):
-            series.append({"session_date": run["session_date"], "excess": values})
+        nets = {name: (outcome["arms"].get(name) or {}).get("net") for name in arms}
+        if all(v is not None for v in nets.values()):
+            series.append({"session_date": run["session_date"], "excess": values, "net": nets})
     return {
         "protocol": protocol,
         "evidence_kind": pool_name,
@@ -445,10 +446,31 @@ def execution_run(directory):
     started = finished = None
     db_status = db_mode = run_id = None
     events = []
+    account = strategy = None
     db = connect(directory / "agent" / "state.sqlite3")
     if db is not None:
         try:
-            if "runs" in _tables(db):
+            tables = _tables(db)
+            if "one_shot_meta" in tables:
+                # Only the account value and cash the run started from, and which rule chose it.
+                meta = dict(
+                    db.execute(
+                        "SELECT key, payload FROM one_shot_meta WHERE key IN ('initial','decision')"
+                    )
+                )
+                try:
+                    initial = json.loads(meta.get("initial") or "null") or {}
+                    decision = json.loads(meta.get("decision") or "null") or {}
+                except ValueError:
+                    initial, decision = {}, {}
+                if _money(initial.get("nav")) is not None:
+                    account = {
+                        "nav": _money(initial.get("nav")),
+                        "cash": _money(initial.get("cash")),
+                        "asof": _money(initial.get("asof")),
+                    }
+                strategy = (decision.get("provenance") or {}).get("strategy_id")
+            if "runs" in tables:
                 row = db.execute(
                     "SELECT id, started, finished, mode, status FROM runs ORDER BY started DESC"
                 ).fetchone()
@@ -480,6 +502,8 @@ def execution_run(directory):
         "reconciled": None,
         "flat": None,
         "source": "ai" if ((report or {}).get("decision") or {}).get("provenance") else "manual",
+        "strategy": strategy,
+        "account": account,
         "timeline": [],
     }
     labels = {
@@ -491,6 +515,7 @@ def execution_run(directory):
         "exit_due": "Exit scheduled",
     }
     seen_fill = set()
+    live_orders = {}  # while a run is open there is no report yet; fills arrive as events
     for time_, kind, payload in events:
         if kind not in labels:
             continue
@@ -501,6 +526,9 @@ def execution_run(directory):
         if kind == "exit_due":
             view["exit_due"] = data.get("due")
         if kind == "fill_reconciliation":
+            order = data.get("order")
+            if isinstance(order, dict) and order.get("side") in ("buy", "sell"):
+                live_orders[order["side"]] = order
             mark = json.dumps(data.get("executions"), sort_keys=True)
             if mark in seen_fill:
                 continue
@@ -508,6 +536,10 @@ def execution_run(directory):
         if kind == "risk_pass" and data.get("phase") != "before_review":
             continue
         view["timeline"].append({"time": time_, "kind": kind})
+    if not report:
+        view["orders"] = [
+            _order_view(live_orders[side]) for side in ("buy", "sell") if side in live_orders
+        ]
     if report:
         view["orders"] = [_order_view(o) for o in report.get("orders") or []]
         view["exit_due"] = report.get("exit_due") or view["exit_due"]
@@ -566,6 +598,23 @@ def live_settings(path):
         if isinstance(exit_.get("hold_seconds"), int)
         else None,
     }
+
+
+# ---------------------------------------------------------------- autotrade
+
+
+def autotrade_records(directory, limit=90):
+    """Daily outcomes the autotrade timer saved (one small JSON per New York session)."""
+    directory = Path(directory)
+    if not directory.is_dir():
+        return []
+    keep = ("session", "status", "symbol", "reason", "decision_id", "followed", "pnl", "position")
+    records = []
+    for path in sorted(directory.glob("????-??-??.json"))[-limit:]:
+        value = read_json(path)
+        if isinstance(value, dict):
+            records.append({k: value.get(k) for k in keep})
+    return records
 
 
 # ---------------------------------------------------------------- strategy lab

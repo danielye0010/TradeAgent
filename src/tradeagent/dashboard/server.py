@@ -188,6 +188,18 @@ class Workspace:
             )
         schedule = self.schedule(jobs, research)
         checks = self.setup_checks()
+        mirror = next((j for j in jobs if j["kind"] == "autotrade"), None)
+        autotrade = (
+            {
+                "unit": mirror["unit"],
+                "timer": mirror["timer"],
+                "records": readers.autotrade_records(mirror["state_dir"])
+                if mirror["state_dir"]
+                else [],
+            }
+            if mirror
+            else None
+        )
         live = {
             "settings": readers.live_settings(self.config_path),
             "kill_switch": (self.live_dir / "KILL").exists(),
@@ -203,6 +215,7 @@ class Workspace:
             "executions": executions[:50],
             "labs": labs,
             "live": live,
+            "autotrade": autotrade,
             "setup": {
                 "checks": checks,
                 "steps": self.steps(checks, jobs, research, executions),

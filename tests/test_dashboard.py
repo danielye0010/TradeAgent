@@ -299,3 +299,61 @@ def test_ribbon_shows_only_enabled_daily_schedules(tmp_path):
     next(j for j in found if j["kind"] == "daily")["timer"] = {"enabled": False}
     disabled = Workspace.schedule(None, found, [])
     assert disabled == {"example": False, "marks": []}
+
+
+def test_runs_show_the_starting_account_value_but_no_account_identity(tmp_path):
+    live = tmp_path / "live"
+    run_paper(live, "25", 3600, 3, "full_fill", "full_fill", None)
+    [run] = readers.execution_history(live)
+    assert run["account"]["nav"] > 0 and run["account"]["cash"] is not None
+    assert set(run["account"]) == {"nav", "cash", "asof"}
+    assert "account_number" not in json.dumps(run)
+
+
+def test_an_open_run_shows_its_entry_fill_before_the_report_exists(tmp_path):
+    run_dir = tmp_path / "live"
+    (run_dir / "agent").mkdir(parents=True)
+    db = sqlite3.connect(run_dir / "agent" / "state.sqlite3")
+    db.execute("CREATE TABLE runs(id TEXT, started REAL, finished REAL, mode TEXT, status TEXT)")
+    db.execute("CREATE TABLE events(seq INTEGER, run_id TEXT, time REAL, kind TEXT, payload TEXT)")
+    db.execute("INSERT INTO runs VALUES('r', 100, NULL, 'LIVE', 'RUNNING')")
+    order = {
+        "side": "buy",
+        "symbol": "TLT",
+        "state": "filled",
+        "cumulative_quantity": "0.011",
+        "average_price": "89.62",
+        "executions": [{"timestamp": "2026-10-19T14:36:00+00:00"}],
+    }
+    db.execute(
+        "INSERT INTO events VALUES(1, 'r', 101, 'fill_reconciliation', ?)",
+        (json.dumps({"order": order}),),
+    )
+    db.commit()
+    db.close()
+    run = readers.execution_run(run_dir)
+    assert run["in_progress"] and run["orders"][0]["symbol"] == "TLT"
+    assert run["orders"][0]["price"] == 89.62
+
+
+def test_autotrade_records_reach_the_overview(tmp_path):
+    records = tmp_path / "autotrade"
+    records.mkdir()
+    (records / "2026-10-19.json").write_text(
+        json.dumps(
+            {
+                "session": "2026-10-19",
+                "status": "NO_TRADE",
+                "reason": "codex_news chose cash",
+                "extra": "x",
+            }
+        )
+    )
+    (records / "notes.json").write_text("{}")
+    (tmp_path / "tradeagent-autotrade.service").write_text(
+        f"[Service]\nExecStart=/py -m tradeagent.autotrade run --config c --follow-dir f --state-dir {records}\n"
+    )
+    payload = Workspace([], unit_dir=tmp_path, doctor=False, live_dir=tmp_path / "live").overview()
+    [record] = payload["autotrade"]["records"]
+    assert record["status"] == "NO_TRADE" and "extra" not in record
+    assert payload["errors"] == []
