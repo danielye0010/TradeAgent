@@ -2,24 +2,26 @@
 
 [English](README.md) | **简体中文**
 
-**在 Robinhood 上为你分析市场、自动交易的 AI Agent。**
+**属于你自己的 AI 交易代理，每一笔都公开。**
 
 [![CI](https://github.com/danielye0010/TradeAgent/actions/workflows/ci.yml/badge.svg)](https://github.com/danielye0010/TradeAgent/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/tradeagent)](https://pypi.org/project/tradeagent/)
 [![License](https://img.shields.io/badge/License-Apache--2.0%20AND%20MIT-blue)](LICENSE)
 
-每个交易日早上，AI 看行情、读新闻，从当天的美股或 ETF 里选出一只（或者决定不买），并说明理由。
-开启自动交易后，TradeAgent 会通过 Robinhood 官方 Agent 交易接口，用你设定的小金额买入，一小时后自动卖出。
+TradeAgent 是一个运行在你自己电脑上的开源 AI 交易代理。每个交易日早上，它读新闻，
+选出一只美股或 ETF（或者选择空仓），并说明理由。开启自动交易后，它会在 Robinhood 上用你设定的小金额买入、
+一小时后卖出，所有限额由确定性的执行引擎强制执行。
 
-**[查看实时战绩 →](https://danielye0010.github.io/TradeAgent/)** GPT 和 Claude 每天面对同样的股票，每天收盘后更新。
+每次选择都在行情变化前锁定，并和 SPY、同一批候选中的随机选股一起计分，让你看清 AI 到底有没有用。
+**[查看公开战绩 →](https://danielye0010.github.io/TradeAgent/)**
 
-- **选择你的 AI。** 每天由 Codex（GPT）做选择；加上 Claude 后，它会对同样的股票回答同一个问题，
-  你可以对比两者，并决定跟随谁下单。
-- **用你已有的订阅。** Codex 用 ChatGPT 登录，Claude 用你的 Claude 订阅登录，Robinhood 用官方浏览器登录。
-  不需要任何 API key。
-- **由你掌控。** 自己决定允许买入的标的和每笔金额（1–5 美元），每天最多一笔，持有一小时。
-  风控由执行引擎强制执行，不由 AI 决定。
-- **一目了然。** 本地仪表盘展示账户价值、每笔交易、AI 每天的选择和理由，以及 GPT 与 Claude 的对比。
+- **替你交易，但守住硬限额。** 只买你允许的标的，每笔 1–5 美元，每天一笔，一小时后卖出。
+  AI 只负责选择，下单和检查都由执行引擎完成。
+- **每一步都公开。** 每次选择都附带理由和新闻来源，亏钱的日子也照样记录。
+- **大脑可选：GPT 或 Claude。** 默认用 Codex（GPT）；加上 Claude 后，两者对同样的股票回答同一个问题，
+  你可以对比，并决定跟随谁下单。
+- **不需要 API key。** 直接用你已有的 ChatGPT 和 Claude 订阅，Robinhood 用官方浏览器登录。
+- **一目了然。** 本地仪表盘展示你的账户、每笔交易和每次选择。
 
 ## 一个交易日
 

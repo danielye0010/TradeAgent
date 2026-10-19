@@ -116,3 +116,26 @@ def test_cli_dispatches_publish(capsys):
     with pytest.raises(SystemExit):
         main(["publish", "--help"])
     assert "results page" in capsys.readouterr().out
+
+
+def test_claude_research_must_follow_the_same_v2_run(research, tmp_path):
+    other = tmp_path / "other-claude"
+    other.mkdir()
+    deployment = json.loads((research[1] / "daily-deployment.json").read_text())
+    deployment["config"]["follow_dir"] = str(tmp_path / "another-v2")
+    (other / "daily-deployment.json").write_text(json.dumps(deployment))
+    with pytest.raises(ValueError, match="follows"):
+        publish.snapshot(research[0], other, now=1)
+
+
+def test_spy_as_a_candidate_reports_its_own_move():
+    from tradeagent.dashboard import readers
+
+    outcome = {
+        "decision_id": "d",
+        "comparisons": {},
+        "candidate_outcomes": {
+            "SPY": {"gross": 0.01, "base_net": 0.009, "benchmark": "QQQ", "benchmark_gross": 0.02}
+        },
+    }
+    assert readers.summarize_outcome(outcome)["spy"] == 0.01

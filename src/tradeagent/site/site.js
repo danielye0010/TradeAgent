@@ -6,32 +6,43 @@
   const MIN_DAYS = 20;
   const COPY = {
     en: {
-      live: "Live paper results",
+      live: "Public track record",
       lang: "中文",
-      eyebrow: "Two AIs · the same three stocks · one hour",
-      title: ["Who picks better stocks, ", "GPT", " or ", "Claude", "?"],
-      lede: "Every trading morning at 10:30 New York time, both models read the news and pick one of the same three stocks, or stay in cash. Picks are frozen before the market moves and scored an hour later, after trading costs. This page updates after every close.",
-      ctaRepo: "Run it yourself",
+      eyebrow: "Open-source AI trading agent",
+      title: ["Your own AI trading agent, with a ", "public track record", "."],
+      lede: "Every trading morning it reads the news, picks one US stock or stays in cash, and can trade it for you on Robinhood with $1–$5 under hard limits. Every pick is frozen before the market moves and published here after the close, wins and losses alike.",
+      ctaRepo: "Run your own agent",
       ctaRecord: "See every pick",
+      agent: "The agent",
       gpt: "GPT",
       claude: "Claude",
       spy: "S&P 500 (SPY)",
       random: "Random pick",
       sessions: "Trading days",
-      total: "added up over {n} days",
-      since: "since {d}",
+      agentSub: "GPT reading the news, {n} days added up",
       spySub: "holding SPY for the same hours",
-      sessionsSub: "since {d}",
-      chartTitle: "Results so far",
+      randomSub: "a random pick from the same three",
+      sessionsSub: "every day published, since {d}",
+      chartTitle: "The agent against the market",
       chartAside: "Each day's return after costs, added up",
       chartEarly: "Early days: a handful of sessions is mostly luck. A verdict comes after {need} days.",
+      trustTitle: "Why you can trust the record",
+      trust: [
+        ["Frozen first", "Each pick is locked in before the market moves; nothing is picked or edited after the fact."],
+        ["Same shortlist, real controls", "Every day the agent is scored against SPY, a random pick and a quant signal on the very same three stocks."],
+        ["Costs included", "Returns come from market prices after spread and slippage, not from the best price of the hour."],
+        ["No early victory laps", "No verdict before {need} trading days, and only when the gap is bigger than day-to-day noise."],
+      ],
       picksTitle: "Latest picks",
       cash: "Cash",
       cashLine: "Stayed in cash. Top-ranked idea:",
       noAnswer: "No answer this day",
       pending: "scored after the hour",
       stance: { long: "long", watch: "watch", avoid: "avoid" },
-      vsTitle: "Head to head",
+      vsTitle: "Which AI should run your agent?",
+      vsLede: "The agent can think with GPT (through Codex) or with Claude. Both get the same three stocks and the same question every day; you choose whose pick it trades.",
+      vsEarly: "Claude joined on {d}; the comparison fills in from there.",
+      vsSoon: "Claude is now running next to GPT; its first picks appear here after its first trading day.",
       better: "{who} did better",
       same: "picked the same stock",
       ofDays: "of {n} days",
@@ -47,45 +58,56 @@
       showAll: "Show all {n} days",
       howTitle: "How it works",
       how: [
-        ["A shortlist", "At 10:30 ET a quant scan finds the three US stocks or ETFs moving most unusually that morning."],
-        ["Two AIs decide", "GPT (through Codex) and Claude each get the same three, the same market data and the same question. They search the news, pick one or stay in cash, and explain why."],
-        ["Scored after an hour", "Each pick is bought on paper a few minutes later and sold an hour after that, with trading costs taken out, next to holding SPY for the same hour."],
+        ["Scan", "At 10:30 ET a quant scan finds the three US stocks or ETFs moving most unusually that morning."],
+        ["Decide", "The AI reads the news on those three and picks one or stays in cash, with its reasons. It runs on your ChatGPT or Claude subscription."],
+        ["Trade within your limits", "A deterministic engine, not the AI, places the order: your symbols, your $1–$5, one trade a day, sold after an hour."],
       ],
-      runTitle: "Run it on your own computer",
-      runBody: "Open source. Uses your ChatGPT and Claude subscriptions, no API keys. Watch it on a local dashboard, and if you like, let it trade $1–$5 a day on Robinhood.",
+      runTitle: "Run your own agent",
+      runBody: "Free and open source. No API keys: it uses the ChatGPT or Claude subscription you already have. Start on paper with a local dashboard, and turn on small live trades on Robinhood when you're ready.",
       runBtn: "Get it on GitHub",
       empty: "The first results appear here after the first trading day.",
-      foot1: "Paper results: picks are frozen before the market moves and scored at actual market prices after spread and slippage; they are not live fills. Not investment advice.",
+      foot1: "Paper results: picks are frozen before the market moves and scored at market prices after spread and slippage; they are not live fills. Not investment advice.",
       foot2: "Updated {t}.",
       source: "Source code on GitHub",
     },
     zh: {
-      live: "模拟盘实时战绩",
+      live: "公开战绩",
       lang: "EN",
-      eyebrow: "两个 AI · 同样三只股票 · 同一个小时",
-      title: ["", "GPT", " 和 ", "Claude", "，谁更会选股？"],
-      lede: "每个交易日美东 10:30，两个模型读新闻后，从同样的三只股票里各选一只，或者选择空仓。选择在行情变化前锁定，一小时后扣除交易成本计分。本页每天收盘后更新。",
-      ctaRepo: "自己运行",
+      eyebrow: "开源 AI 交易代理",
+      title: ["属于你自己的 AI 交易代理，", "每一笔都公开", "。"],
+      lede: "每个交易日早上，它读新闻、选出一只美股或选择空仓，还可以在 Robinhood 上按严格限额替你交易 1–5 美元。每次选择都在行情变化前锁定，收盘后公开在这里，赚的亏的都在。",
+      ctaRepo: "运行你自己的代理",
       ctaRecord: "查看每一次选择",
+      agent: "交易代理",
       gpt: "GPT",
       claude: "Claude",
       spy: "标普 500（SPY）",
       random: "随机选股",
       sessions: "交易日",
-      total: "{n} 个交易日累计",
-      since: "自 {d} 起",
+      agentSub: "GPT 读新闻选股，{n} 个交易日累计",
       spySub: "同样时段持有 SPY",
-      sessionsSub: "自 {d} 起",
-      chartTitle: "目前成绩",
+      randomSub: "从同样三只里随机选一只",
+      sessionsSub: "每天公开，自 {d} 起",
+      chartTitle: "交易代理 vs 大盘",
       chartAside: "每天扣除成本后的收益，逐日累加",
       chartEarly: "样本还少：几天的差距多半是运气，满 {need} 个交易日后才有结论。",
+      trustTitle: "为什么这份战绩可信",
+      trust: [
+        ["先锁定，后揭晓", "每次选择都在行情变化前锁定，事后不会补选或修改。"],
+        ["同一批候选，真对照", "每天都在同样的三只股票上，和 SPY、随机选股、量化信号一起计分。"],
+        ["成本算在内", "收益按真实行情价格、扣除价差和滑点计算，而不是挑一小时内的最好价格。"],
+        ["不急着庆功", "不满 {need} 个交易日不下结论，差距要超过日常波动才算数。"],
+      ],
       picksTitle: "最新选择",
       cash: "空仓",
       cashLine: "选择空仓。排名第一的想法：",
       noAnswer: "当天没有给出答案",
       pending: "一小时后计分",
       stance: { long: "看多", watch: "观望", avoid: "回避" },
-      vsTitle: "正面对比",
+      vsTitle: "你的代理该用哪个 AI？",
+      vsLede: "代理可以用 GPT（通过 Codex）思考，也可以用 Claude。两者每天拿到同样的三只股票、同一个问题；跟谁的选择下单由你决定。",
+      vsEarly: "Claude 自 {d} 起加入，对比从那天开始累积。",
+      vsSoon: "Claude 已在 GPT 旁边运行，第一个交易日结束后，它的选择会出现在这里。",
       better: "{who} 更好",
       same: "选了同一只",
       ofDays: "共 {n} 天",
@@ -101,12 +123,12 @@
       showAll: "显示全部 {n} 天",
       howTitle: "怎么运作",
       how: [
-        ["生成候选", "美东 10:30，量化扫描找出当天早上走势最异常的三只美股或 ETF。"],
-        ["两个 AI 决策", "GPT（通过 Codex）和 Claude 拿到同样的三只股票、同样的行情和同一个问题。它们搜索新闻，选一只或空仓，并给出理由。"],
-        ["一小时后计分", "几分钟后按模拟盘买入，一小时后卖出，扣除交易成本，并与同一小时持有 SPY 对比。"],
+        ["扫描", "美东 10:30，量化扫描找出当天早上走势最异常的三只美股或 ETF。"],
+        ["决策", "AI 读这三只的新闻，选一只或空仓，并给出理由。它用你自己的 ChatGPT 或 Claude 订阅运行。"],
+        ["在限额内交易", "下单的是确定性的执行引擎，不是 AI：只买你允许的标的、每笔 1–5 美元、每天一笔、一小时后卖出。"],
       ],
-      runTitle: "在你自己的电脑上运行",
-      runBody: "开源。用你的 ChatGPT 和 Claude 订阅，不需要 API key。在本地仪表盘上查看；愿意的话，也可以让它每天在 Robinhood 上交易 1–5 美元。",
+      runTitle: "运行你自己的代理",
+      runBody: "免费开源。不需要 API key，直接用你已有的 ChatGPT 或 Claude 订阅。先在模拟盘和本地仪表盘上观察，准备好了再开启 Robinhood 小额实盘。",
       runBtn: "前往 GitHub",
       empty: "第一个交易日结束后，结果会显示在这里。",
       foot1: "模拟盘结果：选择在行情变化前锁定，按真实行情价格扣除价差和滑点计分，不是实盘成交。不构成投资建议。",
@@ -165,10 +187,10 @@
   // ------------------------------------------------------------ sections
 
   function hero() {
-    const [a, gpt, b, claude, c] = t("title");
+    const [a, mark, b] = t("title");
     return h("section", { class: "hero" },
       h("p", { class: "eyebrow", text: t("eyebrow") }),
-      h("h1", {}, a, h("span", { class: "gpt", text: gpt }), b, h("span", { class: "claude", text: claude }), c),
+      h("h1", {}, a, h("span", { class: "mark-up", text: mark }), b),
       h("p", { class: "lede", text: t("lede") }),
       h("div", { class: "cta" },
         h("a", { class: "btn primary", href: data.repo, text: t("ctaRepo") }),
@@ -185,12 +207,19 @@
 
   function board() {
     if (!scored.length) return h("p", { class: "lede", text: t("empty") });
-    const g = rowsWith("codex"), c = rowsWith("claude");
+    const g = rowsWith("codex");
     return h("div", { class: "board" },
-      cell("codex", t("gpt"), sum("codex", g), t("total", { n: g.length })),
-      cell("claude", t("claude"), c.length ? sum("claude", c) : "—", c.length ? t("total", { n: c.length }) : t("since", { d: data.claude_since ? day(data.claude_since) : "—" })),
+      cell("codex", t("agent"), sum("codex", g), t("agentSub", { n: g.length })),
       cell("spy", t("spy"), sum("spy", rowsWith("spy")), t("spySub")),
+      cell("random", t("random"), sum("random", rowsWith("random")), t("randomSub")),
       cell(null, t("sessions"), String(scored.length), t("sessionsSub", { d: day(data.first_session) })));
+  }
+
+  function trust() {
+    return h("section", { class: "block" },
+      h("div", { class: "head" }, h("h2", { text: t("trustTitle") })),
+      h("div", { class: "trust" }, ...t("trust").map(([title, body]) =>
+        h("div", { class: "point" }, h("h3", { text: title }), h("p", { text: body.replace("{need}", MIN_DAYS) })))));
   }
 
   function chart() {
@@ -205,7 +234,7 @@
       scored.length < MIN_DAYS ? h("p", { class: "note", text: t("chartEarly", { need: MIN_DAYS }) }) : null);
   }
 
-  const label = (k) => ({ codex: t("gpt"), claude: t("claude"), spy: "SPY", random: t("random") })[k];
+  const label = (k) => ({ codex: `${t("agent")} (GPT)`, claude: t("claude"), spy: "SPY", random: t("random") })[k];
 
   function drawChart() {
     const box = document.querySelector("#chart .plot");
@@ -226,7 +255,7 @@
     if (!lines.claude.some((v) => v != null)) delete lines.claude;
     const W = Math.max(320, box.clientWidth || 800), H = W < 560 ? 240 : 320;
     const narrow = W < 560;
-    const pad = { l: 46, r: narrow ? 12 : 96, t: 12, b: 28 };
+    const pad = { l: 46, r: narrow ? 12 : 136, t: 12, b: 28 };
     const all = Object.values(lines).flat().filter((v) => v != null).concat([0]);
     let lo = Math.min(...all), hi = Math.max(...all);
     const m = (hi - lo) * 0.12 || 0.002; lo -= m; hi += m;
@@ -309,12 +338,15 @@
 
   function headToHead() {
     const d = data.duel;
-    if (!d || !d.scored_days) return null;
+    const head = [h("div", { class: "head" }, h("h2", { text: t("vsTitle") })), h("p", { class: "section-lede", text: t("vsLede") })];
+    if (!d || !d.scored_days) {
+      const note = data.claude_since ? t("vsEarly", { d: day(data.claude_since, true) }) : data.models.claude ? t("vsSoon") : null;
+      return h("section", { class: "block" }, ...head, note ? h("p", { class: "verdict", text: note }) : null);
+    }
     const v = d.verdict || {};
     const text = v.state === "collecting" ? t("verdict.collecting", { d: v.days, n: v.needed || MIN_DAYS }) : t("verdict." + v.state);
     const stat = (big, label, key) => h("div", { class: "stat" }, h("div", { class: "big num", style: key ? `color:${color[key]}` : null, text: big }), h("div", { class: "label", text: label }));
-    return h("section", { class: "block" },
-      h("div", { class: "head" }, h("h2", { text: t("vsTitle") })),
+    return h("section", { class: "block" }, ...head,
       h("div", { class: "vs" },
         stat(String(d.wins.claude || 0), `${t("better", { who: t("claude") })} · ${t("ofDays", { n: d.scored_days })}`, "claude"),
         stat(String(d.wins.codex || 0), `${t("better", { who: t("gpt") })} · ${t("ofDays", { n: d.scored_days })}`, "codex"),
@@ -364,7 +396,7 @@
     document.getElementById("live-label").textContent = t("live");
     document.getElementById("lang").textContent = t("lang");
     document.getElementById("gh").href = data.repo;
-    document.getElementById("top").replaceChildren(...[hero(), chart(), picks(), headToHead(), log(), how()].filter(Boolean));
+    document.getElementById("top").replaceChildren(...[hero(), chart(), trust(), picks(), headToHead(), log(), how()].filter(Boolean));
     const updated = new Date(data.generated_at * 1000).toLocaleString(lang === "zh" ? "zh-CN" : "en-US", { dateStyle: "medium", timeStyle: "short" });
     document.getElementById("foot").replaceChildren(h("p", { text: t("foot1") }), h("p", {}, t("foot2", { t: updated }), " ", h("a", { href: data.repo, text: t("source") })));
     drawChart();

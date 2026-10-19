@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.5.1 — 2026-10-19
+
+Python distribution version: `1.5.1`.
+
+- The public page and the READMEs lead with the agent and its public track record: the
+  agent against SPY and a random pick from the same shortlist, a "why you can trust the
+  record" section, and GPT vs Claude as the choice of which AI runs your agent.
+- Publishing refuses a Claude record that follows a different `daily-news-v2` run, and a
+  session whose shortlist includes SPY reports SPY's own move.
+
 ## 1.5.0 — 2026-10-19
 
 Python distribution version: `1.5.0`.

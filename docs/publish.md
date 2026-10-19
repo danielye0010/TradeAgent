@@ -1,8 +1,9 @@
 # Public results page
 
-`tradeagent publish` turns the daily research into a public web page: every day's frozen
-picks from GPT (Codex) and Claude, their results after costs, SPY over the same hour, a
-running chart, the latest reasoning and a head-to-head scoreboard. It updates itself
+`tradeagent publish` turns the daily research into your agent's public track record:
+every day's frozen pick and its result after costs, next to SPY over the same hour and a
+random pick from the same shortlist, the latest reasoning, and, with Claude installed,
+which AI does better. It updates itself
 after every close. Ours is at <https://danielye0010.github.io/TradeAgent/>.
 
 The page is built from the paper research only. Your live account, balances, orders and
@@ -49,8 +50,10 @@ To stop: `tradeagent publish uninstall` (the published page stays up).
 
 ## What the page shows
 
-- Each model's added-up return, SPY over the same hours, and the number of trading days.
-- A chart of GPT, Claude, SPY and a random pick, day by day.
+- The agent's added-up return next to SPY over the same hours and a random pick from the
+  same shortlist, and the number of trading days.
+- A chart of the agent, Claude, SPY and the random pick, day by day.
+- Why the record can be trusted: frozen picks, same-shortlist controls, costs included.
 - The latest picks with each model's own reasoning and news sources.
 - Head to head: on how many days each model did better, and how often they agreed. The
   verdict waits for 20 trading days, as on the dashboard.

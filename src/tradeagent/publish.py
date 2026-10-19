@@ -89,6 +89,12 @@ def snapshot(v2_dir, claude_dir=None, *, now=None):
     claude = readers.daily_state(claude_dir) if claude_dir else None
     if claude and claude["protocol"] != CLAUDE:
         raise ValueError(f"{claude_dir} is not a {CLAUDE} research directory")
+    if claude:
+        # Only a comparison that follows this very v2 run shares its shortlists.
+        config = (readers.read_json(Path(claude_dir) / "daily-deployment.json") or {}).get("config")
+        followed = (config or {}).get("follow_dir")
+        if not followed or Path(followed).resolve() != Path(v2_dir).resolve():
+            raise ValueError(f"{claude_dir} follows {followed}, not {v2_dir}")
     claude_runs = {
         r["session_date"]: r for r in (claude["runs"] if claude else []) if r.get("decision")
     }
