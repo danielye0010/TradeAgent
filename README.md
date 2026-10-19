@@ -17,14 +17,16 @@
 >   before the market answers, then scored against quant signals, a random pick and SPY.
 > - **What you get:** a daily autopilot that paper-trades every session on its own,
 >   one-command live trades with hard caps and an automatic exit, an optional small live
->   trade every trading day on a timer, and a local dashboard
->   that shows what is running, what the AI picked and why, and how each approach scores.
+>   trade every trading day on a timer, and a local dashboard laid out like a trading app:
+>   account value and profit, today's trade, what the AI picked and why, and how each
+>   approach scores.
 >   Options trading (calls and puts) is coming soon.
 > - **Start:** follow [Quick start](#quick-start) to install and sign in to Codex and Robinhood.
 
-![Latest decisions in the dashboard: each arm's pick and its net result](https://raw.githubusercontent.com/danielye0010/TradeAgent/main/docs/images/dashboard-decisions.png)
-
-<sub>The dashboard on real Paper data, Oct 14–16, 2026.</sub>
+<p align="center">
+  <img src="https://raw.githubusercontent.com/danielye0010/TradeAgent/main/docs/images/dashboard-decisions.png" width="560" alt="Latest decisions in the dashboard: each group's pick and its net result">
+  <br><sub>The dashboard on real Paper data, Oct 14–16, 2026.</sub>
+</p>
 
 ## How it works
 
@@ -115,7 +117,9 @@ each group is scored against Random, and every trade shows its prices. It finds 
 installed timers and the live run on its own. Local and read-only.
 [More](https://github.com/danielye0010/TradeAgent/blob/main/docs/dashboard.md)
 
-![Research view: per-arm results and progress toward a verdict](https://raw.githubusercontent.com/danielye0010/TradeAgent/main/docs/images/dashboard-research.png)
+<p align="center">
+  <img src="https://raw.githubusercontent.com/danielye0010/TradeAgent/main/docs/images/dashboard-research.png" width="560" alt="Research view: per-group results and progress toward a verdict">
+</p>
 
 **Daily autopilot (Paper only).** Install this separately: neither pipx nor the dashboard starts
 a timer. It needs a running systemd user manager, an awake machine and, on Windows,

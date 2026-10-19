@@ -16,12 +16,13 @@
 >   AI 到底有没有用，看数据。
 > - **主要功能**：Autopilot 每个交易日自动跑一轮模拟盘；一条命令完成实盘交易，带金额上限和自动平仓；
 >   也可以开启定时任务，用小额实盘每天跟着 AI 的选择下单；
->   本地 Dashboard 集中展示运行状态、AI 的选择和理由，以及各策略的表现。期权（Call/Put）交易即将上线。
+>   本地 Dashboard 像交易软件一样展示账户价值和盈亏、今天的交易、AI 的选择和理由，以及各策略的表现。期权（Call/Put）交易即将上线。
 > - **快速开始**：按[下面的步骤](#快速开始)安装，并分别登录 Codex 和 Robinhood。
 
-![Dashboard 最新决策：各组的选择和净收益](docs/images/dashboard-decisions.zh.png)
-
-<sub>Dashboard 展示的真实模拟盘数据，2026 年 10 月 14–16 日。</sub>
+<p align="center">
+  <img src="docs/images/dashboard-decisions.zh.png" width="560" alt="Dashboard 最新决策：各组的选择和净收益">
+  <br><sub>Dashboard 展示的真实模拟盘数据，2026 年 10 月 14–16 日。</sub>
+</p>
 
 ## 工作原理
 
@@ -108,7 +109,9 @@ hold_seconds = 3600        # 持有一小时后自动卖出
 几点卖，一眼看清。每个锁定的决策都能点开查看 Codex 的分析，各组和随机选股的对比、每笔交易的明细也都在这里。
 默认红涨绿跌，可一键切换。自动找到已安装的定时任务和实盘记录，仅在本机运行，只读。[详细说明](docs/dashboard.md)
 
-![研究页：各组表现和样本进度](docs/images/dashboard-research.zh.png)
+<p align="center">
+  <img src="docs/images/dashboard-research.zh.png" width="560" alt="研究页：各组表现和样本进度">
+</p>
 
 **Autopilot。** 需要单独安装定时任务，pipx 安装和打开 Dashboard 都不会自动开启。只跑模拟盘，
 需要 systemd 用户服务可用、电脑保持运行；Windows 用户还需保持 WSL 运行。在 Linux 主目录下克隆仓库：
