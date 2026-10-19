@@ -42,6 +42,7 @@
       vsTitle: "Which AI should run your agent?",
       vsLede: "The agent can think with GPT (through Codex) or with Claude. Both get the same three stocks and the same question every day; you choose whose pick it trades.",
       vsEarly: "Claude joined on {d}; the comparison fills in from there.",
+      vsSoon: "Claude is now running next to GPT; its first picks appear here after its first trading day.",
       better: "{who} did better",
       same: "picked the same stock",
       ofDays: "of {n} days",
@@ -106,6 +107,7 @@
       vsTitle: "你的代理该用哪个 AI？",
       vsLede: "代理可以用 GPT（通过 Codex）思考，也可以用 Claude。两者每天拿到同样的三只股票、同一个问题；跟谁的选择下单由你决定。",
       vsEarly: "Claude 自 {d} 起加入，对比从那天开始累积。",
+      vsSoon: "Claude 已在 GPT 旁边运行，第一个交易日结束后，它的选择会出现在这里。",
       better: "{who} 更好",
       same: "选了同一只",
       ofDays: "共 {n} 天",
@@ -338,8 +340,8 @@
     const d = data.duel;
     const head = [h("div", { class: "head" }, h("h2", { text: t("vsTitle") })), h("p", { class: "section-lede", text: t("vsLede") })];
     if (!d || !d.scored_days) {
-      const since = data.claude_since || (data.models.claude ? data.latest.date : null);
-      return h("section", { class: "block" }, ...head, since ? h("p", { class: "verdict", text: t("vsEarly", { d: day(since, true) }) }) : null);
+      const note = data.claude_since ? t("vsEarly", { d: day(data.claude_since, true) }) : data.models.claude ? t("vsSoon") : null;
+      return h("section", { class: "block" }, ...head, note ? h("p", { class: "verdict", text: note }) : null);
     }
     const v = d.verdict || {};
     const text = v.state === "collecting" ? t("verdict.collecting", { d: v.days, n: v.needed || MIN_DAYS }) : t("verdict." + v.state);
