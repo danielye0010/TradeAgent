@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.5.2 — 2026-10-19
+
+Python distribution version: `1.5.2`.
+
+- Public page rewritten as a launch page: "The AI trading agent that has to prove it",
+  the agent against SPY and a random pick up front, the live arena with GPT vs Claude,
+  and "Not another AI arena": how TradeAgent compares with AI trading arenas, signal
+  bots and asking a chatbot.
+
 ## 1.5.1 — 2026-10-19
 
 Python distribution version: `1.5.1`.
