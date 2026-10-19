@@ -2,28 +2,30 @@
 
 **English** | [简体中文](README.zh-CN.md)
 
-**An AI agent that analyzes the market and trades for you on Robinhood.**
+**Your own AI trading agent, with a public track record.**
 
 [![CI](https://github.com/danielye0010/TradeAgent/actions/workflows/ci.yml/badge.svg)](https://github.com/danielye0010/TradeAgent/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/tradeagent)](https://pypi.org/project/tradeagent/)
 [![License](https://img.shields.io/badge/License-Apache--2.0%20AND%20MIT-blue)](LICENSE)
 
-Every trading morning, an AI reads the market and the news, picks one US stock or ETF
-(or decides to sit out), and explains why. Turn on automatic trading and TradeAgent buys
-that pick with a small amount you choose and sells it an hour later, through Robinhood's
-official agentic trading API.
+TradeAgent is an open-source AI agent that runs on your computer. Every trading morning it
+reads the news, picks one US stock or ETF (or stays in cash) and explains why. Turn on
+automatic trading and it buys that pick on Robinhood with a small amount you choose and
+sells it an hour later, while a deterministic engine enforces your limits.
 
-**[See the live results →](https://danielye0010.github.io/TradeAgent/)** GPT and Claude, the same stocks every day, updated after every close.
+Every pick is frozen before the market moves and scored against SPY and a random pick
+from the same shortlist, so you can see whether the AI actually helps.
+**[See the public track record →](https://danielye0010.github.io/TradeAgent/)**
 
-- **Pick your AI.** Codex (GPT) makes the daily pick. Add Claude to answer the same
-  question on the same stocks, compare the two, and choose whose pick to trade.
-- **Use the subscriptions you already have.** Codex signs in with ChatGPT, Claude with
-  your Claude plan, Robinhood with its official browser login. No API keys.
-- **Stay in control.** You choose the allowed symbols and the amount ($1–$5 per trade),
-  with at most one trade a day and a one-hour hold. Risk limits are enforced by the
-  engine, not the AI.
-- **See everything.** A local dashboard shows your account value, every trade, each AI
-  pick with its reasoning, and how GPT and Claude compare.
+- **It trades for you, within hard limits.** Your symbols, $1–$5 a trade, one trade a
+  day, sold after an hour. The AI only picks; the engine places and checks every order.
+- **It shows its work.** Each pick comes with its reasoning and news sources, and the
+  record includes the losing days.
+- **Pick its brain: GPT or Claude.** The agent runs on Codex (GPT) by default. Add Claude
+  to answer the same question on the same stocks, compare them, and choose whose pick to trade.
+- **No API keys.** It uses the ChatGPT and Claude subscriptions you already have, and
+  Robinhood's official browser login.
+- **See everything.** A local dashboard shows your account, every trade and every pick.
 
 ## A trading day
 
@@ -158,7 +160,7 @@ days. See [GPT vs Claude](docs/claude.md).
 | **Trades** | Every trade with prices, times and total profit. |
 
 Want others to follow along? `tradeagent publish install` puts the paper results (never
-your account) on a public page like [ours](https://danielye0010.github.io/TradeAgent/) after every close. See
+your account) on a public track-record page like [ours](https://danielye0010.github.io/TradeAgent/) after every close. See
 [publishing](docs/publish.md).
 
 ## Ask the agent yourself
