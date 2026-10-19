@@ -207,3 +207,47 @@ def test_deployment_is_frozen(tmp_path):
     finally:
         companion.close()
         pipeline.store.close()
+
+
+def test_each_concurrent_answer_keeps_its_own_completion_time(tmp_path):
+    import time
+
+    pipeline, clock = v2_session(tmp_path)
+    entry_after = pipeline.store.decision()["entry_after"]
+    working = news_assessment(["long"])
+
+    def uneven(report, now=None, search=True):
+        if not search:
+            time.sleep(0.5)  # the news answer has long finished by now
+            clock[0] = entry_after + 1
+        return working(report, now=now, search=search)
+
+    companion = companion_for(tmp_path, clock, uneven)
+    try:
+        companion.tick()
+        decision = companion.store.records("decisions")[0]
+        assert decision["claude"]["news"]["frozen_at"] < entry_after
+        assert decision["comparisons"]["claude_news"]["status"] == "VALID"
+        assert decision["claude"]["price"]["late"] is True
+        assert decision["comparisons"]["claude_price"]["status"] == "UNAVAILABLE"
+    finally:
+        companion.close()
+        pipeline.store.close()
+
+
+def test_a_terminal_v2_failure_is_not_pending(tmp_path):
+    pipeline, clock = v2_session(tmp_path)
+    companion = companion_for(tmp_path, clock, news_assessment(["long"]))
+    try:
+        assert companion.tick()["pending_sessions"]
+        source = companion.store.records("decisions")[0]["follows"]["decision_id"]
+        failure = {"decision_id": source, "status": "UNRESOLVABLE_SESSION_WINDOW"}
+        companion.follow.record = lambda kind, key: (
+            failure if kind == "resolution_failures" and key == source else None
+        )
+        status = companion.tick()
+        assert status["pending_sessions"] == []
+        assert len(companion.store.records("resolution_failures")) == 1
+    finally:
+        companion.close()
+        pipeline.store.close()

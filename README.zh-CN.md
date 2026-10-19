@@ -8,29 +8,44 @@
 [![PyPI](https://img.shields.io/pypi/v/tradeagent)](https://pypi.org/project/tradeagent/)
 [![License](https://img.shields.io/badge/License-Apache--2.0%20AND%20MIT-blue)](LICENSE)
 
-TradeAgent 使用 Codex 分析行情和新闻，选择美股或 ETF，并解释交易理由。
-开启自动交易后，它会通过 Robinhood 官方 Agent 交易接口，按照你设定的限额执行 AI 每天的选择。
+每个交易日早上，AI 看行情、读新闻，从当天的美股或 ETF 里选出一只（或者决定不买），并说明理由。
+开启自动交易后，TradeAgent 会通过 Robinhood 官方 Agent 交易接口，用你设定的小金额买入，一小时后自动卖出。
 
-- **每天自动交易。** 配置完成后，Agent 自动分析、买入符合条件的标的并管理到期平仓；没有合适的交易就跳过。
-- **由你掌控。** 自己选择允许买入的标的、每笔金额和风控限额。当前自动交易支持每笔 1–5 美元，
-  每个交易日最多一笔，持有一小时。
-- **随时查看进展。** 本地 Dashboard 展示账户价值、盈亏、交易记录，以及 AI 的选择和分析理由。
-- **连接已有账户。** Codex 使用 ChatGPT 账户登录，Robinhood 使用官方浏览器登录。
+- **选择你的 AI。** 每天由 Codex（GPT）做选择；加上 Claude 后，它会对同样的股票回答同一个问题，
+  你可以对比两者，并决定跟随谁下单。
+- **用你已有的订阅。** Codex 用 ChatGPT 登录，Claude 用你的 Claude 订阅登录，Robinhood 用官方浏览器登录。
+  不需要任何 API key。
+- **由你掌控。** 自己决定允许买入的标的和每笔金额（1–5 美元），每天最多一笔，持有一小时。
+  风控由执行引擎强制执行，不由 AI 决定。
+- **一目了然。** 本地仪表盘展示账户价值、每笔交易、AI 每天的选择和理由，以及 GPT 与 Claude 的对比。
+
+## 一个交易日
+
+| 美东时间 | 发生什么 |
+| --- | --- |
+| 10:30 | AI 查看当天异动最明显的三只候选，读新闻后选出一只，或者都不选。 |
+| 约 10:36 | 如果选中的标的在你的白名单里，按你设定的金额买入。 |
+| 一小时后 | 自动卖出。 |
+| 随时 | 打开仪表盘查看选择、理由和结果。 |
+
+没有符合条件的选择、错过启动时间或任何检查未通过，当天就不交易。
 
 ```mermaid
 flowchart LR
-    A[行情与新闻] --> B[AI 分析]
+    A[行情与新闻] --> B[AI 分析<br/>Codex 或 Claude]
     B --> C{交易决策}
     C -->|符合条件| D[你的风控限额]
     C -->|不交易| E[等待下个交易日]
     D --> F[Robinhood 下单]
-    F --> G[自动平仓]
+    F --> G[一小时后自动平仓]
 ```
 
 ## 快速开始
 
 你需要 Linux 或 WSL2、Python 3.12+、有 Codex 使用权限的 ChatGPT 账户，以及符合条件的 Robinhood Agent 账户。
-以下命令使用同一个 Linux 用户执行，仓库和交易数据保存在 Linux 本地文件系统中。
+Claude 可选，需要 Claude Pro、Max、Team 或 Enterprise 订阅。所有命令用同一个 Linux 用户执行，数据放在 Linux 本地文件系统。
+
+**1. 安装**
 
 ```bash
 git clone https://github.com/danielye0010/TradeAgent.git
@@ -41,24 +56,26 @@ pip install .
 curl -fsSL https://chatgpt.com/codex/install.sh | sh
 ```
 
-重开终端，回到仓库目录并激活 `.venv`，然后连接账户：
+**2. 连接账户。** 重开终端，回到仓库目录并激活 `.venv`：
 
 ```bash
 codex login              # ChatGPT 浏览器登录
-codex login status
 tradeagent login         # Robinhood 浏览器登录，同时生成配置文件
-tradeagent doctor        # 检查本地环境
+tradeagent doctor        # 检查环境，并告诉你还缺什么
 tradeagent live-check    # 检查账户权限和报价，不下单
-tradeagent dashboard     # 打开本地 Dashboard
 ```
 
-TradeAgent 会在后台调用 Codex，不需要一直开着 Codex 窗口。
-安装软件或打开 Dashboard 都不会开启交易。安装问题见[详细上手指南](docs/getting-started.md)。
+**3. 打开仪表盘**
+
+```bash
+tradeagent dashboard
+```
+
+到这里还不会交易：安装、登录和打开仪表盘都不会下单。遇到问题见[详细上手指南](docs/getting-started.md)。
 
 ## 开启自动交易
 
-编辑登录时生成的 `~/.config/tradeagent/tradeagent.toml`，选择允许买入的标的和金额，
-开启 LIVE，并将平仓时间设为自动交易要求的一小时。保留文件中的其他设置：
+**1. 设置限额。** 编辑 `tradeagent login` 生成的 `~/.config/tradeagent/tradeagent.toml`，其他设置保持不变：
 
 ```toml
 [live]
@@ -68,43 +85,53 @@ max_notional = "25"        # 单笔金额上限，单位为美元
 
 [entry]
 order_type = "market"
-dollar_amount = "5"        # 自动交易支持 1–5 美元
+dollar_amount = "5"        # 每笔 1–5 美元
 
 [exit]
 order_type = "market"
-hold_seconds = 3600
+hold_seconds = 3600        # 一小时后卖出
 ```
 
-在仓库目录中激活 `.venv`，安装每日 AI 决策服务，再开启实盘交易定时任务：
+**2. 开启每日 AI 研究。** 它每天早上生成并记录选择，自己从不下单。
 
 ```bash
 python scripts/install_shadow.py --daily --protocol daily-news-v2 \
   --python "$PWD/.venv/bin/python" \
   --state-dir "$HOME/.local/state/tradeagent/daily-decisions"
+```
+
+**3. 开始按选择下单**
+
+```bash
 tradeagent autotrade install --enable
 systemctl --user list-timers tradeagent-daily-news.timer tradeagent-autotrade.timer
 ```
 
-第一个服务只生成决策，不下单；自动交易跟随其中 AI 新闻分析的选择。
-交易任务在每个交易日美东时间 10:30 启动，有效决策、标的白名单、账户状态和风控检查都通过后才会买入。
-不在白名单里的选择会跳过，错过入场时间也会跳过。
+从 10:30 到大约一小时后卖出，电脑和 Linux / WSL 需要保持运行、不休眠。
+定时任务会在 `~/.local/bin`、`/usr/local/bin`、`/usr/bin` 或 `/bin` 中查找 `codex`（以及 `claude`），安装程序默认就装在这里。
+停止：`tradeagent autotrade uninstall`。详见[自动交易说明](docs/autotrade.md)。
 
-这需要 systemd 用户服务可用，且电脑、Linux 或 WSL 在交易和平仓期间保持运行。
-服务需要能在 `~/.local/bin`、`/usr/local/bin`、`/usr/bin` 或 `/bin` 中找到 `codex`。
+## 加上 Claude（可选）
 
-停止后续定时运行：
+Claude 和 Codex 在同一分钟拿到同样的三只股票、同样的行情和同一个问题，
+它的选择按同一个小时、同样的成本计分。仪表盘的 **GPT vs Claude** 页面逐日展示谁领先、两者多常选得一样，
+以及各自的理由。它用你的 Claude 订阅运行，不用 API key。
 
 ```bash
-tradeagent autotrade uninstall
+curl -fsSL https://claude.ai/install.sh | bash
+claude                              # 用 Claude 订阅登录一次
+tradeagent claude doctor --probe    # 检查登录，并实际问一次 Claude
+tradeagent claude install --enable  # 在每日研究旁边运行
 ```
 
-想让 Claude 和 Codex 回答同一个每日问题：用 Claude 订阅登录 Claude Code，然后运行
-`tradeagent claude install --enable`。仪表盘的 **GPT vs Claude** 页面会并排对比两者；
-`tradeagent autotrade install --model claude` 可改为跟随 Claude 的选择下单。详见
-[Claude 与 Codex 对比](docs/claude.md)。
+在你主动选择之前，Claude 只做研究、不下单：
 
-已有交易用 `tradeagent status` 查看；运行中断后，用 `tradeagent recover` 接着管理平仓。
-账户资金要求、配置和平仓恢复见[自动交易说明](docs/autotrade.md)。
+```bash
+tradeagent autotrade install --model claude --enable   # 改为跟随 Claude 下单
+tradeagent autotrade install --enable                  # 换回 Codex（默认）
+```
+
+几天的差距多半是运气；满 20 个交易日后页面才给出结论。详见 [GPT vs Claude](docs/claude.md)。
 
 ## 直接问 Agent
 
@@ -114,17 +141,18 @@ tradeagent autotrade uninstall
 $trade-opportunity-analyst Analyze today's market and generate a TradePlan.
 ```
 
-Agent 会解释候选标的和交易计划，不会下单。
-如需主动按配置执行一笔实盘交易，使用 `tradeagent run-once --live`。
+它会解释候选标的和它会做的交易，但不会下单。想按自己的配置主动下一笔，使用 `tradeagent run-once --live`。
 详见[手动交易与恢复](docs/one-shot.md)。
 
-## 交易控制
+## 安全
 
-AI 选择交易，执行引擎落实你的设置。每笔订单都需要新鲜行情、允许买入的标的、常规交易时段，
-以及符合持仓、敞口和亏损限额的可用资金。不加杠杆，不做空。
-订单先记录再发送，不会盲目重试。在配置的实盘数据目录创建 `KILL` 文件，会阻止新买入并请求平仓处理。
+- AI 只负责选择。执行引擎落实你的设置：新鲜报价、白名单内的标的、常规交易时段，
+  以及在持仓、敞口和亏损限额内的可用资金。
+- 不加杠杆，不做空。订单先记录再发送，从不盲目重试。
+- 紧急停止：在实盘数据目录创建 `KILL` 文件，会阻止新的买入，并让已有持仓正常平仓。
+- 交易期间电脑休眠或断网：用 `tradeagent status` 查看，用 `tradeagent recover` 完成平仓。
 
-自动平仓需要程序和券商连接可用；中断后请检查持仓并使用 `tradeagent recover`。AI 的交易决策也可能亏损。
+AI 的选择也可能亏钱，请从小金额开始。
 
 ## 文档
 

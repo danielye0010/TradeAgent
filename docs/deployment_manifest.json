@@ -62,7 +62,7 @@
     "src/tradeagent/prospective/access.py": "8a2e79855862bc8123a28f85f4227dc05c8fae55ee39853eb10bce3df6360f0e",
     "src/tradeagent/prospective/assessor.py": "fc1a3badbcdfdb0f2d7e17e4f72f11d144b0cc4b5cc06178ab492c0fdd224000",
     "src/tradeagent/prospective/claude_assessor.py": "074178bad824125bcbb42ba4187da555dc7909f0473351460818d8496f1969b9",
-    "src/tradeagent/prospective/claude_compare.py": "13a431c1e7483ad3605ead4bae79c91419e4e1a5e042a0ab181becbacc9761cc",
+    "src/tradeagent/prospective/claude_compare.py": "18e10234cfceb53e451a502249c7a781d8718a2bf2ee0ff4bd2e391a28f2d7c2",
     "src/tradeagent/prospective/collector.py": "1e350381e046ae9a0735c536f45a15bdef4a8c12add560ec7ed385ac36362994",
     "src/tradeagent/prospective/continuous.py": "a5f4239129a851c64a3e45e28f7471ed5e7e51a9558fc7b21bf8f0ecc928cf56",
     "src/tradeagent/prospective/daily.py": "c2bc2b547fa403f99a4be6f07d99f2c553da38883d879263620e3894bdbd60c9",
@@ -130,7 +130,7 @@
     "tests/test_canary_review.py": "84e2c3b188deb097a3a6a8c8a6949f0c8c44142cddb18f28aafc409b5b5ec7ca",
     "tests/test_claude_assessor.py": "800fb0a64e7ca34088c4efbb55b6881d73bd127392a4e972b1681edd08cc769d",
     "tests/test_claude_cli.py": "7da1057cdaa817b24551fa54f83c7b125e40216c629ff7661f22bffec95b747e",
-    "tests/test_claude_compare.py": "4799c1c224166bd5113fbc55d5ab2e60a6f337a19255e9a67fee2ba77b1f4f81",
+    "tests/test_claude_compare.py": "8b6f1632777c7be3578ea284d7284959264c37f83bc6175dc7f8cdecc87c886d",
     "tests/test_commissioning.py": "83b54169dd739c0f8653d4a1d63a28cb184892cf6038277ef8a4a4e6c0d922da",
     "tests/test_continuous.py": "626f575642c8ce5734bed806b92febbfb6aa5d78cbda45ee2442d140d9334e38",
     "tests/test_contract_173.py": "f940b64d9cd2ae63be7fc3398ee50eda2b2f486395be7057632555462e161664",
@@ -172,5 +172,5 @@
     "tests/test_tradeplan_engine.py": "8cb9735d0e593cfa49bb6d4ddb33093ef8e76d33d6cd06752ab18cb10dd5e80f",
     "tests/test_v5_supplement.py": "b8fc88af047f2a5a3c0c645613f16886bb4fa6b7175b7ef6d13263ce3ab1e770"
   },
-  "framework_sha256": "c5a17a1043bff03b685799985d09308d3433ab6439a8677e189d2e61432971b3"
+  "framework_sha256": "ec30321fe0532bb4e8cd911335e26e2f001509ed8409777b5ad360cc339675ce"
 }

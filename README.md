@@ -8,35 +8,49 @@
 [![PyPI](https://img.shields.io/pypi/v/tradeagent)](https://pypi.org/project/tradeagent/)
 [![License](https://img.shields.io/badge/License-Apache--2.0%20AND%20MIT-blue)](LICENSE)
 
-TradeAgent uses Codex to review market moves and news, choose a US stock or ETF, and
-explain its reasoning. Enable automatic trading to act on the AI's daily pick through
-Robinhood's official agentic trading API, within the limits you set.
+Every trading morning, an AI reads the market and the news, picks one US stock or ETF
+(or decides to sit out), and explains why. Turn on automatic trading and TradeAgent buys
+that pick with a small amount you choose and sells it an hour later, through Robinhood's
+official agentic trading API.
 
-- **Automate your daily trade.** Once configured, the agent analyzes, buys eligible
-  picks and manages the scheduled exit. It skips days when there is no eligible trade.
-- **Stay in control.** Choose allowed symbols, set the trade amount and enforce risk limits.
-  Automatic trading currently supports $1–$5 per entry, at most once per trading day,
-  with a one-hour hold.
-- **See what the agent is doing.** A local dashboard shows account value, profit and
-  loss, trade history, and the AI's choices and reasoning.
-- **Use your existing accounts.** Connect Codex with your ChatGPT sign-in and Robinhood
-  through its official browser login.
+- **Pick your AI.** Codex (GPT) makes the daily pick. Add Claude to answer the same
+  question on the same stocks, compare the two, and choose whose pick to trade.
+- **Use the subscriptions you already have.** Codex signs in with ChatGPT, Claude with
+  your Claude plan, Robinhood with its official browser login. No API keys.
+- **Stay in control.** You choose the allowed symbols and the amount ($1–$5 per trade),
+  with at most one trade a day and a one-hour hold. Risk limits are enforced by the
+  engine, not the AI.
+- **See everything.** A local dashboard shows your account value, every trade, each AI
+  pick with its reasoning, and how GPT and Claude compare.
+
+## A trading day
+
+| New York time | What happens |
+| --- | --- |
+| 10:30 | The AI looks at three of the day's most unusual movers, reads the news and picks one, or none. |
+| about 10:36 | If the pick is on your list, TradeAgent buys your amount. |
+| one hour later | It sells automatically. |
+| any time | Open the dashboard to see the pick, the reasoning and the result. |
+
+No eligible pick, a missed start or a failed check means no trade that day.
 
 ```mermaid
 flowchart LR
-    A[Market data & news] --> B[AI analysis]
+    A[Market data & news] --> B[AI analysis<br/>Codex or Claude]
     B --> C{Trade decision}
     C -->|Eligible pick| D[Your risk limits]
     C -->|No trade| E[Wait for next session]
     D --> F[Robinhood order]
-    F --> G[Automatic exit]
+    F --> G[Automatic exit after 1 hour]
 ```
 
 ## Get started
 
-You need Linux or WSL2, Python 3.12+, a ChatGPT account with Codex access, and an
-eligible Robinhood agentic account. Run the commands below as the same Linux user.
-Keep the checkout and trading state on the local Linux filesystem.
+You need Linux or WSL2, Python 3.12+, a ChatGPT account with Codex access and an
+eligible Robinhood agentic account. Claude is optional and needs a Claude Pro, Max, Team
+or Enterprise plan. Run everything as the same Linux user, on the local Linux filesystem.
+
+**1. Install**
 
 ```bash
 git clone https://github.com/danielye0010/TradeAgent.git
@@ -47,26 +61,28 @@ pip install .
 curl -fsSL https://chatgpt.com/codex/install.sh | sh
 ```
 
-Open a new terminal, return to the checkout and activate `.venv`, then connect your accounts:
+**2. Connect your accounts.** Open a new terminal, return to the checkout and activate `.venv`:
 
 ```bash
 codex login              # ChatGPT browser sign-in
-codex login status
 tradeagent login         # Robinhood browser sign-in; creates your configuration
-tradeagent doctor        # check your local setup
-tradeagent live-check    # check account access and quotes without placing orders
-tradeagent dashboard     # open your local dashboard
+tradeagent doctor        # checks your setup and tells you what is missing
+tradeagent live-check    # checks account access and quotes; places no orders
 ```
 
-TradeAgent calls Codex in the background; you do not need to keep a Codex window open.
-Installing the package or opening the dashboard does not enable trading.
-See the [setup guide](docs/getting-started.md) for help.
+**3. Open the dashboard**
+
+```bash
+tradeagent dashboard
+```
+
+Nothing trades yet. Installing, signing in and opening the dashboard never place an
+order. See the [setup guide](docs/getting-started.md) if a step fails.
 
 ## Turn on automatic trading
 
-Edit the existing `~/.config/tradeagent/tradeagent.toml` created by login. Choose your
-allowed symbols and amount, enable LIVE, and set the one-hour exit required by autotrade.
-Keep the other generated settings:
+**1. Set your limits** in `~/.config/tradeagent/tradeagent.toml` (created by
+`tradeagent login`). Keep the other generated settings:
 
 ```toml
 [live]
@@ -76,49 +92,58 @@ max_notional = "25"        # per-entry ceiling in dollars
 
 [entry]
 order_type = "market"
-dollar_amount = "5"        # autotrade accepts $1–$5
+dollar_amount = "5"        # $1–$5 per trade
 
 [exit]
 order_type = "market"
-hold_seconds = 3600
+hold_seconds = 3600        # sell after one hour
 ```
 
-From the checkout, with `.venv` active, install the daily AI decision service, then
-enable its real-money trading timer:
+**2. Start the daily AI research.** It makes and records the pick each morning; it never trades.
 
 ```bash
 python scripts/install_shadow.py --daily --protocol daily-news-v2 \
   --python "$PWD/.venv/bin/python" \
   --state-dir "$HOME/.local/state/tradeagent/daily-decisions"
+```
+
+**3. Start trading the pick**
+
+```bash
 tradeagent autotrade install --enable
 systemctl --user list-timers tradeagent-daily-news.timer tradeagent-autotrade.timer
 ```
 
-The first service generates decisions without placing orders; autotrade follows its
-AI news analyst's pick. Trading starts at 10:30 New York time on trading days, subject
-to a valid decision, your symbol list, account readiness and risk checks. Picks outside
-your list are skipped. Missed entry windows are skipped too.
+Your computer, with Linux or WSL running, needs to be awake from 10:30 until the sale
+about an hour later. The timers look for `codex` (and `claude`) in `~/.local/bin`,
+`/usr/local/bin`, `/usr/bin` or `/bin`, where the installers put them. To stop: `tradeagent autotrade uninstall`. More in
+[automatic trading](docs/autotrade.md).
 
-This requires systemd user services and an awake computer with Linux or WSL running
-through the trade and exit. The service must be able to find `codex` in `~/.local/bin`,
-`/usr/local/bin`, `/usr/bin` or `/bin`.
+## Add Claude (optional)
 
-To stop future scheduled runs:
+Claude gets the same three stocks, the same market data and the same question as Codex
+at the same minute, and its pick is scored over the same hour with the same costs. The
+dashboard's **GPT vs Claude** page shows who is ahead, how often they agree and each
+model's reasoning, session by session. It runs on your Claude subscription, not an API key.
 
 ```bash
-tradeagent autotrade uninstall
+curl -fsSL https://claude.ai/install.sh | bash
+claude                              # sign in once with your Claude plan
+tradeagent claude doctor --probe    # checks the sign-in and asks Claude once
+tradeagent claude install --enable  # runs next to the daily research
 ```
 
-To put Claude next to Codex on the same daily question, sign in to Claude Code with your
-Claude subscription and run `tradeagent claude install --enable`; the dashboard's
-**GPT vs Claude** page compares them, and `tradeagent autotrade install --model claude`
-trades Claude's pick instead. See [Claude next to Codex](docs/claude.md).
+Claude only does research until you choose to trade its pick:
 
-Use `tradeagent status` to check an existing trade and `tradeagent recover` to resume
-its exit if interrupted. See [automatic trading](docs/autotrade.md) for account funding,
-configuration and recovery details.
+```bash
+tradeagent autotrade install --model claude --enable   # trade Claude's pick
+tradeagent autotrade install --enable                  # back to Codex (default)
+```
 
-## Ask the agent
+A few days of results are mostly luck; the page gives a verdict after 20 trading
+days. See [GPT vs Claude](docs/claude.md).
+
+## Ask the agent yourself
 
 Run `codex` from the checkout and ask for an analysis:
 
@@ -126,20 +151,23 @@ Run `codex` from the checkout and ask for an analysis:
 $trade-opportunity-analyst Analyze today's market and generate a TradePlan.
 ```
 
-The agent explains the candidates and its proposed trade without placing an order.
-For an owner-initiated trade using your configured entry, use
-`tradeagent run-once --live`. See [manual trading and recovery](docs/one-shot.md).
+It explains the candidates and the trade it would make, without placing an order. To
+place one trade from your settings yourself, use `tradeagent run-once --live`. See
+[manual trading and recovery](docs/one-shot.md).
 
-## Trading controls
+## Safety
 
-The AI selects a trade; the execution engine enforces your settings. Orders require
-fresh data, an allowed symbol, regular market hours, and sufficient cash within your
-position, exposure and loss limits. TradeAgent does not use leverage or short selling.
-Orders are recorded before submission and are never blindly retried. A `KILL` file in
-the configured live state directory blocks new buys and requests exit management.
+- The AI only picks. The execution engine enforces your settings: fresh quotes, an
+  allowed symbol, regular market hours, and enough cash within your position, exposure
+  and loss limits.
+- No leverage and no short selling. Orders are recorded before they are sent and are
+  never blindly retried.
+- Emergency stop: create a `KILL` file in the live state directory. It blocks new buys
+  and lets the open position exit.
+- If the computer sleeps or the connection drops during a trade, check with
+  `tradeagent status` and finish the exit with `tradeagent recover`.
 
-Automatic exits require the process and broker connection to be available. After an
-interruption, check the position and use `tradeagent recover`. AI decisions can lose money.
+AI picks can lose money. Start small.
 
 ## Documentation
 
