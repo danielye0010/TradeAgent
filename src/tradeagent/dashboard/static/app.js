@@ -16,7 +16,7 @@
       home: {
         account: "Live account",
         noTrades: "Your account value and returns appear here after the first live trade.",
-        asof: "Account value as of {when}. Returns count closed trades only.",
+        asof: "Account value as Robinhood reported it, {when}.",
         chartLabel: "Account value over time",
         ranges: { "1w": "1W", "1m": "1M", "3m": "3M", all: "All", "1wLabel": "Past week", "1mLabel": "Past month", "3mLabel": "Past 3 months", allLabel: "All time" },
         history: "Recent trades",
@@ -221,7 +221,7 @@
       },
       trades: {
         title: "Trades",
-        lede: "Every live trade, newest first. Select one for its fills and timeline.",
+        lede: "Live trades, newest first; the totals cover every trade. Select one for its fills and timeline.",
         total: "Total profit",
         count: "Closed trades",
         winRate: "Win rate",
@@ -284,7 +284,7 @@
       home: {
         account: "实盘账户",
         noTrades: "第一笔实盘交易完成后，这里显示账户价值和收益。",
-        asof: "账户价值截至 {when}。收益只计已平仓的交易。",
+        asof: "账户价值来自 Robinhood，截至 {when}。",
         chartLabel: "账户价值走势",
         ranges: { "1w": "1周", "1m": "1月", "3m": "3月", all: "全部", "1wLabel": "近一周", "1mLabel": "近一月", "3mLabel": "近三月", allLabel: "全部" },
         history: "最近交易",
@@ -503,7 +503,7 @@
       },
       trades: {
         title: "交易记录",
-        lede: "所有实盘交易，最新的在前。点开查看成交明细和时间线。",
+        lede: "实盘交易，最新的在前；累计数字覆盖全部交易。点开查看成交明细和时间线。",
         total: "累计盈亏",
         count: "已平仓",
         winRate: "胜率",
@@ -1062,24 +1062,16 @@
   }
 
   function account() {
-    const runs = liveRuns();
-    const withNav = runs.filter((r) => r.account?.nav != null);
-    const closed = runs.map(tradeOf).filter((x) => x.pnl != null && x.closed).sort((a, b) => a.closed - b.closed);
-    const first = withNav[withNav.length - 1];
-    const latest = withNav[0];
-    const base = first ? first.account.nav : null;
+    // Account value as the broker reported it: at the start of each live run and after
+    // each reconciled fill. Other holdings and deposits move it too, as in any brokerage.
     const points = [];
-    if (base != null) {
-      points.push({ t: first.account.asof || first.started, v: base });
-      let sum = 0;
-      for (const x of closed) {
-        sum += x.pnl;
-        points.push({ t: x.closed, v: base + sum, trade: x });
-      }
+    for (const e of state.data.ledger || []) {
+      if (e.nav != null) points.push({ t: e.asof || e.started, v: e.nav });
+      if (e.end_nav != null) points.push({ t: e.end_asof, v: e.end_nav });
     }
-    const value = latest ? latest.account.nav + (latest.realized_pnl || 0) : null;
-    const asof = latest ? (latest.finished || latest.account.asof) : null;
-    return { runs, closed, points, value, asof, base };
+    points.sort((x, y) => x.t - y.t);
+    const last = points[points.length - 1];
+    return { runs: liveRuns(), points, value: last ? last.v : null, asof: last ? last.t : null };
   }
 
   function signedMoney(v) {
@@ -1578,13 +1570,11 @@
     }
     const live = d.executions.filter((r) => r.mode === "LIVE" && !r.synthetic);
     const other = d.executions.filter((r) => !(r.mode === "LIVE" && !r.synthetic));
-    const total = live.reduce((sum, r) => sum + (r.realized_pnl || 0), 0);
-    const closed = live.filter((r) => r.realized_pnl != null);
-    const wins = closed.filter((r) => r.realized_pnl > 0).length;
+    const totals = d.trade_totals || { pnl: 0, closed: 0, wins: 0 };
     const stats = h("dl", { class: "stats" },
-      h("div", {}, h("dt", { text: t("trades.total") }), h("dd", { class: "num " + dir(total), text: signedMoney(total) })),
-      h("div", {}, h("dt", { text: t("trades.count") }), h("dd", { class: "num", text: String(closed.length) })),
-      h("div", {}, h("dt", { text: t("trades.winRate") }), h("dd", { class: "num", text: closed.length ? Math.round((wins / closed.length) * 100) + "%" : "—" })));
+      h("div", {}, h("dt", { text: t("trades.total") }), h("dd", { class: "num " + dir(totals.pnl), text: signedMoney(totals.pnl) })),
+      h("div", {}, h("dt", { text: t("trades.count") }), h("dd", { class: "num", text: String(totals.closed) })),
+      h("div", {}, h("dt", { text: t("trades.winRate") }), h("dd", { class: "num", text: totals.closed ? Math.round((totals.wins / totals.closed) * 100) + "%" : "—" })));
     const list = (runs) => h("div", { class: "trade-list" }, ...runs.map((r) => tradeRow(tradeOf(r))));
     return h("section", { class: "section trades-page" }, ...head,
       live.length ? [stats, list(live)] : h("p", { class: "muted", text: t("home.historyEmpty") }),

@@ -516,6 +516,7 @@ def execution_run(directory):
     }
     seen_fill = set()
     live_orders = {}  # while a run is open there is no report yet; fills arrive as events
+    reconciled_nav = None  # account value the engine reconciled after the latest fill
     for time_, kind, payload in events:
         if kind not in labels:
             continue
@@ -529,6 +530,8 @@ def execution_run(directory):
             order = data.get("order")
             if isinstance(order, dict) and order.get("side") in ("buy", "sell"):
                 live_orders[order["side"]] = order
+            if _money(data.get("nav")) is not None:
+                reconciled_nav = (time_, _money(data.get("nav")))
             mark = json.dumps(data.get("executions"), sort_keys=True)
             if mark in seen_fill:
                 continue
@@ -536,6 +539,8 @@ def execution_run(directory):
         if kind == "risk_pass" and data.get("phase") != "before_review":
             continue
         view["timeline"].append({"time": time_, "kind": kind})
+    if account is not None and reconciled_nav is not None:
+        account["end_asof"], account["end_nav"] = reconciled_nav
     if not report:
         view["orders"] = [
             _order_view(live_orders[side]) for side in ("buy", "sell") if side in live_orders

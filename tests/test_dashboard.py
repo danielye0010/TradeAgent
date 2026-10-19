@@ -306,7 +306,8 @@ def test_runs_show_the_starting_account_value_but_no_account_identity(tmp_path):
     run_paper(live, "25", 3600, 3, "full_fill", "full_fill", None)
     [run] = readers.execution_history(live)
     assert run["account"]["nav"] > 0 and run["account"]["cash"] is not None
-    assert set(run["account"]) == {"nav", "cash", "asof"}
+    assert set(run["account"]) <= {"nav", "cash", "asof", "end_nav", "end_asof"}
+    assert run["account"]["end_nav"] > 0  # reconciled after the fills
     assert "account_number" not in json.dumps(run)
 
 
@@ -327,13 +328,19 @@ def test_an_open_run_shows_its_entry_fill_before_the_report_exists(tmp_path):
     }
     db.execute(
         "INSERT INTO events VALUES(1, 'r', 101, 'fill_reconciliation', ?)",
-        (json.dumps({"order": order}),),
+        (json.dumps({"order": order, "nav": "10.02"}),),
+    )
+    db.execute("CREATE TABLE one_shot_meta(key TEXT PRIMARY KEY, payload TEXT)")
+    db.execute(
+        "INSERT INTO one_shot_meta VALUES('initial', ?)",
+        (json.dumps({"nav": "10", "cash": "10", "asof": 99}),),
     )
     db.commit()
     db.close()
     run = readers.execution_run(run_dir)
     assert run["in_progress"] and run["orders"][0]["symbol"] == "TLT"
     assert run["orders"][0]["price"] == 89.62
+    assert run["account"]["nav"] == 10 and run["account"]["end_nav"] == 10.02
 
 
 def test_autotrade_records_reach_the_overview(tmp_path):
@@ -357,3 +364,17 @@ def test_autotrade_records_reach_the_overview(tmp_path):
     [record] = payload["autotrade"]["records"]
     assert record["status"] == "NO_TRADE" and "extra" not in record
     assert payload["errors"] == []
+
+
+def test_trade_totals_and_account_history_cover_every_live_run(tmp_path):
+    live = tmp_path / "live"
+    for i in range(55):
+        run = live if i == 0 else tmp_path / "live.history" / f"run-{i:02d}"
+        run.mkdir(parents=True)
+        pnl = "0.01" if i % 5 else "-0.02"
+        report = {"status": "COMPLETED", "realized_pnl": pnl, "orders": []}
+        (run / "report.json").write_text(json.dumps(report))
+    payload = Workspace([], unit_dir=tmp_path, doctor=False, live_dir=live).overview()
+    assert len(payload["executions"]) == 50
+    assert len(payload["ledger"]) == 55
+    assert payload["trade_totals"]["closed"] == 55 and payload["trade_totals"]["wins"] == 44

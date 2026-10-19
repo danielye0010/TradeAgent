@@ -29,8 +29,8 @@
     "src/tradeagent/contracts/options-research-1.8.0.json": "95139864ba51afcc740e863922827a6809ebd3d9070025266b8a19a659e65720",
     "src/tradeagent/dashboard/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "src/tradeagent/dashboard/jobs.py": "076aa4dd940349860da7849d27a569facfc80a4229e13a668cd7cc0329b8dcd0",
-    "src/tradeagent/dashboard/readers.py": "38337ead1778528f7fca07f981a94b0057cc8914e46b024c6eb3bbc2e48af245",
-    "src/tradeagent/dashboard/server.py": "a247355f943e085ed182d9c3fece112aa7d2cebe3d365af50a507f5272c23a01",
+    "src/tradeagent/dashboard/readers.py": "0ca98ca24e8a0bb1c7cb584bf6b01bde06d7cc7f3e94f5def527355a5c7ce4a2",
+    "src/tradeagent/dashboard/server.py": "c56282c6020ee2c233d7a706b6a2fe94e41d586441a345fe88c543d815b354da",
     "src/tradeagent/demo.py": "f561d340185e51ddeddc371bfbddf091a5902a09842aaf66af96ca34a608d67a",
     "src/tradeagent/doctor.py": "5421f2aa00f0c6aa1e4a594b4fd06f61126edaf7a0c3b6d591f454dcbcc9d892",
     "src/tradeagent/execution.py": "68ad4c75ffc857fa420b96e11c9bba836c6c6fae63fceb551fda09c5062d2369",
@@ -134,7 +134,7 @@
     "tests/test_daily_reporting.py": "b11acdcd2ce21b21aa7ea2c633ae5747c604cfabdf59b707ef02d7cfdf2785ee",
     "tests/test_daily_research.py": "f8f59118500905cd4bc8742a85938f7dd01234c5d45fede64fa8a4f7e1bf11b0",
     "tests/test_daily_signal_timing.py": "9a6a876884a3d99081a39131bee4458087b1f7f5b1f837a3d13a60354dd79919",
-    "tests/test_dashboard.py": "01591d0bf3beb9a8c4e4d556b7170e27fce11c597792674b9c0e2ebdc63c41ce",
+    "tests/test_dashboard.py": "2e7e7ca8e310c7ba543297cea8f69afd844c0a11916dc0bb55aba95063624963",
     "tests/test_doctor.py": "65fc0aced9cde3aabbae2f20c5f50d5a6883cd7b9667ed9f90510896d9c6a517",
     "tests/test_events_v6.py": "753f0d0678a9c4987025c495ceff282df436b68165e77f165f6b8584e5b523a3",
     "tests/test_evidence_cohorts.py": "3c9b35eb2e056ebd6c5898f49dae454054d2a52eb96b1848cb33869ecf4d0dcf",
@@ -166,5 +166,5 @@
     "tests/test_tradeplan_engine.py": "8cb9735d0e593cfa49bb6d4ddb33093ef8e76d33d6cd06752ab18cb10dd5e80f",
     "tests/test_v5_supplement.py": "b8fc88af047f2a5a3c0c645613f16886bb4fa6b7175b7ef6d13263ce3ab1e770"
   },
-  "framework_sha256": "af0fcfd96bc63edcfd2f4d91480abdeda2f3cbe28ccffdb3d3c96be321f58cdd"
+  "framework_sha256": "9e8246a1f8b26e2e1dd7d138513541f8ef751921e1c79fc08f5ce8c451764a39"
 }
