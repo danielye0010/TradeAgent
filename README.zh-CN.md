@@ -104,9 +104,9 @@ hold_seconds = 3600        # 持有一小时后自动卖出
 
 ## 日常使用
 
-**Dashboard。** `tradeagent dashboard` 会自动找到已安装的定时任务和实盘记录。今日交易时段以时间轴展示，
-每个锁定的决策都能点开查看 Codex 的分析，各组相对 SPY 和随机选股的表现、每笔交易的成交明细也都在这里。
-仅在本机运行，只读。[详细说明](docs/dashboard.md)
+**Dashboard。** `tradeagent dashboard` 打开就是账户页：账户价值、累计盈亏、收益曲线，今天买了什么、
+几点卖，一眼看清。每个锁定的决策都能点开查看 Codex 的分析，各组和随机选股的对比、每笔交易的明细也都在这里。
+默认红涨绿跌，可一键切换。自动找到已安装的定时任务和实盘记录，仅在本机运行，只读。[详细说明](docs/dashboard.md)
 
 ![研究页：各组表现和样本进度](docs/images/dashboard-research.zh.png)
 

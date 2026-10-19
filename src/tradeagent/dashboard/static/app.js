@@ -11,7 +11,57 @@
 
   const I18N = {
     en: {
-      tabs: { overview: "Overview", activity: "Activity", research: "Research", trades: "Trades" },
+      tabs: { home: "Account", overview: "Decisions", activity: "Activity", research: "Research", trades: "Trades" },
+      updown: { us: "Green up", cn: "Red up" },
+      home: {
+        account: "Live account",
+        noTrades: "Your account value and returns appear here after the first live trade.",
+        asof: "Account value as Robinhood reported it, {when}.",
+        chartLabel: "Account value over time",
+        ranges: { "1w": "1W", "1m": "1M", "3m": "3M", all: "All", "1wLabel": "Past week", "1mLabel": "Past month", "3mLabel": "Past 3 months", allLabel: "All time" },
+        history: "Recent trades",
+        allTrades: "All trades",
+        historyEmpty: "No live trades yet.",
+        row: { closed: "Bought {buy} → sold {sell}", open: "Bought {cost} at {buy}", none: "{status}", holding: "Holding" },
+        today: {
+          label: "Today, {day}",
+          holding: "Holding {sym}",
+          bought: "Bought {cost} at {price}, {when}",
+          buying: "Placing the order",
+          sellsAt: "Sells automatically at {when}",
+          done: "{sym} bought and sold",
+          result: "{pnl} ({ret})",
+          noTrade: "No trade today",
+          problem: "Today's trade did not run",
+          picked: "Codex picked {sym}",
+          soon: "Buys at the research entry time, about 10:36 ET",
+          waiting: "Waiting for today's pick",
+          noPick: "No pick today",
+          waitingLine: "Codex reads the news and decides at 10:30 ET",
+          closedNow: "Market closed",
+          holiday: "Market closed today",
+          next: "Next trading day: {day}",
+        },
+        reasons: {
+          cash: "Codex chose to stay in cash.",
+          unavailable: "Codex did not answer in time, so nothing was bought.",
+          noDecision: "The research did not run today (computer asleep or offline?).",
+          notAllowed: "Codex picked {sym}, which is not on your list of allowed symbols.",
+          already: "Today's trade was already attempted.",
+          late: "The entry window had passed, so nothing was bought.",
+        },
+        auto: {
+          title: "Autotrade",
+          rule: "Follows",
+          ruleValue: "Codex reading the news",
+          next: "Next run",
+          off: "Off",
+          amount: "Per trade",
+          hold: "Holds for",
+          notInstalled: "Daily live trading is not set up.",
+        },
+        ai: { title: "Codex + news, paper results", perDay: "per day on average", days: "{n} of {need} trading days scored" },
+      },
       stop: ". ",
       lang: "中文",
       theme: { auto: "Auto", light: "Light", dark: "Dark" },
@@ -130,9 +180,10 @@
         vsSpy: "Vs SPY, per session",
         vsBase: "Vs {base}",
         baseline: "baseline",
-        chartTitle: "Cumulative return over SPY, per arm",
-        chartNote: "Each session's net return minus SPY over the same window, added up day by day.",
-        chartGate: "The chart appears after {need} paired sessions ({n} so far).",
+        chartTitle: "Cumulative net return, per group",
+        chartNote: "Each session's return after costs, added up day by day.",
+        chartGate: "The chart appears after the second scored session ({n} so far).",
+        chartEarly: "Only {n} of {need} sessions so far: the line can still swing a lot.",
         recent: "Recent sessions",
         date: "Session",
         pick: "Codex pick",
@@ -170,7 +221,12 @@
       },
       trades: {
         title: "Trades",
-        lede: "Every live and paper run, with its fills, P&L and whether the account reconciled afterwards.",
+        lede: "Live trades, newest first; the totals cover every trade. Select one for its fills and timeline.",
+        total: "Total profit",
+        count: "Closed trades",
+        winRate: "Win rate",
+        paper: "Paper and test runs",
+        detail: { bought: "Bought", sold: "Sold", amount: "Amount", shares: "Shares", rule: "Chosen by", manual: "Manual run", status: "Status", reconciled: "Account reconciled" },
         started: "Started",
         mode: "Mode",
         status: "Status",
@@ -223,7 +279,57 @@
       },
     },
     zh: {
-      tabs: { overview: "总览", activity: "动态", research: "研究", trades: "交易" },
+      tabs: { home: "账户", overview: "AI 决策", activity: "动态", research: "研究", trades: "交易记录" },
+      updown: { us: "绿涨红跌", cn: "红涨绿跌" },
+      home: {
+        account: "实盘账户",
+        noTrades: "第一笔实盘交易完成后，这里显示账户价值和收益。",
+        asof: "账户价值来自 Robinhood，截至 {when}。",
+        chartLabel: "账户价值走势",
+        ranges: { "1w": "1周", "1m": "1月", "3m": "3月", all: "全部", "1wLabel": "近一周", "1mLabel": "近一月", "3mLabel": "近三月", allLabel: "全部" },
+        history: "最近交易",
+        allTrades: "全部交易",
+        historyEmpty: "还没有实盘交易。",
+        row: { closed: "买 {buy} → 卖 {sell}", open: "{buy} 买入 {cost}", none: "{status}", holding: "持有中" },
+        today: {
+          label: "今天 {day}",
+          holding: "持有 {sym}",
+          bought: "{when} 以 {price} 买入 {cost}",
+          buying: "正在下单",
+          sellsAt: "{when} 自动卖出",
+          done: "{sym} 已买入并卖出",
+          result: "{pnl}（{ret}）",
+          noTrade: "今天不交易",
+          problem: "今天的交易没有执行",
+          picked: "Codex 选了 {sym}",
+          soon: "按研究的入场时间买入，约美东 10:36",
+          waiting: "等待今天的选择",
+          noPick: "今天没有选择",
+          waitingLine: "Codex 美东 10:30 读新闻后做决定",
+          closedNow: "已收盘",
+          holiday: "今天休市",
+          next: "下个交易日：{day}",
+        },
+        reasons: {
+          cash: "Codex 选择空仓。",
+          unavailable: "Codex 没有按时给出答案，所以没有买入。",
+          noDecision: "今天研究没有运行（电脑是否休眠或断网？）。",
+          notAllowed: "Codex 选了 {sym}，不在你允许交易的标的里。",
+          already: "今天已经尝试过下单。",
+          late: "错过了入场时间，所以没有买入。",
+        },
+        auto: {
+          title: "自动交易",
+          rule: "跟随",
+          ruleValue: "读新闻的 Codex",
+          next: "下次运行",
+          off: "已关闭",
+          amount: "每笔金额",
+          hold: "持有时间",
+          notInstalled: "还没有开启每日实盘。",
+        },
+        ai: { title: "Codex 读新闻 · 模拟盘表现", perDay: "日均", days: "已计分 {n}/{need} 个交易日" },
+      },
       stop: "。",
       checks: {
         System: "系统",
@@ -356,9 +462,10 @@
         vsSpy: "相对 SPY（日均）",
         vsBase: "对比{base}",
         baseline: "基准",
-        chartTitle: "各组相对 SPY 的累计收益",
-        chartNote: "每天扣除成本后的收益减去同时段 SPY，逐日累加。",
-        chartGate: "满 {need} 个交易日后显示曲线（目前 {n} 个）。",
+        chartTitle: "各组累计净收益",
+        chartNote: "每天扣除成本后的收益，逐日累加。",
+        chartGate: "第二个计分交易日后显示曲线（目前 {n} 个）。",
+        chartEarly: "目前只有 {n}/{need} 个交易日，曲线还会大幅波动。",
         recent: "最近交易日",
         date: "交易日",
         pick: "Codex 首选",
@@ -395,8 +502,13 @@
         details: "详情",
       },
       trades: {
-        title: "交易",
-        lede: "所有实盘与模拟交易的成交、盈亏和对账结果。",
+        title: "交易记录",
+        lede: "实盘交易，最新的在前；累计数字覆盖全部交易。点开查看成交明细和时间线。",
+        total: "累计盈亏",
+        count: "已平仓",
+        winRate: "胜率",
+        paper: "模拟和测试运行",
+        detail: { bought: "买入", sold: "卖出", amount: "金额", shares: "股数", rule: "选股来源", manual: "手动运行", status: "状态", reconciled: "账户已对账" },
         started: "时间",
         mode: "模式",
         status: "状态",
@@ -461,7 +573,10 @@
 
   let lang = store.get("ta.lang", (navigator.language || "en").toLowerCase().startsWith("zh") ? "zh" : "en");
   let theme = store.get("ta.theme", "auto");
-  const state = { data: null, etag: null, fetchedAt: 0, offline: false, route: "overview", filter: "all" };
+  let updown = store.get("ta.updown", lang === "zh" ? "cn" : "us");
+  const TABS = ["home", "overview", "research", "trades"];
+  const ROUTES = [...TABS, "activity"];
+  const state = { data: null, etag: null, fetchedAt: 0, offline: false, route: "home", filter: "all", range: "all" };
 
   function t(path, vars) {
     const pick = (table) => path.split(".").reduce((o, k) => (o == null ? o : o[k]), table);
@@ -610,7 +725,7 @@
       if (res.status === 304) {
         state.fetchedAt = Date.now();
         // Same data, but the clock moved: keep the session ribbon current.
-        if (state.route === "overview" && document.getElementById("drawer").hidden) render();
+        if ((state.route === "overview" || state.route === "home") && document.getElementById("drawer").hidden) render();
         else { renderPulse(); renderFoot(); }
         return;
       }
@@ -636,12 +751,14 @@
     document.querySelector(".skip").textContent = t("skip");
     const tabs = document.getElementById("tabs");
     tabs.replaceChildren(
-      ...["overview", "activity", "research", "trades"].map((r) =>
+      ...TABS.map((r) =>
         h("a", { href: "#/" + r, "aria-current": state.route === r ? "page" : null, text: t("tabs." + r) }),
       ),
     );
     document.getElementById("lang").textContent = t("lang");
     document.getElementById("theme").textContent = "◐ " + t("theme." + theme);
+    document.getElementById("updown").textContent = t("updown." + updown);
+    document.documentElement.setAttribute("data-updown", updown);
     document.getElementById("drawer-close").textContent = t("close");
     if (theme === "auto") document.documentElement.removeAttribute("data-theme");
     else document.documentElement.setAttribute("data-theme", theme);
@@ -916,6 +1033,259 @@
         : h("p", { class: "small muted", text: t("setup.ready") }));
   }
 
+  // ------------------------------------------------------------------ home (account)
+
+  const RANGES = { "1w": 7, "1m": 31, "3m": 92, all: Infinity };
+  const toTs = (iso) => (iso ? Date.parse(iso) / 1000 : null);
+  const nyDate = (ts) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(ts * 1000));
+
+  function liveRuns() {
+    return (state.data.executions || []).filter((r) => r.mode === "LIVE" && !r.synthetic);
+  }
+
+  function tradeOf(run) {
+    const buy = run.orders.find((o) => o.side === "buy" && o.quantity);
+    const sell = run.orders.find((o) => o.side === "sell" && o.quantity);
+    const cost = buy ? (buy.notional ?? (buy.price != null ? buy.price * buy.quantity : null)) : null;
+    return {
+      run,
+      symbol: buy?.symbol || run.orders[0]?.symbol || null,
+      buy,
+      sell,
+      cost,
+      pnl: run.realized_pnl,
+      ret: run.realized_pnl != null && cost ? run.realized_pnl / cost : null,
+      opened: toTs(buy?.filled_at) || run.started,
+      closed: toTs(sell?.filled_at) || run.finished,
+      mirror: String(run.strategy || "").startsWith("mirror:"),
+    };
+  }
+
+  function account() {
+    // Account value as the broker reported it: at the start of each live run and after
+    // each reconciled fill. Other holdings and deposits move it too, as in any brokerage.
+    const points = [];
+    for (const e of state.data.ledger || []) {
+      if (e.nav != null) points.push({ t: e.asof || e.started, v: e.nav });
+      if (e.end_nav != null) points.push({ t: e.end_asof, v: e.end_nav });
+    }
+    points.sort((x, y) => x.t - y.t);
+    const last = points[points.length - 1];
+    return { runs: liveRuns(), points, value: last ? last.v : null, asof: last ? last.t : null };
+  }
+
+  function signedMoney(v) {
+    if (v == null || !isFinite(v)) return "—";
+    const sign = v > 0 ? "+" : v < 0 ? "−" : "";
+    const a = Math.abs(v);
+    return sign + "$" + (a > 0 && a < 0.01 ? a.toFixed(3) : a.toFixed(2));
+  }
+  function usd(v) {
+    return v == null || !isFinite(v) ? "—" : "$" + Number(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function price(v) {
+    return v == null ? "—" : "$" + Number(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  const dir = (v) => (v == null || v === 0 ? "flat" : v > 0 ? "up" : "down");
+
+  function heroChange(change, startValue, label) {
+    const share = startValue ? change / startValue : null;
+    return h("p", { class: "hero-change " + dir(change) },
+      h("span", { class: "num", text: `${signedMoney(change)} (${pct(share)})` }),
+      h("span", { class: "range-label", text: label }));
+  }
+
+  function home() {
+    const acct = account();
+    const range = state.range || "all";
+    const days = RANGES[range];
+    const now = Date.now() / 1000;
+    const inRange = acct.points.filter((p) => days === Infinity || p.t >= now - days * 86400);
+    const before = acct.points.filter((p) => !(days === Infinity || p.t >= now - days * 86400));
+    const start = before.length ? before[before.length - 1].v : acct.points[0]?.v;
+    const series = before.length ? [{ t: now - days * 86400, v: start }, ...inRange] : inRange;
+    const end = series.length ? series[series.length - 1].v : null;
+    const change = end != null && start != null ? end - start : null;
+
+    const valueEl = h("h1", { class: "hero-value num", text: acct.value != null ? usd(acct.value) : "" });
+    const changeSlot = h("div", {}, acct.value != null ? heroChange(change, start, t("home.ranges." + range + "Label")) : null);
+    const restore = () => {
+      valueEl.textContent = acct.value != null ? usd(acct.value) : "";
+      changeSlot.replaceChildren(acct.value != null ? heroChange(change, start, t("home.ranges." + range + "Label")) : null);
+    };
+    const scrub = (p) => {
+      if (!p) return restore();
+      valueEl.textContent = usd(p.v);
+      changeSlot.replaceChildren(heroChange(p.v - start, start, fmtDateTime(p.t)));
+    };
+
+    const left = h("div", { class: "home-main" },
+      h("p", { class: "hero-label", text: t("home.account") }),
+      valueEl,
+      changeSlot,
+      acct.value == null ? h("p", { class: "hero-empty", text: t("home.noTrades") }) : null,
+      acct.points.length ? h("div", { class: "hero-chart " + dir(change), "data-hero": "1" }) : null,
+      acct.points.length ? h("div", { class: "ranges", role: "tablist" }, ...Object.keys(RANGES).map((k) =>
+        h("button", { type: "button", role: "tab", class: "range", "aria-selected": String(k === range), text: t("home.ranges." + k),
+          onclick: () => { state.range = k; render(); } }))) : null,
+      acct.asof ? h("p", { class: "hero-asof", text: t("home.asof", { when: fmtDateTime(acct.asof) }) }) : null);
+    heroScrub = { series, scrub, dir: dir(change) };
+    // Grid areas keep today's status beside the chart on desktop and right under it on a phone.
+    return h("div", { class: "home" }, left, sidePanel(acct), historyList(acct, 8));
+  }
+
+  let heroScrub = null;
+  function drawHero() {
+    const box = document.querySelector("[data-hero]");
+    if (!box || !heroScrub) return;
+    const { series, scrub } = heroScrub;
+    const W = Math.max(300, box.clientWidth || 640), H = 220, padY = 14;
+    const svg = s("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": t("home.chartLabel"), preserveAspectRatio: "none" });
+    if (series.length < 2) {
+      svg.append(s("line", { class: "hero-base", x1: 0, x2: W, y1: H / 2, y2: H / 2 }));
+      box.replaceChildren(svg);
+      return;
+    }
+    const t0 = series[0].t, t1 = series[series.length - 1].t;
+    const vals = series.map((p) => p.v);
+    let lo = Math.min(...vals), hi = Math.max(...vals);
+    if (hi - lo < 1e-9) { lo -= 0.01; hi += 0.01; }
+    const x = (tt) => ((tt - t0) / Math.max(1, t1 - t0)) * (W - 8) + 4;
+    const y = (v) => padY + (1 - (v - lo) / (hi - lo)) * (H - 2 * padY);
+    // Step line: the value changes only when a trade closes.
+    let d = `M${x(series[0].t).toFixed(1)} ${y(series[0].v).toFixed(1)}`;
+    for (let i = 1; i < series.length; i++) d += ` H${x(series[i].t).toFixed(1)} V${y(series[i].v).toFixed(1)}`;
+    svg.append(s("line", { class: "hero-base", x1: 0, x2: W, y1: y(series[0].v), y2: y(series[0].v) }));
+    svg.append(s("path", { class: "hero-line", d }));
+    const dot = s("circle", { class: "hero-dot", r: 5, cx: 0, cy: 0, visibility: "hidden" });
+    const rule = s("line", { class: "hero-rule", x1: 0, x2: 0, y1: 0, y2: H, visibility: "hidden" });
+    svg.append(rule, dot);
+    const hit = s("rect", { x: 0, y: 0, width: W, height: H, fill: "transparent" });
+    const move = (evt) => {
+      const rect = svg.getBoundingClientRect();
+      const px = ((evt.clientX - rect.left) / rect.width) * W;
+      let best = 0;
+      for (let i = 0; i < series.length; i++) if (x(series[i].t) <= px) best = i;
+      const p = series[best];
+      dot.setAttribute("cx", x(p.t)); dot.setAttribute("cy", y(p.v));
+      rule.setAttribute("x1", x(p.t)); rule.setAttribute("x2", x(p.t));
+      dot.setAttribute("visibility", "visible"); rule.setAttribute("visibility", "visible");
+      scrub(p);
+    };
+    const leave = () => { dot.setAttribute("visibility", "hidden"); rule.setAttribute("visibility", "hidden"); scrub(null); };
+    hit.addEventListener("pointermove", move);
+    hit.addEventListener("pointerleave", leave);
+    svg.append(hit);
+    box.replaceChildren(svg);
+  }
+
+  function tradeRow(x) {
+    const run = x.run;
+    const when = x.closed || x.opened || run.started;
+    let detail;
+    if (x.buy && x.sell) detail = t("home.row.closed", { buy: price(x.buy.price), sell: price(x.sell.price) });
+    else if (x.buy) detail = t("home.row.open", { buy: price(x.buy.price), cost: usd(x.cost) });
+    else detail = t("home.row.none", { status: statusName(run.status) });
+    const row = h("button", { type: "button", class: "trade-row" },
+      h("span", { class: "trade-sym" }, h("b", { text: x.symbol || "—" }), h("span", { class: "muted", text: fmtDay(nyDate(when)) })),
+      h("span", { class: "trade-detail muted", text: detail }),
+      h("span", { class: "trade-pnl num " + dir(x.pnl) },
+        x.pnl != null ? h("b", { text: signedMoney(x.pnl) }) : h("b", { class: "muted", text: run.in_progress ? t("home.row.holding") : "—" }),
+        x.ret != null ? h("span", { text: pct(x.ret) }) : null));
+    row.addEventListener("click", () => openTrade(run));
+    return row;
+  }
+
+  function historyList(acct, limit) {
+    const items = acct.runs.map(tradeOf).filter((x) => x.buy || x.run.in_progress);
+    const head = h("div", { class: "section-head" }, h("h2", { text: t("home.history") }),
+      items.length > limit ? h("a", { class: "push small", href: "#/trades", text: t("home.allTrades") }) : null);
+    if (!items.length) return h("section", { class: "history" }, head, h("p", { class: "muted", text: t("home.historyEmpty") }));
+    return h("section", { class: "history" }, head, h("div", { class: "trade-list" }, ...items.slice(0, limit).map(tradeRow)));
+  }
+
+  function reasonText(reason) {
+    const r = String(reason || "");
+    if (/chose cash/.test(r)) return t("home.reasons.cash");
+    if (/assessment unavailable/.test(r)) return t("home.reasons.unavailable");
+    if (/no daily-news-v2 decision/.test(r)) return t("home.reasons.noDecision");
+    if (/not in the owner/.test(r)) return t("home.reasons.notAllowed", { sym: r.split(" ")[0] });
+    if (/already attempted/.test(r)) return t("home.reasons.already");
+    if (/entry window passed/.test(r)) return t("home.reasons.late");
+    return r;
+  }
+
+  function todayStatus() {
+    const d = state.data;
+    const day = d.market?.date;
+    const runs = liveRuns();
+    const open = runs.find((r) => r.in_progress);
+    const record = (d.autotrade?.records || []).find((r) => r.session === day);
+    const news = d.research.find((r) => r.protocol === "daily-news-v2");
+    const run = news?.runs?.find((r) => r.session_date === day);
+    const pick = run?.decision?.arms?.codex_news;
+    if (open) {
+      const x = tradeOf(open);
+      return { tone: "busy", title: t("home.today.holding", { sym: x.symbol || "" }),
+        lines: [x.buy ? t("home.today.bought", { cost: usd(x.cost), price: price(x.buy.price), when: fmtTime(x.opened) }) : t("home.today.buying"),
+          open.exit_due ? t("home.today.sellsAt", { when: fmtTime(open.exit_due) }) : null] };
+    }
+    if (record) {
+      if (record.status === "CLOSED") {
+        const x = runs.map(tradeOf).find((y) => y.symbol === record.symbol && y.closed && nyDate(y.closed) === day);
+        return { tone: dir(x?.pnl), title: t("home.today.done", { sym: record.symbol }),
+          lines: [x ? t("home.today.result", { pnl: signedMoney(x.pnl), ret: pct(x.ret) }) : null] };
+      }
+      if (record.status === "NO_TRADE") return { tone: "idle", title: t("home.today.noTrade"), lines: [reasonText(record.reason)] };
+      return { tone: "trouble", title: t("home.today.problem"), lines: [reasonText(record.reason) || statusName(record.status)] };
+    }
+    if (pick?.symbol && d.market?.session && Date.now() / 1000 < d.market.session.close)
+      return { tone: "busy", title: t("home.today.picked", { sym: pick.symbol }), lines: [t("home.today.soon")] };
+    const nowTs = Date.now() / 1000;
+    if (d.market?.session && nowTs < d.market.session.open + 4800)  // pick is due by about 10:50 ET
+      return { tone: "idle", title: t("home.today.waiting"), lines: [t("home.today.waitingLine")] };
+    if (d.market?.session && nowTs < d.market.session.close)
+      return { tone: "trouble", title: t("home.today.noPick"), lines: [t("home.reasons.noDecision")] };
+    return { tone: "idle", title: d.market?.session ? t("home.today.closedNow") : t("home.today.holiday"),
+      lines: [d.market?.next ? t("home.today.next", { day: fmtDay(d.market.next.date) }) : null] };
+  }
+
+  function sidePanel(acct) {
+    const d = state.data;
+    const at = d.autotrade;
+    const parts = [];
+    const st = todayStatus();
+    parts.push(h("section", { class: "side-block" },
+      h("p", { class: "side-label", text: t("home.today.label", { day: fmtDay(d.market?.date) }) }),
+      h("p", { class: "side-title " + st.tone }, h("span", { class: "dot " + st.tone, "aria-hidden": "true" }), st.title),
+      ...st.lines.filter(Boolean).map((line) => h("p", { class: "side-line", text: line }))));
+    const settings = d.live?.settings;
+    const rows = [];
+    if (at) {
+      rows.push([t("home.auto.rule"), t("home.auto.ruleValue")]);
+      rows.push([t("home.auto.next"), at.timer?.enabled === false ? t("home.auto.off") : at.timer?.next_run ? fmtDateTime(at.timer.next_run) : "—"]);
+    }
+    if (settings) {
+      rows.push([t("home.auto.amount"), plainMoney(settings.dollar_amount)]);
+      rows.push([t("home.auto.hold"), settings.hold_seconds ? duration(settings.hold_seconds) : "—"]);
+    }
+    if (d.live?.kill_switch) rows.push([t("trading.kill"), t("trading.killOn")]);
+    parts.push(h("section", { class: "side-block" },
+      h("p", { class: "side-label", text: t("home.auto.title") }),
+      at ? h("dl", { class: "side-kv" }, ...rows.flatMap(([k, v]) => [h("dt", { text: k }), h("dd", { text: v })]))
+        : h("div", {}, h("p", { class: "side-line", text: t("home.auto.notInstalled") }), h("code", { text: "tradeagent autotrade install --enable" }))));
+    const news = d.research.find((r) => r.protocol === "daily-news-v2");
+    const arm = news?.arms?.find((a) => a.arm === "codex_news");
+    if (arm) {
+      parts.push(h("a", { class: "side-block side-link", href: "#/research" },
+        h("p", { class: "side-label", text: t("home.ai.title") }),
+        h("p", { class: "side-big" }, h("span", { class: "num " + dir(arm.mean_net), text: pct(arm.mean_net) }), h("span", { class: "muted small", text: " " + t("home.ai.perDay") })),
+        h("p", { class: "side-line", text: t("home.ai.days", { n: news.valid_paired_days || 0, need: MIN_DAYS }) })));
+    }
+    const setup = setupPanel();
+    return h("aside", { class: "home-side" }, h("div", { class: "side-card" }, ...parts), setup);
+  }
+
   // ------------------------------------------------------------------ overview
 
   function emptyState() {
@@ -991,12 +1361,12 @@
 
   function chartPlaceholder(r) {
     const n = r.series.length;
-    if (n < MIN_DAYS) return h("p", { class: "empty gate", text: t("research.chartGate", { need: MIN_DAYS, n }) });
+    if (n < 2) return h("p", { class: "empty gate", text: t("research.chartGate", { need: MIN_DAYS, n }) });
     const box = h("div", { class: "chart", "data-chart": r.id },
       h("h3", { text: t("research.chartTitle") }),
       h("div", { class: "legend" }, ...r.arms.map((a) => h("span", {}, h("i", { style: `background:${armColor(a.arm)}` }), armName(a.arm)))),
       h("div", { class: "plot" }),
-      h("p", { class: "small muted", text: t("research.chartNote") }));
+      h("p", { class: "small muted", text: t("research.chartNote") + (n < MIN_DAYS ? " " + t("research.chartEarly", { n, need: MIN_DAYS }) : "") }));
     return box;
   }
 
@@ -1021,7 +1391,7 @@
       const cum = {};
       for (const a of arms) {
         let sum = 0;
-        cum[a] = r.series.map((p) => (sum += p.excess[a] || 0));
+        cum[a] = r.series.map((p) => (sum += (p.net ? p.net[a] : p.excess[a]) || 0));
       }
       const all = Object.values(cum).flat().concat([0]);
       let lo = Math.min(...all), hi = Math.max(...all);
@@ -1196,31 +1566,19 @@
     const d = state.data;
     const head = [h("div", { class: "section-head" }, h("h2", { text: t("trades.title") })), h("p", { class: "lede", text: t("trades.lede") })];
     if (!d.executions.length) {
-      return h("section", { class: "section" }, ...head, h("div", { class: "empty stack" }, h("p", { text: t("trades.empty") }), h("code", { text: "tradeagent run-once --live" })));
+      return h("section", { class: "section" }, ...head, h("div", { class: "empty stack" }, h("p", { text: t("trades.empty") }), h("code", { text: "tradeagent autotrade install --enable" })));
     }
-    const fill = (run, side) => {
-      const o = run.orders.find((x) => x.side === side);
-      return o ? `${o.quantity ?? ""} @ ${o.price ?? "—"}` : "—";
-    };
-    const table = h("div", { class: "table-wrap" }, h("table", {},
-      h("thead", {}, h("tr", {}, ...["started", "mode", "status", "symbol", "buy", "sell"].map((k) => h("th", { text: t("trades." + k) })),
-        h("th", { class: "n", text: t("trades.pnl") }), h("th", { text: t("trades.reconciled") }))),
-      h("tbody", {}, ...d.executions.map((run) => {
-        const tr = h("tr", { class: "click", tabindex: "0" },
-          h("td", { text: fmtDateTime(run.started) }),
-          h("td", {}, ...modeBadge(run.mode, run.synthetic)),
-          h("td", {}, h("span", { class: "status " + (run.status === "COMPLETED" ? "ok" : run.in_progress ? "run" : run.status === "HALTED" ? "fail" : "warn"), text: statusName(run.status) })),
-          h("td", { text: run.orders[0]?.symbol || "—" }),
-          h("td", { class: "num", text: fill(run, "buy") }),
-          h("td", { class: "num", text: fill(run, "sell") }),
-          h("td", { class: "n " + tone(run.realized_pnl), text: money(run.realized_pnl) }),
-          h("td", { text: run.reconciled == null ? "—" : run.reconciled ? t("trades.yes") : t("trades.no") }));
-        const open = () => openTrade(run);
-        tr.addEventListener("click", open);
-        tr.addEventListener("keydown", (e) => { if (e.key === "Enter") open(); });
-        return tr;
-      }))));
-    return h("section", { class: "section" }, ...head, table);
+    const live = d.executions.filter((r) => r.mode === "LIVE" && !r.synthetic);
+    const other = d.executions.filter((r) => !(r.mode === "LIVE" && !r.synthetic));
+    const totals = d.trade_totals || { pnl: 0, closed: 0, wins: 0 };
+    const stats = h("dl", { class: "stats" },
+      h("div", {}, h("dt", { text: t("trades.total") }), h("dd", { class: "num " + dir(totals.pnl), text: signedMoney(totals.pnl) })),
+      h("div", {}, h("dt", { text: t("trades.count") }), h("dd", { class: "num", text: String(totals.closed) })),
+      h("div", {}, h("dt", { text: t("trades.winRate") }), h("dd", { class: "num", text: totals.closed ? Math.round((totals.wins / totals.closed) * 100) + "%" : "—" })));
+    const list = (runs) => h("div", { class: "trade-list" }, ...runs.map((r) => tradeRow(tradeOf(r))));
+    return h("section", { class: "section trades-page" }, ...head,
+      live.length ? [stats, list(live)] : h("p", { class: "muted", text: t("home.historyEmpty") }),
+      other.length ? [h("div", { class: "section-head sub" }, h("h2", { text: t("trades.paper") })), list(other)] : null);
   }
 
   // ------------------------------------------------------------------ drawer
@@ -1305,17 +1663,25 @@
   }
 
   function openTrade(run) {
+    const x = tradeOf(run);
+    const facts = [
+      [t("trades.detail.bought"), x.buy ? `${price(x.buy.price)}, ${fmtDateTime(x.opened)}` : "—"],
+      [t("trades.detail.sold"), x.sell ? `${price(x.sell.price)}, ${fmtDateTime(x.closed)}` : run.in_progress && run.exit_due ? t("home.today.sellsAt", { when: fmtTime(run.exit_due) }) : "—"],
+      [t("trades.detail.amount"), usd(x.cost)],
+      [t("trades.detail.shares"), x.buy?.quantity != null ? String(x.buy.quantity) : "—"],
+      [t("trades.detail.rule"), x.mirror ? t("home.auto.ruleValue") : t("trades.detail.manual")],
+      [t("trades.detail.status"), statusName(run.status)],
+      [t("trades.detail.reconciled"), run.reconciled == null ? "—" : run.reconciled ? t("trades.yes") : t("trades.no")],
+    ];
     const body = [
-      h("h2", { id: "drawer-title", text: `${run.orders[0]?.symbol || ""} ${fmtDateTime(run.started)}` }),
-      h("div", { class: "decision-head" }, ...modeBadge(run.mode, run.synthetic), h("span", { class: "badge", text: statusName(run.status) })),
-      run.realized_pnl != null ? h("p", { class: "frozen " + tone(run.realized_pnl), text: `${t("trades.pnl")} ${money(run.realized_pnl)}` }) : null,
-      h("div", { class: "section-head" }, h("h3", { text: t("trades.orders") })),
-      h("div", { class: "table-wrap" }, h("table", {}, h("tbody", {}, ...run.orders.map((o) => h("tr", {},
-        h("td", { text: o.side }), h("td", { text: o.symbol }), h("td", { class: "n", text: `${o.quantity ?? ""} @ ${o.price ?? "—"}` }),
-        h("td", { class: "n", text: o.notional != null ? "$" + o.notional.toFixed(2) : "—" }), h("td", { text: o.state }), h("td", { class: "muted small", text: o.filled_at || "" })))))),
-      h("div", { class: "section" }, h("div", { class: "section-head" }, h("h3", { text: t("trades.timeline") })),
-        h("ol", { class: "steps" }, ...run.timeline.map((e) => h("li", { class: "done" }, h("div", { text: t("trades.events." + e.kind) }), h("div", { class: "small muted", text: fmtTime(e.time, { second: "2-digit" }) }))))),
-      run.path ? h("p", { class: "small muted mono", text: run.path }) : null,
+      h("h2", { id: "drawer-title", class: "detail-sym", text: x.symbol || "—" }),
+      h("div", { class: "decision-head" }, ...modeBadge(run.mode, run.synthetic)),
+      x.pnl != null ? h("p", { class: "detail-pnl num " + dir(x.pnl), text: `${signedMoney(x.pnl)} (${pct(x.ret)})` })
+        : h("p", { class: "detail-pnl muted", text: run.in_progress ? t("home.row.holding") : statusName(run.status) }),
+      h("dl", { class: "side-kv detail-kv" }, ...facts.flatMap(([k, v]) => [h("dt", { text: k }), h("dd", { text: v })])),
+      run.timeline.length ? h("div", { class: "section" }, h("div", { class: "section-head" }, h("h3", { text: t("trades.timeline") })),
+        h("ol", { class: "steps" }, ...run.timeline.map((e) => h("li", { class: "done" }, h("div", { text: t("trades.events." + e.kind) }), h("div", { class: "small muted", text: fmtTime(e.time, { second: "2-digit" }) }))))) : null,
+      run.reason ? h("p", { class: "small muted note", text: run.reason }) : null,
     ];
     showDrawer(body.filter(Boolean));
   }
@@ -1332,14 +1698,16 @@
       main.replaceChildren(h("p", { class: "muted", text: state.offline ? t("pulse.offline") : "…" }));
       return;
     }
-    const views = { overview, activity, research, trades };
+    const views = { home, overview, activity, research, trades };
+    heroScrub = null;
     main.replaceChildren(...[views[state.route]()].flat().filter(Boolean));
+    drawHero();
     drawCharts();
   }
 
   function route() {
-    const name = (location.hash.replace(/^#\/?/, "") || "overview").split("?")[0];
-    state.route = ["overview", "activity", "research", "trades"].includes(name) ? name : "overview";
+    const name = (location.hash.replace(/^#\/?/, "") || "home").split("?")[0];
+    state.route = ROUTES.includes(name) ? name : "home";
     render();
     if (document.activeElement && document.activeElement.closest(".tabs")) document.getElementById("main").focus({ preventScroll: true });
   }
@@ -1347,6 +1715,7 @@
   document.getElementById("lang").addEventListener("click", () => {
     lang = lang === "zh" ? "en" : "zh";
     store.set("ta.lang", lang);
+    if (!store.get("ta.updown", "")) updown = lang === "zh" ? "cn" : "us";
     render();
   });
   document.getElementById("theme").addEventListener("click", () => {
@@ -1354,12 +1723,17 @@
     store.set("ta.theme", theme);
     render();
   });
+  document.getElementById("updown").addEventListener("click", () => {
+    updown = updown === "cn" ? "us" : "cn";
+    store.set("ta.updown", updown);
+    render();
+  });
   document.getElementById("drawer-close").addEventListener("click", hideDrawer);
   document.getElementById("drawer").addEventListener("click", (e) => { if (e.target.id === "drawer") hideDrawer(); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !document.getElementById("drawer").hidden) hideDrawer(); });
   window.addEventListener("hashchange", route);
   let resizeTimer = null;
-  window.addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(drawCharts, 150); });
+  window.addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { drawHero(); drawCharts(); }, 150); });
 
   route();
   load();

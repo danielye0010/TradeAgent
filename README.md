@@ -109,9 +109,10 @@ hold_seconds = 3600        # sell automatically after an hour
 
 ## Daily use
 
-**Dashboard.** `tradeagent dashboard` finds the installed timers and the live run on its
-own. Today's session as a timeline, every frozen decision with Codex's reasoning, per-arm
-results against SPY and Random, and every trade with its fills. Local and read-only.
+**Dashboard.** `tradeagent dashboard` opens on your account: value, profit, a value chart,
+and today's trade with its sell time. Every frozen decision opens to Codex's reasoning,
+each group is scored against Random, and every trade shows its prices. It finds the
+installed timers and the live run on its own. Local and read-only.
 [More](https://github.com/danielye0010/TradeAgent/blob/main/docs/dashboard.md)
 
 ![Research view: per-arm results and progress toward a verdict](https://raw.githubusercontent.com/danielye0010/TradeAgent/main/docs/images/dashboard-research.png)

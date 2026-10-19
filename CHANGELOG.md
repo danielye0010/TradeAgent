@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.3.0 — 2026-10-19
+
+Python distribution version: `1.3.0`.
+
+- Dashboard redesigned around the account, in the style of a retail trading app. The new
+  **Account** home shows the live account value, profit in dollars and percent, a value
+  chart you can scrub (1W / 1M / 3M / All), recent trades with buy and sell prices, and a
+  card for today's trade (waiting, picked, holding with the sell time, result, or the
+  plain reason nothing was bought). The **Trades** page lists every trade with total
+  profit and win rate; a trade opens to its prices, times and timeline.
+- Gain and loss colors switch between green up and red up (red up by default in
+  Chinese). Cleaner white and black themes.
+- Research charts show cumulative net return per group from the second scored session.
+- The dashboard reads the account value each live run started from, the entry fill of a
+  run still in progress, and the autotrade timer's daily outcomes. Still read-only.
+
 ## 1.2.0 — 2026-10-16
 
 Python distribution version: `1.2.0`.
