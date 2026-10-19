@@ -30,7 +30,7 @@
     "src/tradeagent/contracts/options-research-1.8.0.json": "95139864ba51afcc740e863922827a6809ebd3d9070025266b8a19a659e65720",
     "src/tradeagent/dashboard/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "src/tradeagent/dashboard/jobs.py": "b2042a47f762f313d1cb293db4f87fcb820dbd9f6fe2377e69a215bc6630ee52",
-    "src/tradeagent/dashboard/readers.py": "246b3b96fcc70b10c3731ba79746e9fdaec38a5057951103990c62091039d39a",
+    "src/tradeagent/dashboard/readers.py": "6c2e7ff51a802d1ffd9da65a7123cbb9dd1232792cb489daacde56b728552020",
     "src/tradeagent/dashboard/server.py": "a2975ae52319ca2bd650ab03d4e629338728138ba5ed3ba076da8697ff7592e7",
     "src/tradeagent/demo.py": "f561d340185e51ddeddc371bfbddf091a5902a09842aaf66af96ca34a608d67a",
     "src/tradeagent/doctor.py": "1a2383924beddc61faab1ccf5a61be62dd1b608ee584a57d0bd89fac9722bd1e",
@@ -75,7 +75,7 @@
     "src/tradeagent/prospective/sec_events.py": "8de9cb2882d7e3ba61183a40852d01c1c9d983a25cc5d8bf8e55c71e4005b4a9",
     "src/tradeagent/prospective/service.py": "33cfeb5c1995263b66f3bbee8d7a1da5628f71a5c23be549325d2aed838f0f5d",
     "src/tradeagent/prospective/v5_supplement.py": "d44e55f4efd7cc574b0dea1282d7a53d453f01ca8090468e5c631ee39e701835",
-    "src/tradeagent/publish.py": "acef0d606c0b30ce015d3712595858be5a9a5f4894782c20ef1abbd102f59976",
+    "src/tradeagent/publish.py": "75591bc1b933d009c583334966b9d8fc18e139da685f522fcacacb5f6341af9a",
     "src/tradeagent/research/__init__.py": "c6b7d096648fdf0a1eb0233cbdf078da4a4fa3e2549e0da9f8f6a83b713ec464",
     "src/tradeagent/research/agent_market.py": "ed70ddf7f4ede46db7dbe9b78cf9e6140b989d95e5fdd4b5748c9b7a356d306b",
     "src/tradeagent/research/alpha_data.py": "dd66541ae5b52f3ff777cdd136898968eda41c66a62b57c608f9d368d3a21642",
@@ -161,7 +161,7 @@
     "tests/test_owner_recovery.py": "8c72be1c10f33c556c5d4d9e56b241d046b0e6f6c04c78e6350f7ef129c018c7",
     "tests/test_production_oneshot.py": "57394b16866773f1f93063216c6c1465a5268bead9fae657113c5e279eccdd2a",
     "tests/test_prospective.py": "596505f0c76bd3ca1f60d49255e01c228bf5dd99101d36ea0e5fdd225b8275e3",
-    "tests/test_publish.py": "02d3385d91ab2e62f04f646a3f09a694161ec19663ebd763c1e8318e2dc6ef09",
+    "tests/test_publish.py": "ec41e3f6366ada794d8dcbfdcd4c1167d41734634231e6231b5f1755ee338e3e",
     "tests/test_release_policy.py": "406a8f771658e1815cecbab48293b497ac95fd05751f1b5fa726f079629bbf7a",
     "tests/test_research_integrity.py": "7e23af828a9974495d97824e92300aa262a7d3a89d2e69245dee4b4f18358106",
     "tests/test_research_loop.py": "bd863a6df5f40260072dac426bb4041dfb9fa2df2d02ae278bc36c2820478b72",
@@ -174,5 +174,5 @@
     "tests/test_tradeplan_engine.py": "8cb9735d0e593cfa49bb6d4ddb33093ef8e76d33d6cd06752ab18cb10dd5e80f",
     "tests/test_v5_supplement.py": "b8fc88af047f2a5a3c0c645613f16886bb4fa6b7175b7ef6d13263ce3ab1e770"
   },
-  "framework_sha256": "5c55f4024e1df8719423fc6a1cd076c3d2ea89fcf30a168a395be0f856e11d59"
+  "framework_sha256": "1a296c81af235a83be1d8dd83d56a506e40b92d73f43ae6925e33f9031137f4c"
 }
