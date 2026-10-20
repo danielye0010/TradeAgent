@@ -77,7 +77,7 @@
         ["Track record", "Every call locked first, scored vs SPY, random and quant-only, published", "None; the misses are forgotten"],
         ["Model choice", "GPT or Claude, measured head-to-head on the same shortlist", "One model, never measured"],
       ],
-      vsNote: "Unlike AI trading arenas, it trades your account rather than a showcase portfolio. Unlike signal bots, every call is published before it is scored.",
+      vsNote: "Unlike AI trading arenas, it trades your account rather than a showcase portfolio. Unlike signal bots, every call is locked before the market moves and published with its result, losses included.",
 
       memoTitle: "Latest decision",
       memoAside: "{d} · 10:30 ET session",
@@ -190,7 +190,7 @@
         ["历史战绩", "每次决策先锁定，与 SPY、随机、纯量化对比计分并公开", "没有记录，错的很快就忘了"],
         ["模型选择", "GPT 或 Claude，在同一候选名单上正面对比", "单一模型，从未被衡量"],
       ],
-      vsNote: "与 AI 交易擂台不同，它交易的是你的账户，而不是展示用的组合；与信号机器人不同，每次决策都在计分前公开。",
+      vsNote: "与 AI 交易擂台不同，它交易的是你的账户，而不是展示用的组合；与信号机器人不同，每次决策都在行情变化前锁定，并连同结果一起公开，亏损也不例外。",
 
       memoTitle: "最新决策",
       memoAside: "{d} · 美东 10:30 场次",
