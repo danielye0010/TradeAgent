@@ -137,10 +137,25 @@ def snapshot(v2_dir, claude_dir=None, *, now=None):
             "claude": claude["config"].get("claude_model") if claude else None,
         },
         "holding_minutes": round((v2["config"].get("holding_seconds") or 3600) / 60),
+        "method": _method(
+            (readers.read_json(Path(v2_dir) / "daily-deployment.json") or {}).get("config") or {}
+        ),
         "sessions": sessions,
         "latest": {"date": latest, **picks},
         "duel": duel,
         "repo": REPO_URL,
+    }
+
+
+def _method(config):
+    """The frozen research design the page describes: universe, shortlist and costs."""
+    costs = (config.get("costs") or {}).get("base") or {}
+    return {
+        "universe": list(config.get("universe") or []),
+        "shortlist": config.get("candidates"),
+        "costs_bps": {
+            k: costs[k] for k in ("half_spread_bps", "slippage_bps", "fee_bps") if k in costs
+        },
     }
 
 

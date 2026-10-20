@@ -65,6 +65,10 @@ pip install .
 curl -fsSL https://chatgpt.com/codex/install.sh | sh
 ```
 
+Just want to try the command and the dashboard? `pipx install tradeagent` installs the same
+`tradeagent` command from [PyPI](https://pypi.org/project/tradeagent/). Automatic trading
+below uses the checkout's research installer, so clone the repository for that.
+
 **2. Connect your accounts.** Open a new terminal, return to the checkout and activate `.venv`:
 
 ```bash

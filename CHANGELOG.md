@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.6.0 — 2026-10-20
+
+Python distribution version: `1.6.0`.
+
+- Public page redesigned as an institutional track record: a factsheet panel (cumulative
+  net return, excess over SPY and a random pick, days ahead of SPY, hit rate), a
+  performance table for every arm including the quant engine alone, the six-stage
+  pipeline from universe to exit, "Same AI. Inside a quant desk." comparing TradeAgent
+  with asking an LLM directly, the latest decision memo with thesis, catalyst and
+  sources, and a full trade log. All times are New York (ET).
+- The published snapshot includes the research design it describes (universe, shortlist
+  size and modeled costs).
+- Install from PyPI: `pipx install tradeagent`.
+
 ## 1.5.2 — 2026-10-19
 
 Python distribution version: `1.5.2`.

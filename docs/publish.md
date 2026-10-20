@@ -50,15 +50,17 @@ To stop: `tradeagent publish uninstall` (the published page stays up).
 
 ## What the page shows
 
-- The agent's added-up return next to SPY over the same hours and a random pick from the
-  same shortlist, and the number of trading days.
-- A chart of the agent, Claude, SPY and the random pick, day by day.
-- Why the record can be trusted: frozen picks, same-shortlist controls, costs included.
-- The latest picks with each model's own reasoning and news sources.
-- Head to head: on how many days each model did better, and how often they agreed. The
+- A track-record panel: the agent's cumulative net return, its excess over SPY over the
+  same hours and over a random pick from the same shortlist, days ahead of SPY, hit rate
+  and trading days.
+- Performance: a chart and a table (cumulative, average per day, hit rate, best and worst
+  day) for the agent, Claude, the quant engine alone, the random pick and SPY.
+- The pipeline from the universe to the exit, and how TradeAgent differs from asking an
+  LLM directly.
+- The latest decision with each model's thesis, catalyst and sources.
+- GPT or Claude: both models, and their head-to-head once both have scored sessions. The
   verdict waits for 20 trading days, as on the dashboard.
-- Every pick, newest first.
-- How it works, and how to run it yourself.
+- Every decision, newest first.
 
-Returns are modeled from market prices after spread and slippage, not live fills. The
-page says so in its footer.
+All times are New York time (ET). Returns are modeled from market prices after spread
+and slippage, not live fills, and are summed rather than compounded; the footer says so.

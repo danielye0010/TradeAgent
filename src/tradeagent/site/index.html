@@ -4,27 +4,33 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
-<title>TradeAgent: the AI trading agent that has to prove it</title>
-<meta name="description" content="An open-source AI agent that reads the news, picks one stock a day and can trade it for you on Robinhood. Every pick is frozen first and published after the close.">
-<meta property="og:title" content="TradeAgent: the AI trading agent that has to prove it">
-<meta property="og:description" content="One stock a day, frozen before the market moves, scored against SPY and a random pick. Run on GPT or Claude.">
+<title>TradeAgent: a quant desk with an AI analyst</title>
+<meta name="description" content="Open-source AI trading agent for US equities. A quant scan, alpha models and GPT or Claude reading the news pick one trade a day; a risk engine executes it in your Robinhood account. Every decision is locked first and published with its result after costs.">
+<meta property="og:title" content="TradeAgent: a quant desk with an AI analyst">
+<meta property="og:description" content="Quant scan, alpha models, GPT or Claude on the news, 34 hard risk checks. Every decision locked first, scored against SPY and a random pick, published daily.">
 <meta property="og:type" content="website">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2316191a'/%3E%3Cpath d='M7 21l6-6 4 4 8-9' stroke='%2300c805' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='4' fill='%230b1f3a'/%3E%3Cpath d='M7 21l6-6 4 4 8-9' stroke='%2334c38f' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="site.css">
 </head>
 <body>
 <header class="bar">
   <div class="wrap bar-row">
-    <a class="mark" href="#top">TradeAgent</a>
-    <span class="live"><i></i><span id="live-label">Live record</span></span>
-    <nav class="bar-tools">
-      <button type="button" class="pill" id="lang">中文</button>
-      <a class="pill dark" id="gh" href="https://github.com/danielye0010/TradeAgent">GitHub</a>
+    <a class="mark" href="#top"><span class="logo" aria-hidden="true"></span>TradeAgent</a>
+    <nav class="bar-nav" aria-label="Sections">
+      <a href="#performance">Performance</a>
+      <a href="#pipeline">Pipeline</a>
+      <a href="#compare">Compare</a>
+      <a href="#log">Trade log</a>
     </nav>
+    <span class="asof num" id="asof"></span>
+    <div class="bar-tools">
+      <button type="button" class="pill" id="lang">中文</button>
+      <a class="pill solid" id="gh" href="https://github.com/danielye0010/TradeAgent">GitHub</a>
+    </div>
   </div>
 </header>
 <main id="top" class="wrap"></main>
-<footer class="wrap foot" id="foot"></footer>
+<footer class="foot"><div class="wrap" id="foot"></div></footer>
 <script id="data" type="application/json">__DATA__</script>
 <script src="site.js"></script>
 </body>
