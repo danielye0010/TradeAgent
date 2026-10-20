@@ -33,6 +33,13 @@ def test_snapshot_has_both_models_spy_and_the_latest_reasoning(research):
     assert data["duel"]["scored_days"] == 3 and "series" not in data["duel"]
 
 
+def test_snapshot_describes_the_frozen_research_design(research):
+    method = publish.snapshot(*research, now=1)["method"]
+    assert set(method) == {"universe", "shortlist", "costs_bps"}
+    assert "SPY" in method["universe"] and method["shortlist"] == 3
+    assert set(method["costs_bps"]) == {"half_spread_bps", "slippage_bps", "fee_bps"}
+
+
 def test_snapshot_holds_nothing_from_the_live_account(research):
     text = json.dumps(publish.snapshot(*research, now=1)).lower()
     for word in ("nav", "cash_balance", "account", "order", "robinhood", "/home", "token"):

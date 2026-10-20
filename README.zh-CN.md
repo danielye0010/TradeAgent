@@ -60,6 +60,9 @@ pip install .
 curl -fsSL https://chatgpt.com/codex/install.sh | sh
 ```
 
+只想先试试命令行和仪表盘？`pipx install tradeagent` 从 [PyPI](https://pypi.org/project/tradeagent/)
+安装同样的 `tradeagent` 命令。下面的自动交易需要用仓库里的研究安装脚本，所以请克隆仓库。
+
 **2. 连接账户。** 重开终端，回到仓库目录并激活 `.venv`：
 
 ```bash
