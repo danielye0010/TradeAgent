@@ -178,7 +178,6 @@
 .wk-tag.hold { color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
 .wk-tag.cash { color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); }
 .wk-tag.miss { color: var(--muted); border: 1px dashed var(--rule); }
-.wk-tag.risk { color: var(--down); border: 1px solid var(--down); }
 .wk-memo { padding: 4px 16px 16px 16px; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 18px; font-size: 13.5px; }
 .wk-memo dt { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-top: 10px; }
 .wk-memo dt:first-child { margin-top: 0; }

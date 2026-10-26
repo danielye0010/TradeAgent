@@ -40,6 +40,7 @@
       kpiStart: "started with $10,000",
       kpiTotal: "{p} since {d}",
       kpiNoMarks: "First close is marked on {d}.",
+      kpiNoValue: "Value unavailable: a holding is missing its close or corporate-action data.",
       ringTitle: "Weeks ahead of random",
       ringAside: "The number to watch",
       ringScored: "{n} scored weeks · GPT vs a random pick from the same universe",
@@ -76,9 +77,9 @@
         ["Risk & value", "15:45 / 17:15 ET daily", "A holding 10% below cost is sold and stays cash until next week. Every portfolio is marked to the close."],
       ],
       feedTitle: "Decision log",
-      feedAside: "Every pick, newest first",
+      feedAside: "Every weekly pick, newest first",
       all: "All",
-      tags: { buy: "Buy", hold: "Hold", sell: "Sell", cash: "Cash", miss: "Missed", risk: "Risk exit" },
+      tags: { buy: "Buy", hold: "Hold", sell: "Sell", cash: "Cash", miss: "Missed" },
       why: {
         spy: "Benchmark: buy once, hold for the whole study",
         quant: "Top 3 by 12–1 momentum",
@@ -173,6 +174,7 @@
       kpiStart: "初始 1 万美元",
       kpiTotal: "{d} 以来 {p}",
       kpiNoMarks: "{d} 收盘后出现第一个估值。",
+      kpiNoValue: "暂无法估值：有持仓缺少收盘价或公司行动数据。",
       ringTitle: "跑赢随机的周数",
       ringAside: "最值得看的数字",
       ringScored: "已计分 {n} 周 · GPT 对同一股票池的随机组合",
@@ -211,7 +213,7 @@
       feedTitle: "决策记录",
       feedAside: "每一笔选择，最新在前",
       all: "全部",
-      tags: { buy: "买入", hold: "持有", sell: "卖出", cash: "空仓", miss: "缺失", risk: "风控卖出" },
+      tags: { buy: "买入", hold: "持有", sell: "卖出", cash: "空仓", miss: "缺失" },
       why: {
         spy: "基准组：首个决策日买入，之后一直持有",
         quant: "12–1 动量排名前 3",
@@ -289,7 +291,7 @@
     ["missed fill window", "Missed the fill window; not backfilled", "错过成交窗口，不回填"],
     ["no affordable cash", "Not enough cash to buy", "现金不足以买入"],
     ["settled cash unavailable", "Waiting for sale proceeds to settle (sensitivity book)", "等待卖出款交割（敏感性账本）"],
-    ["risk exit", "Fell 10% below cost; sold, cash until next week", "较成本下跌 10%，已卖出，持现金到下周"],
+    ["risk exit", "Stopped out earlier this week; not rebought until next rebalance", "本周已触发风控卖出，下次调仓前不再买回"],
     ["early close", "Early close: no 15:45 risk check that day", "提前收盘，当天没有 15:45 风控检查"],
     ["missed risk check", "Risk check missed; no stale fill", "错过风控检查，不用过期价格补做"],
     ["corporate action source pending", "Corporate-action data pending; no fill guessed", "公司行动数据待定，不猜测成交"],
@@ -500,10 +502,11 @@
       const total = b.cumulative_return;
       const agent = h("div", { class: "wk-card wk-kpi" },
         h("div", { class: "wk-label-row" }, h("span", { class: "wk-label", text: t("kpiAgent") }), h("span", { class: "wk-aside", text: t("kpiAgentAside") })),
-        h("div", { class: "wk-big num", text: money(isNum(b.nav) ? b.nav : 10000) }),
+        h("div", { class: "wk-big num", text: money(b.nav) }),
         h("p", { class: "wk-sub" }, isNum(total)
           ? h("span", {}, h("b", { class: tone(total), text: pct(total) }), " · ", t("kpiStart"))
-          : (data && data.start_date ? t("kpiNoMarks", { d: day(data.start_date) }) : t("kpiStart"))),
+          : !isNum(b.nav) && started() ? t("kpiNoValue")
+            : (data && data.start_date ? t("kpiNoMarks", { d: day(data.start_date) }) : t("kpiStart"))),
         h("div", { class: "wk-spark", html: spark(b.nav_series || []) }));
 
       let wins = 0, losses = 0;
@@ -683,12 +686,7 @@
           prev[arm] = syms;
         });
       }
-      for (const m of (data && data.missing) || []) {
-        if (!String(m.reason || "").startsWith("risk exit") || !String(m.book || "").startsWith(mode + ":")) continue;
-        const arm = m.book.split(":")[1];
-        rows.push({ date: m.date || m.week, arm, order: ARMS.indexOf(arm), tag: "risk", sym: m.symbol, why: reason(m.reason) });
-      }
-      const rank = { sell: 0, risk: 0, buy: 1, hold: 2, cash: 3, miss: 4 };
+      const rank = { sell: 0, buy: 1, hold: 2, cash: 3, miss: 4 };
       rows.sort((a, b) => (a.date === b.date ? a.order - b.order || rank[a.tag] - rank[b.tag] : a.date < b.date ? 1 : -1));
       return rows;
     }
@@ -715,7 +713,7 @@
       }
       add(t("memo.method"), t("memo." + row.arm));
       if (row.arm === "random" && r.seed) add(t("memo.seed"), String(r.seed));
-      if (row.tag === "miss" || row.tag === "risk") add(t("memo.reason"), row.why);
+      if (row.tag === "miss") add(t("memo.reason"), row.why);
       return h("div", { class: "wk-memo" }, left, h("div"));
     }
 
