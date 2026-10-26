@@ -186,26 +186,25 @@ def build(out_dir, data, weekly_data=None):
     for name in ("site.css", "site.js", "portal.js"):
         (out_dir / name).write_text(_template(name), encoding="utf-8")
     (out_dir / "data.json").write_text(encoded, encoding="utf-8")
-    # The weekly renderer has one canonical source. Derive an isolated in-page
-    # component from it rather than duplicating strategy or display logic.
+    # The weekly renderer has one canonical source (also served by the dashboard and
+    # `tradeagent weekly serve`). Mount it in a shadow root so its styles stay isolated.
     weekly = resources.files("tradeagent.weekly").joinpath("static")
-    html = weekly.joinpath("weekly.html").read_text(encoding="utf-8")
-    markup = html.split("<main>", 1)[1].split("</main>", 1)[0]
-    css = weekly.joinpath("weekly.css").read_text(encoding="utf-8").replace("body{", ":host{")
+    css = weekly.joinpath("weekly.css").read_text(encoding="utf-8")
     script = weekly.joinpath("weekly.js").read_text(encoding="utf-8")
-    content = "<style>" + css + "</style><main>" + markup + "</main>"
+    shell = "<style>" + css + '</style><div id="wk-mount"></div>'
     component = (
-        "(() => { const host = document.getElementById('weekly-root'); if (!host) return; const root = host.attachShadow({mode:'open'}); root.innerHTML = "
-        + json.dumps(content)
-        + "; { const document = root;\n"
-        + script
-        + "\n} })();\n"
+        script
+        + "\n(() => { const host = document.getElementById('weekly-root');"
+        + " if (!host || !window.TradeAgentWeekly) return;"
+        + " const root = host.attachShadow({mode: 'open'}); root.innerHTML = "
+        + json.dumps(shell)
+        + "; window.TradeAgentWeekly.mount(root.getElementById('wk-mount'), {embedded: true}); })();\n"
     )
     (out_dir / "weekly-view.js").write_text(component, encoding="utf-8")
     for name in ("weekly.css", "weekly.js"):
         (out_dir / name).write_text(weekly.joinpath(name).read_text(), encoding="utf-8")
     (out_dir / "weekly.html").write_text(
-        '<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=./#weekly"><title>TradeAgent · 周度持仓</title><link rel="canonical" href="./#weekly"><a href="./#weekly">返回统一首页 / Weekly portfolios</a></html>',
+        '<!doctype html><html lang="en"><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=./#weekly"><title>TradeAgent · Weekly portfolios</title><link rel="canonical" href="./#weekly"><a href="./#weekly">TradeAgent · Weekly portfolios / 周度持仓</a></html>',
         encoding="utf-8",
     )
     if weekly_data is None:

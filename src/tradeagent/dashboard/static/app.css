@@ -170,6 +170,7 @@ h1, h2, h3, p { margin: 0; }
   padding: 4px 12px; font-size: 13px; cursor: pointer; color: var(--ink-2);
 }
 .tool:hover { border-color: var(--line-strong); color: var(--ink); }
+a.tool { text-decoration: none; display: inline-flex; align-items: center; }
 .tabs { display: flex; gap: 4px; overflow-x: auto; }
 .tabs a {
   padding: 8px 12px 10px; color: var(--ink-2); text-decoration: none; font-size: 14px;

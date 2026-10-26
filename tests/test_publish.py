@@ -166,7 +166,9 @@ def test_unified_home_has_two_horizons_and_legacy_redirect(research, tmp_path):
     assert json.loads((out / "weekly.json").read_text()) == weekly
     assert "url=./#weekly" in (out / "weekly.html").read_text()
     component = (out / "weekly-view.js").read_text()
-    assert "attachShadow" in component and "const document = root" in component
+    assert "attachShadow" in component and "TradeAgentWeekly.mount" in component
+    assert "embedded: true" in component and "Five $10,000 portfolios" in component
+    assert "五个 1 万美元组合" in component  # both languages ship in one component
     assert "early_exit_advice" in component and "settled" in component
 
 
@@ -194,3 +196,25 @@ def test_unified_publish_preserves_weekly_across_both_daily_refreshes(research, 
     publish.push({**daily, "generated_at": 2}, str(remote), work, weekly)
     assert json.loads((work / "weekly.json").read_text()) == weekly
     assert 'role="tablist"' in (work / "index.html").read_text()
+
+
+def test_weekly_view_universe_size_matches_frozen_protocol():
+    import re
+    from importlib.resources import files
+
+    from tradeagent.weekly.protocol import PROTOCOL, UNIVERSE
+
+    script = files("tradeagent.weekly").joinpath("static", "weekly.js").read_text()
+    found = re.search(r'const UNIVERSE = \{ "([\w-]+)": (\d+) \}', script)
+    assert found and found.group(1) == PROTOCOL and int(found.group(2)) == len(UNIVERSE)
+
+
+def test_public_header_follows_the_page_language(research, tmp_path):
+    import re
+
+    out = publish.build(tmp_path / "site", publish.snapshot(*research, now=1))
+    tabs = (out / "index.html").read_text().split('id="tabs"', 1)[1].split("</nav>", 1)[0]
+    assert not re.search(r"[一-鿿]", tabs)  # no hard-coded mixed-language labels
+    portal = (out / "portal.js").read_text()
+    assert "周度持仓" in portal and "Weekly portfolios" in portal and "ta:lang" in portal
+    assert "ta:lang" in (out / "site.js").read_text()

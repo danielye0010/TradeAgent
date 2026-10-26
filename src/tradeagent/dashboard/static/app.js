@@ -862,6 +862,8 @@
       ),
     );
     document.getElementById("lang").textContent = t("lang");
+    const weeklyLink = document.getElementById("weekly-link");
+    if (weeklyLink) weeklyLink.textContent = lang === "zh" ? "周度持仓" : "Weekly portfolios";
     document.getElementById("theme").textContent = "◐ " + t("theme." + theme);
     document.getElementById("updown").textContent = t("updown." + updown);
     document.documentElement.setAttribute("data-updown", updown);
