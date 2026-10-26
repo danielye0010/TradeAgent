@@ -203,3 +203,11 @@ AI picks can lose money. Start small.
 ## License
 
 [Apache 2.0](LICENSE), with some vendored MIT components ([details](THIRD_PARTY.md)).
+
+## Weekly paper portfolios
+
+`tradeagent weekly` runs the independent [weekly-hold-v1 SHADOW study](docs/weekly-hold-v1.md):
+Codex, Claude, 12–1 momentum, random and SPY each start with $10,000 of virtual cash.
+Cross-week holdings, settlement sensitivity, missing observations and every group
+are retained. View `/weekly` in the dashboard or the public [weekly page](https://danielye0010.github.io/TradeAgent/weekly.html).
+This experimental protocol places no real orders and does not authorize LIVE.

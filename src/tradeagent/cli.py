@@ -30,6 +30,10 @@ def main(argv=None):
         from .autotrade import main as autotrade_main
 
         return autotrade_main(supplied[1:])
+    if supplied[0] == "weekly":
+        from .weekly.cli import main as weekly_main
+
+        return weekly_main(supplied[1:])
     if supplied[0] == "publish":
         from .publish import main as publish_main
 
