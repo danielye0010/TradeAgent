@@ -130,7 +130,7 @@
     "src/tradeagent/weekly/models.py": "0c4a88361668be47658430a1f93d30f5a5118cf60d5f0d224263f12ba42887a0",
     "src/tradeagent/weekly/protocol.py": "e37f67a90a6fae1b36207113e4546a7a6809d5fcc2d513490b1a5a4f3a22fa89",
     "src/tradeagent/weekly/reporting.py": "d13e889f244a1efc2aefffe957939f659ede6708943cf9d0f57ee804fc441fab",
-    "src/tradeagent/weekly/store.py": "a99ddede5d5564e7899063cc537905081e8c6d4187c990bed7bf77fdcd7619c0",
+    "src/tradeagent/weekly/store.py": "dbe04067943d850df7a3a16cbd249ab4128f6afd957b9f3b721aaf14654d18e8",
     "src/tradeagent/weekly/web.py": "e8ef596a9e358670aecc9392ce1c19ab8eea25e0b9c00960bb78a1421436db40",
     "tests/conftest.py": "28a01e1ab052c6da3d1576d66b0f59ee942fb18d3106bdccd215ba11639f3fb1",
     "tests/dashboard_fixtures.py": "adee53c29ccbafb3e71d4239563a3423418c633002f84c06cea40bfb20674e78",
@@ -186,7 +186,7 @@
     "tests/test_supervised_contract.py": "b17692ea76ef0653e92215103a4dc459478601cfc17c7fb3df17697e37c92d44",
     "tests/test_tradeplan_engine.py": "8cb9735d0e593cfa49bb6d4ddb33093ef8e76d33d6cd06752ab18cb10dd5e80f",
     "tests/test_v5_supplement.py": "b8fc88af047f2a5a3c0c645613f16886bb4fa6b7175b7ef6d13263ce3ab1e770",
-    "tests/test_weekly_hold.py": "d54f9b7d10e18818bcbb58cad33149c6cca8b9004e2c36e8b6579208e6b781a2"
+    "tests/test_weekly_hold.py": "4a8e93120d2d77639142d031024715ae5cbc928591c00ccd46400f7e717fd22d"
   },
-  "framework_sha256": "6d794f5491cb024b38c0082147e13d3b00806c7e433562632bdf4715f9813227"
+  "framework_sha256": "a8a8ce79d9670dba907a24778c36e0506de1879444090bb6d05dd5733fa17ea0"
 }

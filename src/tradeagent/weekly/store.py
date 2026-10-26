@@ -96,10 +96,14 @@ class Store:
             if old != json.loads(canonical(value)):
                 raise ValueError("conflicting append-only identity: " + key)
             return False
+        previous = self.db.execute("SELECT at FROM events ORDER BY rowid DESC LIMIT 1").fetchone()
+        now = self.clock()
+        if previous and now < previous[0]:
+            raise ValueError("weekly evidence clock regressed; no backdated append")
         with self.db:
             self.db.execute(
                 "INSERT INTO events VALUES(?,?,?,?,?)",
-                (key, kind, self.clock(), canonical(value), digest(value)),
+                (key, kind, now, canonical(value), digest(value)),
             )
         return True
 
