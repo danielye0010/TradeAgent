@@ -9,7 +9,7 @@ Python distribution version: `1.7.2`.
   value with sparkline, weeks-ahead-of-random gauge, on-the-record counters, a
   five-portfolio board with settlement toggle, value chart with hover, six-step
   pipeline with the next step marked, filterable decision log (buy/hold/sell/cash/
-  missed/risk exit) with each model's reasons and sources, positions, weekly returns,
+  missed) with each model's reasons and sources, positions, weekly returns,
   head-to-head, data quality and reading notes. Light and dark themes; fits phones.
 - Full English and Chinese for the weekly page, the site header tabs and page title,
   following the site's language switch; engine reasons are shown in the reader's
