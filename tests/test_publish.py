@@ -169,6 +169,7 @@ def test_unified_home_has_two_horizons_and_legacy_redirect(research, tmp_path):
     assert "attachShadow" in component and "TradeAgentWeekly.mount" in component
     assert "embedded: true" in component and "Five $10,000 portfolios" in component
     assert "五个 1 万美元组合" in component  # both languages ship in one component
+    assert "Results could not load right now" in component  # an outage is visible
 
 
 def test_unified_public_site_rejects_historical_weekly_data(research, tmp_path):

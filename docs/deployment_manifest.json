@@ -174,7 +174,7 @@
     "tests/test_owner_recovery.py": "8c72be1c10f33c556c5d4d9e56b241d046b0e6f6c04c78e6350f7ef129c018c7",
     "tests/test_production_oneshot.py": "57394b16866773f1f93063216c6c1465a5268bead9fae657113c5e279eccdd2a",
     "tests/test_prospective.py": "596505f0c76bd3ca1f60d49255e01c228bf5dd99101d36ea0e5fdd225b8275e3",
-    "tests/test_publish.py": "695c8c5245e483f39da9ee678fa0bb0ee371cd116ae6b5999d4b6db5b6ad0473",
+    "tests/test_publish.py": "b5b265a920eb8f412e70806a3080f163aef17c91fc405088871cba28974153b2",
     "tests/test_release_policy.py": "406a8f771658e1815cecbab48293b497ac95fd05751f1b5fa726f079629bbf7a",
     "tests/test_research_integrity.py": "7e23af828a9974495d97824e92300aa262a7d3a89d2e69245dee4b4f18358106",
     "tests/test_research_loop.py": "bd863a6df5f40260072dac426bb4041dfb9fa2df2d02ae278bc36c2820478b72",
@@ -188,5 +188,5 @@
     "tests/test_v5_supplement.py": "b8fc88af047f2a5a3c0c645613f16886bb4fa6b7175b7ef6d13263ce3ab1e770",
     "tests/test_weekly_hold.py": "4a8e93120d2d77639142d031024715ae5cbc928591c00ccd46400f7e717fd22d"
   },
-  "framework_sha256": "38136aa636c344d730a3657eb488f1fcef31398637e00390b3b95d74b7d887d9"
+  "framework_sha256": "a28b167924bb95e0029bd0a2b386fecfc95191864f2f3cbb719fbad8aeae385d"
 }

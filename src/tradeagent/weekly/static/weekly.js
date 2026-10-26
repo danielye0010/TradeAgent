@@ -39,6 +39,7 @@
       noAnswer: "No pick this week; last week's holdings stay.",
       allCash: "Stays in cash this week.",
       paper: "Paper trading",
+      loadFailed: "Results could not load right now. Please refresh in a minute.",
       updated: "Updated {t} ET",
     },
     zh: {
@@ -71,6 +72,7 @@
       noAnswer: "本周没有给出选择，沿用上周持仓。",
       allCash: "本周持有现金。",
       paper: "模拟盘",
+      loadFailed: "成绩暂时加载不出来，请稍后刷新。",
       updated: "更新于美东 {t}",
     },
   };
@@ -334,6 +336,7 @@
       clockHost.replaceChildren(clock());
       const wrap = h("div", { class: "wk-wrap" }, hero());
       if (data && !failed) wrap.append(board(), chart(), picks(), foot());
+      else if (failed) wrap.append(h("div", { class: "wk-sec" }, h("div", { class: "wk-card wk-empty", role: "status", text: t("loadFailed") })), foot());
       root.replaceChildren(...(embedded ? [] : [bar()]), wrap);
     }
 
