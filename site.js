@@ -130,8 +130,8 @@
       nav: ["业绩", "流程", "对比", "交易记录"],
       asOf: "数据截至美东 {t}",
       eyebrow: "开源 AI 交易代理 · 美股",
-      title: "一整套量化交易台，配一位 AI 分析师。不是聊天机器人的直觉。",
-      lede: "每个交易日美东 10:30，TradeAgent 用实时一分钟行情扫描 {u} 只高流动性美股和 ETF，以量化信号排序，让 GPT 或 Claude 研究前 {k} 名的新闻，再在你自己的 Robinhood 账户中、经过 {c} 项硬性风控检查后执行最终选择。每个决策都在行情变化前锁定，并在扣除成本后计分。",
+      title: "量化系统打底，AI 分析师把关。不靠聊天机器人拍脑袋。",
+      lede: "每个交易日美东 10:30，TradeAgent 用实时分钟行情扫描 {u} 只高流动性美股和 ETF，按量化信号排序，再交给 GPT 或 Claude 研究前 {k} 名的新闻。最终选择过完 {c} 项硬性风控，在自己的 Robinhood 账户里执行。每个决策都在行情变化前锁定，扣除成本后计分。",
       ctaInstall: "安装",
       ctaRecord: "历史战绩",
       ctaGh: "GitHub",
@@ -174,8 +174,8 @@
         ["+{h} 分钟", "平仓、计分、公开", "对比 3 个对照组", "{h} 分钟后自动平仓。扣除成本后，与同一小时的 SPY、同一候选名单中的随机选择、以及纯量化引擎对比计分，美东 17:20 在此公开。"],
       ],
 
-      vsTitle: "同样的 AI，装进一整套量化交易台。",
-      vsLede: "直接问 ChatGPT 或 Claude 买什么股票，你得到的是一个观点。TradeAgent 把同样的模型作为一个严谨流程中的一环，然后执行交易、持续计分。",
+      vsTitle: "同一个 AI，放进一整套量化流程。",
+      vsLede: "直接问 ChatGPT 或 Claude 买什么，得到的只是一个观点。TradeAgent 把同样的模型当作严格流程中的一环：先筛选、再研究、再风控，成交之后持续计分。",
       vsCols: ["", "TradeAgent", "直接问大模型"],
       vsRows: [
         ["选股来源", "用实时一分钟行情量化扫描 {u} 个标的", "模型记得什么就说什么，通常是讨论最多的热门股"],
@@ -185,12 +185,12 @@
         ["输出", "结构校验的立场、逻辑、催化剂和来源", "自由文本，每次问都不一样"],
         ["交易成本", "每个结果都扣除价差、滑点和手续费", "忽略"],
         ["时机", "美东 10:37 前锁定；固定持有 {h} 分钟并平仓", "没有入场、没有离场、没有时间表"],
-        ["执行", "在你的账户中自动下单和平仓", "你自己手动交易"],
+        ["执行", "在自己的账户里自动下单和平仓", "只能手动下单"],
         ["风控", "{c} 项硬性检查；每笔 1–5 美元；亏损与回撤熔断", "没有"],
         ["历史战绩", "每次决策先锁定，与 SPY、随机、纯量化对比计分并公开", "没有记录，错的很快就忘了"],
         ["模型选择", "GPT 或 Claude，在同一候选名单上正面对比", "单一模型，从未被衡量"],
       ],
-      vsNote: "与 AI 交易擂台不同，它交易的是你的账户，而不是展示用的组合；与信号机器人不同，每次决策都在行情变化前锁定，并连同结果一起公开，亏损也不例外。",
+      vsNote: "和 AI 交易擂台不同，它交易的是真实账户，不是展示用的组合；和信号机器人不同，每次决策都在行情变化前锁定，连同结果一起公开，亏损也照样公开。",
 
       memoTitle: "最新决策",
       memoAside: "{d} · 美东 10:30 场次",
@@ -205,8 +205,8 @@
       noAnswer: "本场次没有给出答案。",
       stance: { long: "看多", watch: "观望", avoid: "回避" },
 
-      modelTitle: "AI 由你来选",
-      modelLede: "用你已有的订阅运行：GPT（通过 Codex）或 Claude（通过 Claude Code），不需要 API key。两者每天在同一候选名单上回答同一个问题，谁更值得用，一目了然。",
+      modelTitle: "模型自己选",
+      modelLede: "直接用现有订阅运行：GPT（通过 Codex）或 Claude（通过 Claude Code），不需要 API key。两者每天在同一候选名单上回答同一个问题，谁更靠谱，看数据。",
       modelDefault: "默认",
       modelOptional: "可选",
       modelGpt: "ChatGPT 订阅 · Codex CLI",
@@ -226,8 +226,8 @@
       date: "日期",
       showAll: "显示全部 {n} 个场次",
 
-      runTitle: "运行你自己的交易代理。",
-      runLede: "免费开源。先用模拟盘和本地仪表盘，准备好了再切换实盘。",
+      runTitle: "部署一个自己的交易代理。",
+      runLede: "免费开源。先用模拟盘和本地仪表盘跑起来，准备好了再切实盘。",
       runSteps: ["安装", "检查环境", "打开仪表盘"],
       runReq: "Linux 或 WSL2 · Python 3.12+ · ChatGPT 或 Claude 订阅 · 实盘需 Robinhood",
       runBtn: "GitHub 文档",
@@ -601,6 +601,8 @@
 
   function render() {
     document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+    window.TA_LANG = lang;
+    window.dispatchEvent(new CustomEvent("ta:lang", { detail: { lang } }));
     document.getElementById("lang").textContent = t("lang");
     document.getElementById("gh").href = data.repo;
     document.querySelectorAll(".bar-nav a").forEach((a, i) => { a.textContent = t("nav")[i]; });
