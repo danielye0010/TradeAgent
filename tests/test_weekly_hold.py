@@ -374,7 +374,8 @@ def test_fourteen_week_e2e_holiday_dst_risk_missing_and_restart(setup):
             engine.history()
             engine.risk()
             market.prices = {}
-        clock.set(str(day), "17:15")
+        report_day = next_session(day) if index == 1 else day
+        clock.set(str(report_day), "17:15")
         engine.valuation()
         day = next_week(day)
     data = write_reports(store)
@@ -529,3 +530,11 @@ def test_weighted_average_basis_survives_partial_sale(setup):
         store, "s1", "main:codex", "AAPL", 5, quote(clock, 180), day, at=clock(), reason="weekly"
     )
     assert ledger.wac(store.state("main:codex"), "AAPL") == average
+
+
+def test_journal_refuses_regressing_clock(setup):
+    store, _, _, clock = setup
+    store.add("first-clock", "test", {"v": 1})
+    clock.now -= 1
+    with pytest.raises(ValueError, match="clock regressed"):
+        store.add("second-clock", "test", {"v": 2})
