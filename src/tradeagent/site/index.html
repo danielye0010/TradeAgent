@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
-<title>TradeAgent: a quant desk with an AI analyst</title>
+<title>TradeAgent · Weekly portfolios & intraday research</title>
 <meta name="description" content="Open-source AI trading agent for US equities. A quant scan, alpha models and GPT or Claude reading the news pick one trade a day; a risk engine executes it in your Robinhood account. Every decision is locked first and published with its result after costs.">
 <meta property="og:title" content="TradeAgent: a quant desk with an AI analyst">
 <meta property="og:description" content="Quant scan, alpha models, GPT or Claude on the news, 34 hard risk checks. Every decision locked first, scored against SPY and a random pick, published daily.">
@@ -15,24 +15,26 @@
 <body>
 <header class="bar">
   <div class="wrap bar-row">
-    <a class="mark" href="#top"><span class="logo" aria-hidden="true"></span>TradeAgent</a>
-    <nav class="bar-nav" aria-label="Sections">
-      <a href="#performance">Performance</a>
-      <a href="weekly.html">Weekly / 周度持仓</a>
-      <a href="#pipeline">Pipeline</a>
-      <a href="#compare">Compare</a>
-      <a href="#log">Trade log</a>
+    <a class="mark" href="#weekly"><span class="logo" aria-hidden="true"></span>TradeAgent</a>
+    <nav class="portfolio-tabs" role="tablist" aria-label="Research horizon">
+      <button type="button" id="tab-weekly" role="tab" aria-controls="weekly-root" aria-selected="true">周度持仓 <span>Weekly</span></button>
+      <button type="button" id="tab-intraday" role="tab" aria-controls="intraday-shell" aria-selected="false">短线研究 <span>Intraday</span></button>
     </nav>
-    <span class="asof num" id="asof"></span>
     <div class="bar-tools">
       <button type="button" class="pill" id="lang">中文</button>
       <a class="pill solid" id="gh" href="https://github.com/danielye0010/TradeAgent">GitHub</a>
     </div>
   </div>
 </header>
-<main id="top" class="wrap"></main>
-<footer class="foot"><div class="wrap" id="foot"></div></footer>
+<section id="weekly-root" role="tabpanel" aria-labelledby="tab-weekly"></section>
+<div id="intraday-shell" role="tabpanel" aria-labelledby="tab-intraday" hidden>
+  <div class="wrap intraday-subnav"><nav class="bar-nav" aria-label="Sections"><a href="#performance">Performance</a><a href="#pipeline">Pipeline</a><a href="#compare">Compare</a><a href="#log">Trade log</a></nav><span class="asof num" id="asof"></span></div>
+  <main id="top" class="wrap"></main>
+  <footer class="foot"><div class="wrap" id="foot"></div></footer>
+</div>
 <script id="data" type="application/json">__DATA__</script>
 <script src="site.js"></script>
+<script src="weekly-view.js"></script>
+<script src="portal.js"></script>
 </body>
 </html>

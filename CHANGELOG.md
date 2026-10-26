@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.7.1 — 2026-10-26
+
+Python distribution version: `1.7.1`.
+
+- Unify public weekly portfolios and intraday research under one homepage with
+  accessible horizon tabs. Legacy weekly URLs return to the weekly tab.
+- Both publishing jobs use the same complete-site builder and a shared publish lock.
+  Research runtimes, frozen protocol identities, accounts and schedules are unchanged.
+
 ## 1.7.0 — 2026-10-26
 
 Python distribution version: `1.7.0`.

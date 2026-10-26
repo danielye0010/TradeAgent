@@ -12,6 +12,7 @@ balances or settings. Pushing uses your normal git sign-in for the remote.
 """
 
 import argparse
+import fcntl
 import json
 import shutil
 import subprocess
@@ -30,7 +31,19 @@ BRANCH = "gh-pages"
 REPO_URL = "https://github.com/danielye0010/TradeAgent"
 # After both research services have scored the day (12:00/12:10) and written reports.
 TIME = "Mon..Fri *-*-* 17:20:00"
-SITE_FILES = ("index.html", "site.css", "site.js", "data.json", ".nojekyll")
+SITE_FILES = (
+    "index.html",
+    "site.css",
+    "site.js",
+    "portal.js",
+    "weekly-view.js",
+    "weekly.html",
+    "weekly.css",
+    "weekly.js",
+    "weekly.json",
+    "data.json",
+    ".nojekyll",
+)
 ARMS = {
     "codex": "codex_news",
     "claude": "claude_news",
@@ -163,16 +176,51 @@ def _template(name):
     return resources.files("tradeagent").joinpath("site", name).read_text(encoding="utf-8")
 
 
-def build(out_dir, data):
+def build(out_dir, data, weekly_data=None):
     """Write a self-contained static site (data inlined; also saved as data.json)."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     encoded = json.dumps(data, allow_nan=False, separators=(",", ":"))
     page = _template("index.html").replace("__DATA__", encoded.replace("</", "<\\/"))
     (out_dir / "index.html").write_text(page, encoding="utf-8")
-    for name in ("site.css", "site.js"):
+    for name in ("site.css", "site.js", "portal.js"):
         (out_dir / name).write_text(_template(name), encoding="utf-8")
     (out_dir / "data.json").write_text(encoded, encoding="utf-8")
+    # The weekly renderer has one canonical source. Derive an isolated in-page
+    # component from it rather than duplicating strategy or display logic.
+    weekly = resources.files("tradeagent.weekly").joinpath("static")
+    html = weekly.joinpath("weekly.html").read_text(encoding="utf-8")
+    markup = html.split("<main>", 1)[1].split("</main>", 1)[0]
+    css = weekly.joinpath("weekly.css").read_text(encoding="utf-8").replace("body{", ":host{")
+    script = weekly.joinpath("weekly.js").read_text(encoding="utf-8")
+    content = "<style>" + css + "</style><main>" + markup + "</main>"
+    component = (
+        "(() => { const host = document.getElementById('weekly-root'); if (!host) return; const root = host.attachShadow({mode:'open'}); root.innerHTML = "
+        + json.dumps(content)
+        + "; { const document = root;\n"
+        + script
+        + "\n} })();\n"
+    )
+    (out_dir / "weekly-view.js").write_text(component, encoding="utf-8")
+    for name in ("weekly.css", "weekly.js"):
+        (out_dir / name).write_text(weekly.joinpath(name).read_text(), encoding="utf-8")
+    (out_dir / "weekly.html").write_text(
+        '<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=./#weekly"><title>TradeAgent · 周度持仓</title><link rel="canonical" href="./#weekly"><a href="./#weekly">返回统一首页 / Weekly portfolios</a></html>',
+        encoding="utf-8",
+    )
+    if weekly_data is None:
+        weekly_data = {
+            "protocol": "weekly-hold-v1",
+            "status": "NOT_DEPLOYED",
+            "books": {},
+            "weeks": [],
+            "comparisons": {},
+            "missing": [],
+            "delays": [],
+        }
+    if weekly_data.get("evidence_kind") not in (None, "prospective"):
+        raise ValueError("unified public site refuses nonprospective weekly evidence")
+    (out_dir / "weekly.json").write_text(json.dumps(weekly_data, allow_nan=False), encoding="utf-8")
     (out_dir / ".nojekyll").write_text("", encoding="utf-8")
     return out_dir
 
@@ -187,8 +235,16 @@ def _git(directory, *args, check=True):
     )
 
 
-def push(data, remote, work_dir):
-    """Commit the built site to the gh-pages branch of ``remote`` and push it."""
+def push(data, remote, work_dir, weekly_data=None):
+    """Serialize both publishers and commit the complete unified public site."""
+    directory = Path(work_dir)
+    directory.mkdir(parents=True, exist_ok=True)
+    with (directory / ".publish.lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        return _push(data, remote, directory, weekly_data)
+
+
+def _push(data, remote, work_dir, weekly_data):
     work = Path(work_dir)
     if not (work / ".git").is_dir():
         work.mkdir(parents=True, exist_ok=True)
@@ -201,7 +257,7 @@ def push(data, remote, work_dir):
         _git(work, "checkout", "-q", "-B", BRANCH, "FETCH_HEAD")
     elif _git(work, "rev-parse", "--verify", "-q", BRANCH, check=False).returncode != 0:
         _git(work, "checkout", "-q", "--orphan", BRANCH)
-    build(work, data)
+    build(work, data, weekly_data)
     _git(work, "add", "--", *SITE_FILES)
     if _git(work, "diff", "--cached", "--quiet", check=False).returncode == 0:
         return {"status": "UNCHANGED", "branch": BRANCH}
@@ -319,6 +375,11 @@ def main(argv=None):
     for command in (local, once, setup):
         command.add_argument("--research-dir", type=Path, help="the daily-news-v2 --state-dir")
         command.add_argument("--claude-dir", type=Path, help="the Claude comparison --state-dir")
+    for command in (local, once):
+        command.add_argument(
+            "--weekly-dir", type=Path, help="weekly-hold-v1 public projection directory"
+        )
+    once.add_argument("--work-dir", type=Path, help="serialized public git checkout")
     commands.add_parser("uninstall")
     args = parser.parse_args(argv)
     try:
@@ -332,10 +393,14 @@ def main(argv=None):
             )
             return 0
         data = snapshot(v2_dir, claude_dir)
+        from .weekly.cli import default_state
+        from .weekly.reporting import read_public
+
+        weekly_data = read_public(args.weekly_dir or default_state())
         if args.command == "build":
-            print(json.dumps({"built": str(build(args.out, data).resolve())}))
+            print(json.dumps({"built": str(build(args.out, data, weekly_data).resolve())}))
             return 0
-        print(json.dumps(push(data, args.remote, site_dir())))
+        print(json.dumps(push(data, args.remote, args.work_dir or site_dir(), weekly_data)))
         return 0
     except Exception as error:
         print(json.dumps({"error": f"{type(error).__name__}: {error}"}), file=sys.stderr)

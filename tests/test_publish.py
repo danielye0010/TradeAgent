@@ -146,3 +146,51 @@ def test_spy_as_a_candidate_reports_its_own_move():
         },
     }
     assert readers.summarize_outcome(outcome)["spy"] == 0.01
+
+
+def test_unified_home_has_two_horizons_and_legacy_redirect(research, tmp_path):
+    daily = publish.snapshot(*research, now=1)
+    weekly = {
+        "protocol": "weekly-hold-v1",
+        "evidence_kind": "prospective",
+        "status": "PENDING_START",
+        "start_date": "2026-11-02",
+        "books": {"main:codex": {"nav": 10000}},
+        "weeks": [],
+    }
+    out = publish.build(tmp_path / "unified", daily, weekly)
+    html = (out / "index.html").read_text()
+    assert 'role="tablist"' in html and 'id="weekly-root"' in html and 'id="intraday-shell"' in html
+    assert "<iframe" not in html
+    assert json.loads((out / "data.json").read_text()) == daily
+    assert json.loads((out / "weekly.json").read_text()) == weekly
+    assert "url=./#weekly" in (out / "weekly.html").read_text()
+    component = (out / "weekly-view.js").read_text()
+    assert "attachShadow" in component and "const document = root" in component
+    assert "early_exit_advice" in component and "settled" in component
+
+
+def test_unified_public_site_rejects_historical_weekly_data(research, tmp_path):
+    with pytest.raises(ValueError, match="nonprospective"):
+        publish.build(
+            tmp_path / "bad", publish.snapshot(*research, now=1), {"evidence_kind": "historical"}
+        )
+
+
+def test_unified_publish_preserves_weekly_across_both_daily_refreshes(research, tmp_path):
+    remote = tmp_path / "remote.git"
+    subprocess.run(["git", "init", "-q", "--bare", str(remote)], check=True)
+    daily = publish.snapshot(*research, now=1)
+    weekly = {
+        "protocol": "weekly-hold-v1",
+        "evidence_kind": "prospective",
+        "status": "PENDING_START",
+        "start_date": "2026-11-02",
+        "books": {},
+        "weeks": [],
+    }
+    work = tmp_path / "public"
+    publish.push(daily, str(remote), work, weekly)
+    publish.push({**daily, "generated_at": 2}, str(remote), work, weekly)
+    assert json.loads((work / "weekly.json").read_text()) == weekly
+    assert 'role="tablist"' in (work / "index.html").read_text()

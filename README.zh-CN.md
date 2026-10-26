@@ -192,5 +192,5 @@ AI 的选择也可能亏钱，请从小金额开始。
 `tradeagent weekly` 提供独立的 [weekly-hold-v1 SHADOW 研究](docs/weekly-hold-v1.md)：
 Codex、Claude、12–1 动量、随机、SPY 五组各自从 $10,000 虚拟现金开始。
 跨周持仓、结算敏感性、缺失和所有组的结果完整保留。仪表盘 `/weekly` 与
-[公开周度页](https://danielye0010.github.io/TradeAgent/weekly.html)展示记录。
+[公开周度页](https://danielye0010.github.io/TradeAgent/#weekly)展示记录。
 该协议尚未验证，不下真实订单，也不授权实盘。
