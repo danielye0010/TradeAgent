@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.7.0 — 2026-10-26
+
+Python distribution version: `1.7.0`.
+
+- Add isolated weekly-hold-v1 SHADOW research: five independent virtual accounts,
+  frozen native-search model decisions, cross-week append-only lot/cash ledgers,
+  T+1 funding restrictions, settled-only sensitivity and mechanical risk exits.
+- Add historical quant/random/SPY replay with data-quality gates and explicit
+  daily-price/survivorship limitations; historical and prospective evidence stay separate.
+- Add a read-only weekly holdings dashboard and complete public weekly results page.
+- Existing shortline protocols, schedules, frozen observations and LIVE settings are unchanged.
+
 ## 1.6.0 — 2026-10-20
 
 Python distribution version: `1.6.0`.

@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Weekly portfolios · TradeAgent</title><link rel="stylesheet" href="weekly.css"></head>
+<body><header><a href="./">TradeAgent</a><span>SHADOW · PAPER ONLY</span><a href="weekly.json">完整数据 JSON ↗</a></header>
+<main><p class="eyebrow">WEEKLY-HOLD-V1 / 周度持仓研究</p><h1>让每一周的选择，<br>留下完整的记录。</h1><p class="intro">五个独立的 $10,000 模拟账户。相同股票池，决策先冻结，交易后计分。盈利、亏损和缺失全部保留。</p><div class="notice" id="status">读取前瞻记录…</div>
+<div class="controls"><label for="mode">结算模型</label><select id="mode"><option value="main">主结果：T+1，允许未交割款买入</option><option value="settled">敏感性：仅用已交割资金</option></select></div>
+<section><div class="section-title"><h2>账户与持仓</h2><span>当前模拟余额 · 非券商账户</span></div><div id="cards" class="cards"></div></section>
+<section><div class="section-title"><h2>每日净值</h2><span>缺失数据保留断点</span></div><div id="legend" class="legend"></div><div id="chart" class="chart"></div></section>
+<section><h2>周度净收益</h2><div class="scroll"><table id="weeks"></table></div></section>
+<section><h2>主要与次要比较</h2><p class="muted">同周配对差；标准误仅作描述。周收益可能相关，早期结果尚未验证。</p><div class="scroll"><table id="comparisons"></table></div></section>
+<section><h2>冻结决策与来源</h2><div id="decisions"></div></section>
+<section><h2>缺失与延迟记录</h2><div id="issues"></div></section>
+<footer id="foot"></footer></main><script src="weekly.js"></script></body></html>

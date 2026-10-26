@@ -443,6 +443,16 @@ def make_handler(workspace, port_ref):
                     name, content_type = STATIC[url.path]
                     body = (static_root / name).read_bytes()
                     self._send(HTTPStatus.OK, body, content_type, {"Cache-Control": "no-cache"})
+                elif url.path in {"/weekly", "/weekly.html", "/weekly.css", "/weekly.js"}:
+                    from ..weekly.web import ASSETS, asset
+
+                    name = url.path.lstrip("/") if url.path != "/weekly" else "weekly.html"
+                    self._send(HTTPStatus.OK, asset(name), ASSETS[name])
+                elif url.path == "/weekly.json":
+                    from ..weekly.cli import default_state
+                    from ..weekly.reporting import read_public
+
+                    self._json(read_public(default_state()))
                 elif url.path == "/api/overview":
                     self._json(workspace.overview())
                 elif url.path == "/api/run":

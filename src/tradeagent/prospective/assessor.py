@@ -215,6 +215,8 @@ def run(
     web_search,
     allowed_items=(),
     report_search=False,
+    validator=None,
+    include_events=False,
 ):
     with tempfile.TemporaryDirectory(prefix="tradeagent-assessor-") as temporary:
         root = Path(temporary)
@@ -338,7 +340,10 @@ def run(
             and (r.get("item") or {}).get("id")
         }
         document = json.loads(output.read_text())
-        check_document(document, schema_value, candidates)
+        if validator is None:
+            check_document(document, schema_value, candidates)
+        else:
+            validator(document)
         provenance = {
             "model": MODEL,
             "status": "VALID",
@@ -351,4 +356,8 @@ def run(
         if report_search:
             provenance["web_searches"] = len(searches)
             provenance["web_search_mode"] = web_search
+        if include_events:
+            provenance["search_events"] = search_items
+            provenance["raw_output_sha256"] = hashlib.sha256(output.read_bytes()).hexdigest()
+            provenance["raw_events_sha256"] = hashlib.sha256(events.read_bytes()).hexdigest()
         return document, provenance
