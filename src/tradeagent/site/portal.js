@@ -2,8 +2,8 @@
 (() => {
   "use strict";
   const LABELS = {
-    en: { weekly: "Weekly portfolios", intraday: "Intraday research", weeklyShort: "Weekly", intradayShort: "Intraday", tabs: "Research horizon" },
-    zh: { weekly: "周度持仓", intraday: "短线研究", weeklyShort: "周度", intradayShort: "短线", tabs: "研究周期" },
+    en: { weekly: "Weekly portfolios", intraday: "Daily picks", weeklyShort: "Weekly", intradayShort: "Daily", tabs: "Research horizon" },
+    zh: { weekly: "周度持仓", intraday: "每日短线", weeklyShort: "周度", intradayShort: "短线", tabs: "研究周期" },
   };
   let lang = window.TA_LANG === "zh" ? "zh" : "en";
   const weekly = document.getElementById("weekly-root");

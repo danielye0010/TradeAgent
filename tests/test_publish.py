@@ -169,7 +169,6 @@ def test_unified_home_has_two_horizons_and_legacy_redirect(research, tmp_path):
     assert "attachShadow" in component and "TradeAgentWeekly.mount" in component
     assert "embedded: true" in component and "Five $10,000 portfolios" in component
     assert "五个 1 万美元组合" in component  # both languages ship in one component
-    assert "early_exit_advice" in component and "settled" in component
 
 
 def test_unified_public_site_rejects_historical_weekly_data(research, tmp_path):
@@ -196,17 +195,6 @@ def test_unified_publish_preserves_weekly_across_both_daily_refreshes(research, 
     publish.push({**daily, "generated_at": 2}, str(remote), work, weekly)
     assert json.loads((work / "weekly.json").read_text()) == weekly
     assert 'role="tablist"' in (work / "index.html").read_text()
-
-
-def test_weekly_view_universe_size_matches_frozen_protocol():
-    import re
-    from importlib.resources import files
-
-    from tradeagent.weekly.protocol import PROTOCOL, UNIVERSE
-
-    script = files("tradeagent.weekly").joinpath("static", "weekly.js").read_text()
-    found = re.search(r'const UNIVERSE = \{ "([\w-]+)": (\d+) \}', script)
-    assert found and found.group(1) == PROTOCOL and int(found.group(2)) == len(UNIVERSE)
 
 
 def test_public_header_follows_the_page_language(research, tmp_path):

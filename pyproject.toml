@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tradeagent"
-version = "1.7.2"
+version = "1.7.3"
 description = "An AI analyst picks the trade; tested Python places it on Robinhood with hard limits and an automatic exit."
 readme = "README.md"
 authors = [{ name = "Daniel Ye" }]
