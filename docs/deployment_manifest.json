@@ -11,7 +11,7 @@
     "licenses/Oft3r-MIT.txt": "380775b4c1b3ec8ea691f8380e33c4f76be1c412c1444674a1b7c75af0a26797",
     "licenses/abiemann-MIT.txt": "43b87f35ac1a7d87c2a87caa4ffe37019927a1c2c2f9075bd35cf0176de7bdca",
     "licenses/cbangera2-MIT.txt": "82c7d6213c64ee4d1a906a7b5049f8d3959c481f42a63f0174534991136f2a0e",
-    "pyproject.toml": "a3e9220bf395b2648c0e86f5190d6b781cf231836e8bff34d49c77c5612cf12f",
+    "pyproject.toml": "216962f8d14f0d3716fad5c9d7d4b430d5ce1293362009567721bac39ca34701",
     "src/tradeagent/__init__.py": "4d6ac5a1a0ad94edd128dc9e0a30a6614df73456dbdc71ddad7e777731ee9221",
     "src/tradeagent/account_policy.py": "ac872bb24842f0defcb09960bfbd78d0dd94c52725835caa8df0a7e860114020",
     "src/tradeagent/accounting.py": "901e8f4d4682817402b54f5c2cc3d8c8fbf7ca514d3c207737a269b723450615",
@@ -75,7 +75,7 @@
     "src/tradeagent/prospective/sec_events.py": "8de9cb2882d7e3ba61183a40852d01c1c9d983a25cc5d8bf8e55c71e4005b4a9",
     "src/tradeagent/prospective/service.py": "33cfeb5c1995263b66f3bbee8d7a1da5628f71a5c23be549325d2aed838f0f5d",
     "src/tradeagent/prospective/v5_supplement.py": "d44e55f4efd7cc574b0dea1282d7a53d453f01ca8090468e5c631ee39e701835",
-    "src/tradeagent/publish.py": "366d0954946557f43cf9947056d84057ff0841f319867f284afcf178ea6aaaf6",
+    "src/tradeagent/publish.py": "ac33fdbd7fe8c67713e45bf845deb876ca16cac0189ec9f34d5861823d3ff056",
     "src/tradeagent/research/__init__.py": "c6b7d096648fdf0a1eb0233cbdf078da4a4fa3e2549e0da9f8f6a83b713ec464",
     "src/tradeagent/research/agent_market.py": "ed70ddf7f4ede46db7dbe9b78cf9e6140b989d95e5fdd4b5748c9b7a356d306b",
     "src/tradeagent/research/alpha_data.py": "dd66541ae5b52f3ff777cdd136898968eda41c66a62b57c608f9d368d3a21642",
@@ -174,7 +174,7 @@
     "tests/test_owner_recovery.py": "8c72be1c10f33c556c5d4d9e56b241d046b0e6f6c04c78e6350f7ef129c018c7",
     "tests/test_production_oneshot.py": "57394b16866773f1f93063216c6c1465a5268bead9fae657113c5e279eccdd2a",
     "tests/test_prospective.py": "596505f0c76bd3ca1f60d49255e01c228bf5dd99101d36ea0e5fdd225b8275e3",
-    "tests/test_publish.py": "0b0d7bc3cd6ab9a907e3902dfa49c33c9f38ae58708e69fc79238812b1788e47",
+    "tests/test_publish.py": "b5b265a920eb8f412e70806a3080f163aef17c91fc405088871cba28974153b2",
     "tests/test_release_policy.py": "406a8f771658e1815cecbab48293b497ac95fd05751f1b5fa726f079629bbf7a",
     "tests/test_research_integrity.py": "7e23af828a9974495d97824e92300aa262a7d3a89d2e69245dee4b4f18358106",
     "tests/test_research_loop.py": "bd863a6df5f40260072dac426bb4041dfb9fa2df2d02ae278bc36c2820478b72",
@@ -188,5 +188,5 @@
     "tests/test_v5_supplement.py": "b8fc88af047f2a5a3c0c645613f16886bb4fa6b7175b7ef6d13263ce3ab1e770",
     "tests/test_weekly_hold.py": "4a8e93120d2d77639142d031024715ae5cbc928591c00ccd46400f7e717fd22d"
   },
-  "framework_sha256": "60cf672708e0677bc40bc1307c5a432e8f1de94b0e28c379b7933ff300c90e6d"
+  "framework_sha256": "a28b167924bb95e0029bd0a2b386fecfc95191864f2f3cbb719fbad8aeae385d"
 }

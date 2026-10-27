@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.7.3 — 2026-10-26
+
+Python distribution version: `1.7.3`.
+
+- Simpler public pages. Weekly: headline with the next-pick countdown, a leaderboard
+  (value, return, holdings), the value chart and this week's GPT and Claude picks with
+  one-line reasons. Daily: headline with the track record, results chart and table,
+  latest picks and the pick log. Statistical, pipeline, comparison and data-quality
+  panels are removed from the public view; all data stays in weekly.json/data.json.
+- Header tabs read "Weekly portfolios" and "Daily picks".
+- Display only: research protocols, frozen identities and schedules are unchanged.
+
 ## 1.7.2 — 2026-10-26
 
 Python distribution version: `1.7.2`.
