@@ -16,37 +16,37 @@
       lang: "中文",
       nav: ["Performance", "Pipeline", "Compare", "Trade log"],
       asOf: "As of {t} ET",
-      eyebrow: "Open-source AI trading agent · US equities",
-      title: "A quant desk with an AI analyst. Not a chatbot's hunch.",
-      lede: "Every trading day at 10:30 ET, TradeAgent scans {u} liquid US stocks and ETFs on live one-minute data, ranks them with quantitative signals, has GPT or Claude research the news on the top {k}, and executes the winner in your own Robinhood account under {c} hard risk checks. Every decision is locked before the market moves and scored after costs.",
+      eyebrow: "Daily picks · paper trading",
+      title: "One AI stock pick a day. Every result public.",
+      lede: "Every trading day at 10:30 ET, GPT and Claude read the news on the day's biggest movers and each pick one stock. Each pick is held for {h} minutes and scored against the S&P 500.",
       ctaInstall: "Install",
       ctaRecord: "Track record",
       ctaGh: "GitHub",
       kpiTitle: "Track record",
-      kpiSub: "Paper portfolio · net of costs · {h}-minute holds",
-      kpiMain: "Cumulative net return",
+      kpiSub: "TradeAgent · GPT · paper trading",
+      kpiMain: "Total return",
       kpiAgent: "TradeAgent · GPT with news",
-      vsSpy: "Excess vs S&P 500",
-      vsSpySub: "SPY, same hour",
+      vsSpy: "vs S&P 500",
+      vsSpySub: "same hours",
       vsRandom: "Excess vs random pick",
       vsRandomSub: "same shortlist",
       beatSpy: "Days ahead of SPY",
-      hit: "Hit rate",
-      hitSub: "positive / traded days",
+      hit: "Win rate",
+      hitSub: "winning days / days traded",
       days: "Trading days",
       inception: "since {d}",
       empty: "The track record starts after the first trading day.",
 
-      perfTitle: "Performance",
-      perfAside: "Cumulative net return. Every arm: same shortlist, same minute, same hour.",
+      perfTitle: "Results",
+      perfAside: "Total return after costs. Same stocks, same hour for everyone.",
       sample: "n = {n} trading days. Differences over fewer than {need} days are mostly noise; the record updates after every close.",
-      statCols: ["Strategy", "Cumulative", "Avg / day", "Hit rate", "Best", "Worst", "Days"],
+      statCols: ["Strategy", "Total", "Win rate", "Days"],
       arms: {
-        codex: ["TradeAgent · GPT", "quant scan + GPT with news"],
-        claude: ["TradeAgent · Claude", "quant scan + Claude with news"],
-        quant: ["Quant engine only", "no AI"],
-        random: ["Random pick", "same shortlist, seeded"],
-        spy: ["S&P 500 (SPY)", "same hour"],
+        codex: ["TradeAgent · GPT", "AI, reads the news"],
+        claude: ["TradeAgent · Claude", "AI, reads the news"],
+        quant: ["Quant only", "no AI"],
+        random: ["Random pick", "same shortlist"],
+        spy: ["S&P 500", "same hour"],
       },
       short: { codex: "GPT", claude: "Claude", quant: "Quant", random: "Random", spy: "SPY" },
 
@@ -79,14 +79,14 @@
       ],
       vsNote: "Unlike AI trading arenas, it trades your account rather than a showcase portfolio. Unlike signal bots, every call is locked before the market moves and published with its result, losses included.",
 
-      memoTitle: "Latest decision",
-      memoAside: "{d} · 10:30 ET session",
+      memoTitle: "Latest picks",
+      memoAside: "{d}",
       pick: "Pick",
-      result: "Result, {h} min",
+      result: "Result",
       pending: "Scored after the hour",
       cash: "Cash",
       cashLine: "No candidate cleared the gate. Top idea:",
-      thesis: "Thesis",
+      thesis: "Why",
       catalyst: "Catalyst",
       sources: "Sources",
       noAnswer: "No answer this session.",
@@ -108,20 +108,18 @@
         unclear: "Within day-to-day noise: no significant difference yet.",
       },
 
-      logTitle: "Trade log",
-      logAside: "Every decision, newest first",
+      logTitle: "All picks",
+      logAside: "Newest first",
       date: "Date",
       showAll: "Show all {n} sessions",
 
-      runTitle: "Run your own agent.",
-      runLede: "Free and open source. Start with paper trading and a local dashboard; switch to live trading when you choose.",
+      runTitle: "Run your own.",
+      runLede: "Free and open source.",
       runSteps: ["Install", "Check your setup", "Open the dashboard"],
       runReq: "Linux or WSL2 · Python 3.12+ · a ChatGPT or Claude plan · Robinhood for live trading",
       runBtn: "Documentation on GitHub",
 
-      foot: [
-        "Hypothetical performance. Results come from paper trading: each decision is locked before entry and scored at market prices with modeled costs ({cost} bp per side: half-spread, slippage and fees), not live fills. Cumulative figures sum daily {h}-minute returns and are not compounded. Short records are dominated by noise. Past performance does not predict future results. Not investment advice.",
-      ],
+      foot: ["Paper trading results after costs."],
       updated: "Data as of {t} ET.",
       source: "Source code",
     },
@@ -129,18 +127,18 @@
       lang: "EN",
       nav: ["业绩", "流程", "对比", "交易记录"],
       asOf: "数据截至美东 {t}",
-      eyebrow: "开源 AI 交易代理 · 美股",
-      title: "量化系统打底，AI 分析师把关。不靠聊天机器人拍脑袋。",
-      lede: "每个交易日美东 10:30，TradeAgent 用实时分钟行情扫描 {u} 只高流动性美股和 ETF，按量化信号排序，再交给 GPT 或 Claude 研究前 {k} 名的新闻。最终选择过完 {c} 项硬性风控，在自己的 Robinhood 账户里执行。每个决策都在行情变化前锁定，扣除成本后计分。",
+      eyebrow: "每日短线 · 模拟盘",
+      title: "AI 每天选一只股票，结果全部公开。",
+      lede: "每个交易日美东 10:30，GPT 和 Claude 读完当天异动最大几只股票的新闻，各选一只，持有 {h} 分钟，和标普 500 比收益。",
       ctaInstall: "安装",
       ctaRecord: "历史战绩",
       ctaGh: "GitHub",
       kpiTitle: "历史战绩",
-      kpiSub: "模拟组合 · 扣除成本 · 每笔持有 {h} 分钟",
-      kpiMain: "累计净收益",
+      kpiSub: "TradeAgent · GPT · 模拟盘",
+      kpiMain: "累计收益",
       kpiAgent: "TradeAgent · GPT 读新闻",
-      vsSpy: "相对标普 500 超额",
-      vsSpySub: "SPY，同一小时",
+      vsSpy: "相对标普 500",
+      vsSpySub: "同一时段",
       vsRandom: "相对随机选股超额",
       vsRandomSub: "同一候选名单",
       beatSpy: "跑赢 SPY 天数",
@@ -150,16 +148,16 @@
       inception: "自 {d} 起",
       empty: "第一个交易日结束后开始记录战绩。",
 
-      perfTitle: "业绩表现",
-      perfAside: "累计净收益。所有策略：同一候选名单、同一分钟、同一小时。",
+      perfTitle: "成绩",
+      perfAside: "扣除成本后的累计收益，所有组用同样的股票、同一时段。",
       sample: "样本 n = {n} 个交易日。少于 {need} 天的差异主要是噪声；每日收盘后更新。",
-      statCols: ["策略", "累计", "日均", "胜率", "最好", "最差", "天数"],
+      statCols: ["策略", "累计", "胜率", "天数"],
       arms: {
-        codex: ["TradeAgent · GPT", "量化扫描 + GPT 读新闻"],
-        claude: ["TradeAgent · Claude", "量化扫描 + Claude 读新闻"],
-        quant: ["纯量化引擎", "不用 AI"],
-        random: ["随机选股", "同一候选名单，固定种子"],
-        spy: ["标普 500（SPY）", "同一小时"],
+        codex: ["TradeAgent · GPT", "AI 读新闻选股"],
+        claude: ["TradeAgent · Claude", "AI 读新闻选股"],
+        quant: ["纯量化", "不用 AI"],
+        random: ["随机", "同一候选名单"],
+        spy: ["标普 500", "同一时段"],
       },
       short: { codex: "GPT", claude: "Claude", quant: "量化", random: "随机", spy: "SPY" },
 
@@ -192,14 +190,14 @@
       ],
       vsNote: "和 AI 交易擂台不同，它交易的是真实账户，不是展示用的组合；和信号机器人不同，每次决策都在行情变化前锁定，连同结果一起公开，亏损也照样公开。",
 
-      memoTitle: "最新决策",
-      memoAside: "{d} · 美东 10:30 场次",
+      memoTitle: "最新选股",
+      memoAside: "{d}",
       pick: "选择",
-      result: "{h} 分钟结果",
+      result: "结果",
       pending: "一小时后计分",
       cash: "空仓",
       cashLine: "没有候选通过门槛。排名第一：",
-      thesis: "逻辑",
+      thesis: "理由",
       catalyst: "催化剂",
       sources: "来源",
       noAnswer: "本场次没有给出答案。",
@@ -221,20 +219,18 @@
         unclear: "仍在日常波动范围内，暂无显著差异。",
       },
 
-      logTitle: "交易记录",
-      logAside: "每一次决策，最新在前",
+      logTitle: "全部记录",
+      logAside: "最新在前",
       date: "日期",
       showAll: "显示全部 {n} 个场次",
 
-      runTitle: "部署一个自己的交易代理。",
-      runLede: "免费开源。先用模拟盘和本地仪表盘跑起来，准备好了再切实盘。",
+      runTitle: "自己部署一个。",
+      runLede: "免费开源。",
       runSteps: ["安装", "检查环境", "打开仪表盘"],
       runReq: "Linux 或 WSL2 · Python 3.12+ · ChatGPT 或 Claude 订阅 · 实盘需 Robinhood",
       runBtn: "GitHub 文档",
 
-      foot: [
-        "模拟业绩。结果来自模拟盘：每个决策在入场前锁定，按市场价格计分并扣除模型化成本（每边 {cost} 个基点：半价差、滑点和手续费），不是实盘成交。累计数字为每日 {h} 分钟收益之和，不复利。短期记录主要受噪声影响。过往表现不代表未来结果。不构成投资建议。",
-      ],
+      foot: ["模拟盘成绩，已扣除成本。"],
       updated: "数据截至美东时间 {t}。",
       source: "源代码",
     },
@@ -334,7 +330,6 @@
         h("p", { class: "lede", text: t("lede") }),
         h("div", { class: "cta" },
           h("a", { class: "btn primary", href: "#run", text: t("ctaInstall") }),
-          h("a", { class: "btn", href: "#performance", text: t("ctaRecord") }),
           h("a", { class: "btn", href: data.repo, text: t("ctaGh") + " ↗" }))),
       kpis());
   }
@@ -343,7 +338,7 @@
     const a = stats("codex");
     const top = h("div", { class: "kpi-head" }, h("b", { text: t("kpiTitle") }), h("span", { text: t("kpiSub") }));
     if (!a) return h("aside", { class: "kpi" }, top, h("p", { class: "muted pad", text: t("empty") }));
-    const spy = excess("codex", "spy"), rnd = excess("codex", "random");
+    const spy = excess("codex", "spy");
     const row = (name, sub, val, cls) => h("div", { class: "kpi-row" },
       h("div", {}, h("div", { class: "k", text: name }), sub ? h("div", { class: "ks", text: sub }) : null),
       h("div", { class: "v num " + (cls || ""), text: val }));
@@ -353,8 +348,6 @@
         h("div", { class: "big num " + tone(a.total), text: pct(a.total) }),
         h("div", { class: "ks" }, h("i", { class: "key", style: `background:${color.codex}` }), t("kpiAgent"))),
       spy ? row(t("vsSpy"), t("vsSpySub"), pct(spy.total), tone(spy.total)) : null,
-      rnd ? row(t("vsRandom"), t("vsRandomSub"), pct(rnd.total), tone(rnd.total)) : null,
-      spy ? row(t("beatSpy"), null, `${spy.ahead} / ${spy.days}`) : null,
       row(t("hit"), t("hitSub"), a.traded ? `${rate(a)} (${a.hits}/${a.traded})` : "—"),
       row(t("days"), t("inception", { d: day(data.first_session, true) }), String(scored.length)));
   }
@@ -370,28 +363,23 @@
   function performance() {
     if (!scored.length) return null;
     const keys = ORDER.filter(has);
-    const hide = new Set([2, 4, 5, 6]);
     const table = h("table", { class: "stats" },
-      h("thead", {}, h("tr", {}, ...t("statCols").map((c, i) => h("th", { class: (i ? "n" : "") + (hide.has(i) ? " hide-s" : ""), text: c })))),
+      h("thead", {}, h("tr", {}, ...t("statCols").map((c, i) => h("th", { class: i ? "n" : "", text: c })))),
       h("tbody", {}, ...keys.map((k) => {
         const st = stats(k);
         const [name, sub] = t("arms." + k);
         return h("tr", { class: k === "codex" ? "lead" : "" },
           h("th", { scope: "row" }, h("span", { class: "name" }, h("i", { class: "key", style: `background:${color[k]}` }), name), h("span", { class: "sub", text: sub })),
           h("td", { class: "n num strong " + tone(st.total), text: pct(st.total) }),
-          h("td", { class: "n num hide-s " + tone(st.mean), text: pct(st.mean) }),
           h("td", { class: "n num", text: rate(st) }),
-          h("td", { class: "n num hide-s " + tone(st.best), text: pct(st.best) }),
-          h("td", { class: "n num hide-s " + tone(st.worst), text: pct(st.worst) }),
-          h("td", { class: "n num hide-s", text: String(st.days) }));
+          h("td", { class: "n num", text: String(st.days) }));
       })));
     return h("section", { class: "block", id: "performance" },
       head(t("perfTitle"), t("perfAside")),
       scored.length >= 2 ? h("div", { class: "panel chart", id: "chart" },
         h("div", { class: "legend" }, ...keys.map((k) => h("span", {}, h("i", { class: k === "spy" || k === "random" ? "dash" : "", style: `--c:${color[k]}` }), t("short." + k)))),
         h("div", { class: "plot" })) : null,
-      h("div", { class: "panel table" }, table),
-      h("p", { class: "note", text: t("sample", { n: scored.length, need: MIN_DAYS }) }));
+      h("div", { class: "panel table" }, table));
   }
 
   function drawChart() {
@@ -465,36 +453,6 @@
     return [1, 2, 2.5, 5, 10].map((k) => k * mag).find((v) => span / v <= 5) || raw;
   }
 
-  // ------------------------------------------------------------ pipeline
-
-  function pipeline() {
-    return h("section", { class: "block", id: "pipeline" },
-      head(t("pipeTitle")),
-      h("p", { class: "section-lede", text: t("pipeLede") }),
-      h("ol", { class: "pipe" }, ...t("pipe").map(([when, name, key, body], i) =>
-        h("li", { class: "stage" + (i === 3 ? " ai" : "") },
-          h("div", { class: "stage-top" }, h("span", { class: "idx num", text: String(i + 1).padStart(2, "0") }), h("span", { class: "when num", text: when })),
-          h("h3", { text: name }),
-          h("p", { class: "key-fact", text: key }),
-          h("p", { class: "body", text: body })))));
-  }
-
-  // ------------------------------------------------------------ comparison
-
-  function versus() {
-    const [, ours, theirs] = t("vsCols");
-    return h("section", { class: "block", id: "compare" },
-      head(t("vsTitle")),
-      h("p", { class: "section-lede", text: t("vsLede") }),
-      h("div", { class: "panel table" }, h("table", { class: "versus" },
-        h("thead", {}, h("tr", {}, h("th", { text: "" }), h("th", { class: "us", text: ours }), h("th", { text: theirs }))),
-        h("tbody", {}, ...t("vsRows").map(([cap, a, b]) => h("tr", {},
-          h("th", { scope: "row", text: cap }),
-          h("td", { class: "us" }, h("div", { class: "vcell" }, h("span", { class: "tick yes", "aria-hidden": "true", text: "✓" }), h("span", { text: a }))),
-          h("td", { class: "them" }, h("div", { class: "vcell" }, h("span", { class: "tick no", "aria-hidden": "true", text: "✕" }), h("span", { text: b })))))))),
-      h("p", { class: "note", text: t("vsNote") }));
-  }
-
   // ------------------------------------------------------------ latest decision
 
   function memo(who, session, note) {
@@ -512,9 +470,6 @@
     if (note) {
       if (!pick.symbol && note.symbol) parts.push(h("p", { class: "cash-line" }, t("cashLine"), " ", h("b", { text: note.symbol }), " ", note.stance ? h("span", { class: "stance " + note.stance, text: t("stance." + note.stance) }) : null));
       if (note.thesis) parts.push(field(t("thesis"), h("p", { text: note.thesis })));
-      if (note.catalyst) parts.push(field(t("catalyst"), h("p", { text: note.catalyst })));
-      const links = (note.sources || []).filter((x) => /^https:\/\//.test(x.url || ""));
-      if (links.length) parts.push(field(t("sources"), h("ul", { class: "src" }, ...links.map((x) => h("li", {}, h("a", { href: x.url, target: "_blank", rel: "noopener noreferrer", text: (x.title || x.url) + " ↗" }))))));
     }
     return h("article", { class: "panel memo" }, ...parts);
   }
@@ -526,36 +481,6 @@
     return h("section", { class: "block", id: "latest" },
       head(t("memoTitle"), t("memoAside", { d: day(last.date, true) })),
       h("div", { class: "memos" + (cards.length === 1 ? " one" : "") }, ...cards));
-  }
-
-  // ------------------------------------------------------------ model choice
-
-  function models() {
-    const d = data.duel;
-    const card = (key, tag, sub) => h("div", { class: "panel model-card" },
-      h("div", { class: "memo-head" }, h("i", { class: "key", style: `background:${color[key]}` }), h("b", { text: key === "codex" ? "GPT" : "Claude" }), h("span", { class: "tag", text: tag })),
-      h("div", { class: "model-id", text: data.models[key] || (key === "codex" ? "Codex" : "Claude Code") }),
-      h("p", { class: "muted", text: sub }));
-    let body;
-    if (d && d.scored_days) {
-      const v = d.verdict || {};
-      const verdict = v.state === "collecting" ? t("verdict.collecting", { d: v.days, n: v.needed || MIN_DAYS }) : t("verdict." + v.state);
-      const [, gpt, claude] = t("duelCols");
-      body = [h("div", { class: "panel table" }, h("table", { class: "duel" },
-        h("thead", {}, h("tr", {}, h("th", { text: "" }), h("th", { class: "n", text: gpt }), h("th", { class: "n", text: claude }))),
-        h("tbody", {},
-          h("tr", {}, h("th", { scope: "row", text: t("duelRows.total") }), h("td", { class: "n num " + tone(d.codex_total), text: pct(d.codex_total) }), h("td", { class: "n num " + tone(d.claude_total), text: pct(d.claude_total) })),
-          h("tr", {}, h("th", { scope: "row", text: t("duelRows.wins") }), h("td", { class: "n num", text: `${d.wins.codex || 0} / ${d.scored_days}` }), h("td", { class: "n num", text: `${d.wins.claude || 0} / ${d.scored_days}` })),
-          h("tr", {}, h("th", { scope: "row", text: t("duelRows.same") }), h("td", { class: "n num", colspan: "2", text: `${d.same_pick || 0} / ${d.answered_both || 0}` }))))),
-        h("p", { class: "note", text: verdict })];
-    } else {
-      body = [h("p", { class: "note", text: t("modelPending") })];
-    }
-    return h("section", { class: "block", id: "models" },
-      head(t("modelTitle")),
-      h("p", { class: "section-lede", text: t("modelLede") }),
-      h("div", { class: "model-cards" }, card("codex", t("modelDefault"), t("modelGpt")), card("claude", t("modelOptional"), t("modelClaude"))),
-      ...body);
   }
 
   // ------------------------------------------------------------ trade log
@@ -574,11 +499,10 @@
     const table = h("table", { class: "log" },
       h("thead", {}, h("tr", {},
         h("th", { text: t("date") }), h("th", { text: t("short.codex") }), withClaude ? h("th", { text: t("short.claude") }) : null,
-        h("th", { class: "hide-s", text: t("short.quant") }), h("th", { class: "hide-s", text: t("short.random") }), h("th", { class: "n", text: "SPY" }))),
+        h("th", { class: "n", text: "S&P 500" }))),
       h("tbody", {}, ...shown.map((x) => h("tr", {},
         h("td", { class: "num", text: day(x.date) }),
         cell(x.codex, x.scored), withClaude ? cell(x.claude, x.scored) : null,
-        cell(x.quant, x.scored, "hide-s"), cell(x.random, x.scored, "hide-s"),
         h("td", { class: "n num " + tone(x.spy), text: x.scored ? pct(x.spy) : "…" })))));
     return h("section", { class: "block", id: "log" },
       head(t("logTitle"), t("logAside")),
@@ -594,7 +518,6 @@
       h("div", { class: "run-copy" },
         h("h2", { text: t("runTitle") }),
         h("p", { class: "section-lede", text: t("runLede") }),
-        h("p", { class: "req", text: t("runReq") }),
         h("a", { class: "btn primary", href: data.repo + "#get-started", text: t("runBtn") + " ↗" })),
       h("ol", { class: "cmds" }, ...cmds.map((c, i) => h("li", {}, h("span", { class: "label", text: t("runSteps")[i] }), h("code", { text: c })))));
   }
@@ -607,7 +530,7 @@
     document.getElementById("gh").href = data.repo;
     document.querySelectorAll(".bar-nav a").forEach((a, i) => { a.textContent = t("nav")[i]; });
     document.getElementById("asof").textContent = data.generated_at ? t("asOf", { t: stamp(data.generated_at) }) : "";
-    document.getElementById("top").replaceChildren(...[hero(), performance(), pipeline(), versus(), latest(), models(), tradeLog(), run()].filter(Boolean));
+    document.getElementById("top").replaceChildren(...[hero(), performance(), latest(), tradeLog(), run()].filter(Boolean));
     const c = method.costs_bps || {};
     const cost = ["half_spread_bps", "slippage_bps", "fee_bps"].every((k) => typeof c[k] === "number")
       ? +(c.half_spread_bps + c.slippage_bps + c.fee_bps).toFixed(2) : 2.1;
